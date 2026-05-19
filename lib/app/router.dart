@@ -30,6 +30,7 @@ import 'package:speech_coach/features/filler_challenge/presentation/screens/fill
 import 'package:speech_coach/features/voice_wrapped/presentation/screens/voice_wrapped_screen.dart';
 import 'package:speech_coach/features/assessment/presentation/screens/assessment_screen.dart';
 import 'package:speech_coach/features/assessment/presentation/screens/plan_summary_screen.dart';
+import 'package:speech_coach/features/assessment/presentation/screens/roadmap_catalog_screen.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/shared/widgets/bottom_nav_bar.dart';
 
@@ -243,6 +244,25 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           );
         },
+      ),
+      // Roadmap catalog
+      GoRoute(
+        path: '/roadmap-catalog',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          child: const RoadmapCatalogScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            );
+          },
+        ),
       ),
       // Paywall
       GoRoute(

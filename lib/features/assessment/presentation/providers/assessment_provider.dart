@@ -88,5 +88,16 @@ class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
     return 'hard';
   }
 
+  Future<void> switchRoadmap(String templateId) async {
+    final plan = generatePlanFromTemplateId(templateId);
+    await _repo.saveLearningPlan(plan);
+    await _repo.saveAssessmentResult(AssessmentResult(
+      answers: const [],
+      templateId: templateId,
+      completedAt: DateTime.now(),
+    ));
+    state = plan;
+  }
+
   PlanStep? get nextStep => state?.nextStep;
 }

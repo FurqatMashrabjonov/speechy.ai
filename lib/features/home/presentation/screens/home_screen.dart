@@ -482,20 +482,47 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
                     ],
                   ),
                 ),
-                Tappable(
-                  onTap: () => context.push('/plan-summary'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
+                Row(
+                  children: [
+                    Tappable(
+                      onTap: () => context.push('/plan-summary'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text('See Plan',
+                            style: AppTypography.labelSmall(
+                                    color: AppColors.primary)
+                                .copyWith(fontWeight: FontWeight.w700)),
+                      ),
                     ),
-                    child: Text('See Plan',
-                        style: AppTypography.labelSmall(
-                                color: AppColors.primary)
-                            .copyWith(fontWeight: FontWeight.w700)),
-                  ),
+                    const SizedBox(width: 8),
+                    Tappable(
+                      onTap: () => context.push('/roadmap-catalog'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F0F0),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.grid_view_rounded,
+                                size: 13, color: Color(0xFF888888)),
+                            const SizedBox(width: 4),
+                            Text('All Roadmaps',
+                                style: AppTypography.labelSmall(
+                                    color: const Color(0xFF888888))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

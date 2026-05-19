@@ -1,5 +1,86 @@
+import 'package:flutter/material.dart';
+
 import '../domain/assessment_entity.dart';
 import '../domain/learning_plan_entity.dart';
+
+// --- Public Roadmap Metadata (for catalog screen) ---
+
+class RoadmapMeta {
+  final String id;
+  final String title;
+  final String description;
+  final String emoji;
+  final Color color;
+
+  const RoadmapMeta({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.emoji,
+    required this.color,
+  });
+}
+
+const allRoadmapMetas = [
+  RoadmapMeta(
+    id: 'career_confidence',
+    title: 'Interview Prep',
+    description: 'Master every stage — from first impressions to salary negotiation.',
+    emoji: '\u{1F4BC}',
+    color: Color(0xFF4F8EF7),
+  ),
+  RoadmapMeta(
+    id: 'social_butterfly',
+    title: 'Social Confidence',
+    description: 'Build real social skills step by step — small talk to confident connections.',
+    emoji: '\u{1F91D}',
+    color: Color(0xFF9B5CF6),
+  ),
+  RoadmapMeta(
+    id: 'stage_ready',
+    title: 'Public Speaking',
+    description: 'Go from nervous speaker to commanding any stage with confidence.',
+    emoji: '\u{1F3A4}',
+    color: Color(0xFFE84D8A),
+  ),
+  RoadmapMeta(
+    id: 'anxiety_buster',
+    title: 'Anxiety Buster',
+    description: 'Gentle progressive practice — start low-pressure, build to real confidence.',
+    emoji: '\u{1F4AA}',
+    color: Color(0xFF10B981),
+  ),
+  RoadmapMeta(
+    id: 'well_rounded',
+    title: 'Well-Rounded Speaker',
+    description: 'Balanced path across all speaking situations — social, professional, public.',
+    emoji: '\u{1F31F}',
+    color: Color(0xFFF59E0B),
+  ),
+];
+
+LearningPlan generatePlanFromTemplateId(String templateId) {
+  final template = _templates.firstWhere(
+    (t) => t.id == templateId,
+    orElse: () => _templates.last,
+  );
+  return LearningPlan(
+    templateId: template.id,
+    title: template.title,
+    description: template.description,
+    steps: template.steps
+        .asMap()
+        .entries
+        .map((e) => PlanStep(
+              scenarioId: e.value.scenarioId,
+              order: e.key,
+              difficulty: e.value.difficulty,
+              minPassScore: e.value.minPassScore,
+            ))
+        .toList(),
+    createdAt: DateTime.now(),
+  );
+}
 
 // --- Assessment Questions ---
 
