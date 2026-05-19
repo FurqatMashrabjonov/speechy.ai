@@ -604,6 +604,13 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                         color: _getScoreColor(feedback.overallScore),
                       ),
                     ).animate().fadeIn(duration: 400.ms),
+                    const SizedBox(height: 16),
+
+                    // XP + Streak row
+                    _XpStreakRow(xpEarned: feedback.xpEarned)
+                        .animate()
+                        .fadeIn(delay: 200.ms, duration: 400.ms)
+                        .slideY(begin: 0.3, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
                     const SizedBox(height: 24),
 
                     // Score Breakdown
@@ -702,7 +709,8 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                         result: _chainResult!,
                         onNextStep: () => context.go('/home'),
                         onRetry: () => context.go('/home'),
-                      ).animate().fadeIn(duration: 400.ms),
+                      ).animate().fadeIn(delay: 400.ms, duration: 500.ms)
+                          .scale(begin: const Offset(0.95, 0.95), curve: Curves.easeOutBack),
                     if (_chainResult != null) const SizedBox(height: 16),
 
                     const SizedBox(height: 24),
@@ -724,14 +732,23 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Continue Learning CTA
               DuoButton.primary(
-                text: 'Continue Learning',
-                icon: Icons.arrow_forward_rounded,
+                text: _chainResult == ChainResult.passed
+                    ? 'Continue Roadmap'
+                    : _chainResult == ChainResult.needsRetry
+                        ? 'Try Again'
+                        : 'Continue Learning',
+                icon: _chainResult == ChainResult.passed
+                    ? Icons.rocket_launch_rounded
+                    : Icons.arrow_forward_rounded,
                 width: double.infinity,
-                onTap: () => context.go(
-                  '/scenarios/${Uri.encodeComponent(widget.category)}',
-                ),
+                onTap: () {
+                  if (_chainResult == ChainResult.needsRetry) {
+                    context.go('/home');
+                  } else {
+                    context.go('/home');
+                  }
+                },
               ),
               const SizedBox(height: 8),
               Row(
@@ -1230,6 +1247,85 @@ class _FillerWordsCard extends StatelessWidget {
   }
 }
 
+class _XpStreakRow extends ConsumerWidget {
+  final int xpEarned;
+
+  const _XpStreakRow({required this.xpEarned});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(progressProvider);
+    final streak = progress.streak;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // XP pill with count-up animation
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFB800), Color(0xFFFF8C00)],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFFB800).withValues(alpha: 0.35),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.bolt_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 4),
+              TweenAnimationBuilder<int>(
+                tween: IntTween(begin: 0, end: xpEarned),
+                duration: const Duration(milliseconds: 1200),
+                curve: Curves.easeOutCubic,
+                builder: (_, value, __) => Text(
+                  '+$value XP',
+                  style: AppTypography.titleMedium(color: Colors.white)
+                      .copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        if (streak > 0) ...[
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF6B35).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: const Color(0xFFFF6B35).withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('\u{1F525}', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 4),
+                Text(
+                  '$streak-day streak',
+                  style: AppTypography.labelMedium(
+                    color: const Color(0xFFFF6B35),
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _ChainResultBanner extends StatelessWidget {
   final ChainResult result;
   final VoidCallback onNextStep;
@@ -1244,50 +1340,102 @@ class _ChainResultBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final passed = result == ChainResult.passed;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: passed
             ? AppColors.success.withValues(alpha: 0.08)
             : AppColors.warning.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: passed
-              ? AppColors.success.withValues(alpha: 0.3)
-              : AppColors.warning.withValues(alpha: 0.3),
+              ? AppColors.success.withValues(alpha: 0.4)
+              : AppColors.warning.withValues(alpha: 0.4),
           width: 2,
         ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(
-            passed ? Icons.lock_open_rounded : Icons.refresh_rounded,
-            color: passed ? AppColors.success : AppColors.warning,
-            size: 28,
+          // Icon + headline
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: ShapeDecoration(
+                  shape: const CircleBorder(),
+                  color: passed
+                      ? AppColors.success.withValues(alpha: 0.15)
+                      : AppColors.warning.withValues(alpha: 0.15),
+                ),
+                child: Icon(
+                  passed ? Icons.lock_open_rounded : Icons.refresh_rounded,
+                  color: passed ? AppColors.success : AppColors.warning,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      passed ? 'Step Unlocked!' : 'Almost There',
+                      style: AppTypography.titleMedium(
+                        color: passed ? AppColors.success : AppColors.warning,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      passed
+                          ? 'Next step is ready on your roadmap.'
+                          : 'Score a bit higher to advance.',
+                      style: AppTypography.bodySmall(
+                          color: context.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+
+          if (!passed) ...[
+            const SizedBox(height: 14),
+            Row(
               children: [
-                Text(
-                  passed ? 'Next step unlocked!' : 'Almost there',
-                  style: AppTypography.titleMedium(
-                    color: passed ? AppColors.success : AppColors.warning,
+                Expanded(
+                  child: Tappable(
+                    onTap: onRetry,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Try Again',
+                          style: AppTypography.labelMedium(color: Colors.white)
+                              .copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  passed
-                      ? 'Great work — continue your roadmap.'
-                      : 'Try once more to pass this step.',
-                  style: AppTypography.bodySmall(
-                      color: context.textSecondary),
+                const SizedBox(width: 10),
+                Tappable(
+                  onTap: onNextStep,
+                  child: Text(
+                    'Skip',
+                    style: AppTypography.labelMedium(
+                        color: context.textSecondary),
+                  ),
                 ),
               ],
             ),
-          ),
+          ],
         ],
       ),
     );
