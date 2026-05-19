@@ -1,4 +1,4 @@
-package com.speechmaster.speech_coach
+package com.furqat.speechyai
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

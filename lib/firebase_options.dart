@@ -26,19 +26,22 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAXJBXLGIHSpDXwd_q4gk-QsKp6Hf-L9gA',
-    appId: '1:542607824855:android:9cf0bd880a7fbb5043dd92',
-    messagingSenderId: '542607824855',
-    projectId: 'fitness-154e6',
-    storageBucket: 'fitness-154e6.firebasestorage.app',
+    apiKey: 'AIzaSyDDixJkieP5qJdSZB0LXdK0plqPYywDXpQ',
+    appId: '1:923195818513:android:56490f43a9e25b7fd567b0',
+    messagingSenderId: '923195818513',
+    projectId: 'speechyai-5bf0b',
+    storageBucket: 'speechyai-5bf0b.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDFFmJVpZw81wSQE21sBTNGcoFOC1sEW40',
-    appId: '1:542607824855:ios:db198010b61df62d43dd92',
-    messagingSenderId: '542607824855',
-    projectId: 'fitness-154e6',
-    storageBucket: 'fitness-154e6.firebasestorage.app',
-    iosBundleId: 'com.speechmaster.speechCoach',
+    apiKey: 'AIzaSyA7JIdelxsCZR0uX5A2iZ13x-8v8YPXQhA',
+    appId: '1:923195818513:ios:dd9b5fa8d058c71bd567b0',
+    messagingSenderId: '923195818513',
+    projectId: 'speechyai-5bf0b',
+    storageBucket: 'speechyai-5bf0b.firebasestorage.app',
+    androidClientId: '923195818513-5hbldmprlfeb9l22hqe9q4vcbaue8ru1.apps.googleusercontent.com',
+    iosClientId: '923195818513-ic0oatv3e43qsee0l8fhhlhhhat97nas.apps.googleusercontent.com',
+    iosBundleId: 'com.furqat.speechyai',
   );
+
 }

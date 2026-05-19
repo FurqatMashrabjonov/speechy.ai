@@ -1,48 +1,48 @@
 {
   "project_info": {
-    "project_number": "542607824855",
-    "project_id": "fitness-154e6",
-    "storage_bucket": "fitness-154e6.firebasestorage.app"
+    "project_number": "923195818513",
+    "project_id": "speechyai-5bf0b",
+    "storage_bucket": "speechyai-5bf0b.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:542607824855:android:9cf0bd880a7fbb5043dd92",
+        "mobilesdk_app_id": "1:923195818513:android:56490f43a9e25b7fd567b0",
         "android_client_info": {
-          "package_name": "com.speechmaster.speech_coach"
+          "package_name": "com.furqat.speechyai"
         }
       },
       "oauth_client": [
         {
-          "client_id": "542607824855-etcgv9qcqta2ev8mu4ofjv6l9ng5i1rd.apps.googleusercontent.com",
+          "client_id": "923195818513-5hbldmprlfeb9l22hqe9q4vcbaue8ru1.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.speechmaster.speech_coach",
-            "certificate_hash": "c856e958d6c04e82a806dbd4e83d87a19546fd2f"
+            "package_name": "com.furqat.speechyai",
+            "certificate_hash": "1fe55adca2baa27c331af074ec53ec3157e62a50"
           }
         },
         {
-          "client_id": "542607824855-4vsj22g0m7rsfl3n6hdq7f95p5v5o3qt.apps.googleusercontent.com",
+          "client_id": "923195818513-mpg23ahqhc1eh9l7v7eqhvqid3i4sssl.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAXJBXLGIHSpDXwd_q4gk-QsKp6Hf-L9gA"
+          "current_key": "AIzaSyDDixJkieP5qJdSZB0LXdK0plqPYywDXpQ"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "542607824855-4vsj22g0m7rsfl3n6hdq7f95p5v5o3qt.apps.googleusercontent.com",
+              "client_id": "923195818513-mpg23ahqhc1eh9l7v7eqhvqid3i4sssl.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "542607824855-vpr0g29qv1j4g9ttbl4ns2fiuiodsllb.apps.googleusercontent.com",
+              "client_id": "923195818513-ic0oatv3e43qsee0l8fhhlhhhat97nas.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.speechmaster.speechCoach"
+                "bundle_id": "com.furqat.speechyai"
               }
             }
           ]
@@ -51,34 +51,34 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:542607824855:android:0aefe50f716c5c3a43dd92",
+        "mobilesdk_app_id": "1:923195818513:android:f61064c9ad9d76e7d567b0",
         "android_client_info": {
-          "package_name": "com.test.gemini_live_test"
+          "package_name": "com.speechmaster.speech_coach"
         }
       },
       "oauth_client": [
         {
-          "client_id": "542607824855-4vsj22g0m7rsfl3n6hdq7f95p5v5o3qt.apps.googleusercontent.com",
+          "client_id": "923195818513-mpg23ahqhc1eh9l7v7eqhvqid3i4sssl.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAXJBXLGIHSpDXwd_q4gk-QsKp6Hf-L9gA"
+          "current_key": "AIzaSyDDixJkieP5qJdSZB0LXdK0plqPYywDXpQ"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "542607824855-4vsj22g0m7rsfl3n6hdq7f95p5v5o3qt.apps.googleusercontent.com",
+              "client_id": "923195818513-mpg23ahqhc1eh9l7v7eqhvqid3i4sssl.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "542607824855-vpr0g29qv1j4g9ttbl4ns2fiuiodsllb.apps.googleusercontent.com",
+              "client_id": "923195818513-ic0oatv3e43qsee0l8fhhlhhhat97nas.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.speechmaster.speechCoach"
+                "bundle_id": "com.furqat.speechyai"
               }
             }
           ]
