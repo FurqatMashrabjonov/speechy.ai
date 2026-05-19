@@ -5,9 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
-import 'package:speech_coach/features/daily_goal/presentation/providers/daily_goal_provider.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
-import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
 class PracticeScreen extends ConsumerWidget {
@@ -41,8 +39,6 @@ class PracticeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dailyChallenge = ref.watch(dailyChallengeProvider);
-
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -69,18 +65,6 @@ class PracticeScreen extends ConsumerWidget {
                 ],
               ).animate().fadeIn(duration: 400.ms),
               const SizedBox(height: 20),
-
-              // Daily Challenge Banner
-              if (dailyChallenge != null)
-                _DailyChallengeBanner(
-                  title: dailyChallenge.title,
-                  description: dailyChallenge.description,
-                  scenarioId: dailyChallenge.id,
-                )
-                    .animate()
-                    .fadeIn(delay: 100.ms, duration: 400.ms)
-                    .slideY(begin: 0.05),
-              if (dailyChallenge != null) const SizedBox(height: 24),
 
               // Categories
               Text(
@@ -125,92 +109,6 @@ class PracticeScreen extends ConsumerWidget {
   }
 }
 
-class _DailyChallengeBanner extends StatelessWidget {
-  final String title;
-  final String description;
-  final String scenarioId;
-
-  const _DailyChallengeBanner({
-    required this.title,
-    required this.description,
-    required this.scenarioId,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tappable(
-      onTap: () => context.push(
-        '/scenario/${Uri.encodeComponent(scenarioId)}',
-      ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.bolt_rounded,
-                  color: AppColors.white.withValues(alpha: 0.9),
-                  size: 16,
-                ),
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'DAILY CHALLENGE',
-                    style: AppTypography.labelSmall(
-                      color: AppColors.white,
-                    ).copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 10,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: AppTypography.headlineSmall(color: AppColors.white),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodySmall(
-                color: AppColors.white.withValues(alpha: 0.8),
-              ),
-            ),
-            const SizedBox(height: 12),
-            DuoButton(
-              text: 'Start Now',
-              color: AppColors.white,
-              shadowColor: const Color(0xFFE5E5E5),
-              onTap: () => context.push(
-                '/scenario/${Uri.encodeComponent(scenarioId)}',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _CategoryCard extends StatelessWidget {
   final String name;

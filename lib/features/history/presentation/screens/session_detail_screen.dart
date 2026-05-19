@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:screenshot/screenshot.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
@@ -10,7 +9,6 @@ import 'package:speech_coach/features/history/data/session_history_repository.da
 import 'package:speech_coach/features/history/domain/session_history_entity.dart';
 import 'package:speech_coach/features/feedback/presentation/widgets/radar_chart.dart';
 import 'package:speech_coach/features/feedback/presentation/widgets/score_bar.dart';
-import 'package:speech_coach/features/sharing/data/share_service.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
 final _sessionDetailProvider =
@@ -21,7 +19,6 @@ final _sessionDetailProvider =
 
 class SessionDetailScreen extends ConsumerWidget {
   final String sessionId;
-  final _screenshotController = ScreenshotController();
 
   SessionDetailScreen({super.key, required this.sessionId});
 
@@ -128,36 +125,6 @@ class SessionDetailScreen extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Tappable(
-                onTap: () => _shareScoreCard(context, session),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.share_rounded,
-                        size: 16,
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Share',
-                        style: AppTypography.labelMedium(
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -166,11 +133,7 @@ class SessionDetailScreen extends ConsumerWidget {
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Screenshot(
-              controller: _screenshotController,
-              child: Container(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: Column(
+            child: Column(
                   children: [
                     const SizedBox(height: 8),
                     // Category badge
@@ -320,27 +283,11 @@ class SessionDetailScreen extends ConsumerWidget {
                           .fadeIn(delay: 1000.ms, duration: 400.ms),
                     const SizedBox(height: 24),
                   ],
-                ),
-              ),
             ),
           ),
         ),
       ],
     );
-  }
-
-  Future<void> _shareScoreCard(
-    BuildContext context,
-    SessionHistoryEntry session,
-  ) async {
-    final image = await _screenshotController.capture();
-    if (image != null) {
-      await ShareService.shareScoreCardImage(
-        imageBytes: image,
-        scenarioTitle: session.scenarioTitle,
-        overallScore: session.overallScore ?? 0,
-      );
-    }
   }
 
   String _formatFullDate(DateTime date) {

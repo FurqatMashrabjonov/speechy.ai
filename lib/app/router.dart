@@ -4,15 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:speech_coach/features/auth/presentation/providers/auth_provider.dart';
 import 'package:speech_coach/features/auth/presentation/screens/login_screen.dart';
 import 'package:speech_coach/features/auth/presentation/screens/onboarding_screen.dart';
-import 'package:speech_coach/features/auth/presentation/screens/register_screen.dart';
 import 'package:speech_coach/features/auth/presentation/screens/splash_screen.dart';
 import 'package:speech_coach/features/conversation/presentation/screens/conversation_screen.dart';
-import 'package:speech_coach/features/text_chat/presentation/screens/text_chat_screen.dart';
 import 'package:speech_coach/features/feedback/presentation/screens/score_card_screen.dart';
 import 'package:speech_coach/features/history/presentation/screens/session_detail_screen.dart';
 import 'package:speech_coach/features/history/presentation/screens/session_history_screen.dart';
 import 'package:speech_coach/features/home/presentation/screens/home_screen.dart';
-import 'package:speech_coach/features/onboarding/presentation/screens/onboarding_flow_screen.dart';
 import 'package:speech_coach/features/paywall/presentation/screens/paywall_screen.dart';
 import 'package:speech_coach/features/profile/presentation/screens/profile_screen.dart';
 import 'package:speech_coach/features/profile/presentation/screens/settings_screen.dart';
@@ -23,11 +20,6 @@ import 'package:speech_coach/features/scenarios/presentation/screens/scenario_li
 import 'package:speech_coach/features/session/presentation/screens/feedback_screen.dart';
 import 'package:speech_coach/features/session/presentation/screens/recording_screen.dart';
 import 'package:speech_coach/features/session/presentation/screens/session_setup_screen.dart';
-import 'package:speech_coach/features/speaker_dna/presentation/screens/speaker_dna_quiz_screen.dart';
-import 'package:speech_coach/features/speaker_dna/presentation/screens/speaker_dna_result_screen.dart';
-import 'package:speech_coach/features/filler_challenge/presentation/screens/filler_challenge_screen.dart';
-import 'package:speech_coach/features/filler_challenge/presentation/screens/filler_result_screen.dart';
-import 'package:speech_coach/features/voice_wrapped/presentation/screens/voice_wrapped_screen.dart';
 import 'package:speech_coach/features/assessment/presentation/screens/assessment_screen.dart';
 import 'package:speech_coach/features/assessment/presentation/screens/plan_summary_screen.dart';
 import 'package:speech_coach/features/assessment/presentation/screens/roadmap_catalog_screen.dart';
@@ -42,10 +34,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isLoggedIn = authState.whenOrNull(data: (user) => user != null) ?? false;
       final isAuthRoute = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register' ||
           state.matchedLocation == '/onboarding' ||
-          state.matchedLocation == '/onboarding-flow' ||
-          state.matchedLocation == '/speaker-dna-quiz' ||
           state.matchedLocation == '/splash';
 
       if (isLoggedIn && isAuthRoute && state.matchedLocation != '/splash') {
@@ -74,16 +63,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
-        path: '/onboarding-flow',
-        builder: (context, state) => const OnboardingFlowScreen(),
-      ),
-      GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: '/register',
-        builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
         path: '/assessment',
@@ -400,133 +381,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           );
         },
-      ),
-      // Text chat (with optional scenario params)
-      GoRoute(
-        path: '/text-chat/:category',
-        pageBuilder: (context, state) {
-          final category = Uri.decodeComponent(
-            state.pathParameters['category']!,
-          );
-          final extra = state.extra as Map<String, dynamic>?;
-          return CustomTransitionPage(
-            child: TextChatScreen(
-              category: category,
-              scenarioId: extra?['scenarioId'] as String?,
-              scenarioTitle: extra?['scenarioTitle'] as String?,
-              scenarioPrompt: extra?['scenarioPrompt'] as String?,
-              durationMinutes: extra?['durationMinutes'] as int?,
-              characterName: extra?['characterName'] as String?,
-              characterPersonality: extra?['characterPersonality'] as String?,
-            ),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 1),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOutCubic,
-                )),
-                child: child,
-              );
-            },
-          );
-        },
-      ),
-      // Speaker DNA
-      GoRoute(
-        path: '/speaker-dna-quiz',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const SpeakerDNAQuizScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
-              child: child,
-            );
-          },
-        ),
-      ),
-      GoRoute(
-        path: '/speaker-dna-result',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const SpeakerDNAResultScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
-              child: child,
-            );
-          },
-        ),
-      ),
-      // Filler Challenge
-      GoRoute(
-        path: '/filler-challenge',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const FillerChallengeScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
-              child: child,
-            );
-          },
-        ),
-      ),
-      GoRoute(
-        path: '/filler-result',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const FillerResultScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
-              child: child,
-            );
-          },
-        ),
-      ),
-      // Voice Wrapped
-      GoRoute(
-        path: '/voice-wrapped',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const VoiceWrappedScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
-              child: child,
-            );
-          },
-        ),
       ),
       // Conversation (with optional scenario params)
       GoRoute(

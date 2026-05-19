@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:screenshot/screenshot.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
@@ -16,11 +15,6 @@ import 'package:speech_coach/shared/widgets/tappable.dart';
 import 'package:speech_coach/features/feedback/presentation/providers/feedback_provider.dart';
 import 'package:speech_coach/features/history/presentation/providers/session_history_provider.dart';
 import 'package:speech_coach/features/progress/presentation/providers/progress_provider.dart';
-import 'package:speech_coach/features/roast/data/roast_service.dart';
-import 'package:speech_coach/features/roast/presentation/providers/roast_provider.dart';
-import 'package:speech_coach/features/roast/presentation/widgets/roast_card.dart';
-import 'package:speech_coach/features/roast/presentation/widgets/roast_intensity_picker.dart';
-import 'package:speech_coach/features/sharing/data/share_service.dart';
 import 'package:speech_coach/shared/widgets/celebration_overlay.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dart';
@@ -52,7 +46,6 @@ class ScoreCardScreen extends ConsumerStatefulWidget {
 
 class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
     with TickerProviderStateMixin {
-  final _screenshotController = ScreenshotController();
   bool _xpAwarded = false;
   bool _sessionSaved = false;
   bool _reviewChecked = false;
@@ -199,16 +192,9 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
           _maybeRequestReview(feedbackState.feedback!);
         }
 
-        if (!_celebrationShown) {
-          final progressNotifier = ref.read(progressProvider.notifier);
-          if (feedbackState.feedback!.overallScore >= 80 ||
-              progressNotifier.dailyGoalJustCompleted) {
-            _celebrationShown = true;
-            final message = progressNotifier.dailyGoalJustCompleted
-                ? 'Daily Goal Complete!'
-                : 'Amazing Performance!';
-            _showCelebration(message);
-          }
+        if (!_celebrationShown && feedbackState.feedback!.overallScore >= 80) {
+          _celebrationShown = true;
+          _showCelebration('Amazing Performance!');
         }
       });
     }
@@ -456,14 +442,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
               const Spacer(),
               Text('Session Feedback', style: AppTypography.titleMedium()),
               const Spacer(),
-              Tappable(
-                onTap: () => _shareScoreCard(feedback),
-                child: const Icon(
-                  Icons.star_outline_rounded,
-                  size: 24,
-                  color: AppColors.primary,
-                ),
-              ),
+              const SizedBox(width: 24),
             ],
           ),
         ),
@@ -472,11 +451,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Screenshot(
-              controller: _screenshotController,
-              child: Container(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: Column(
+            child: Column(
                   children: [
                     const SizedBox(height: 16),
 
@@ -725,8 +700,6 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                     const SizedBox(height: 24),
                   ],
                 ),
-              ),
-            ),
           ),
         ),
 
@@ -760,36 +733,14 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                 },
               ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Tappable(
-                    onTap: () => context.go('/home'),
-                    child: Text(
-                      'Go Home',
-                      style: AppTypography.labelMedium(
-                        color: context.textSecondary,
-                      ),
-                    ),
+              Tappable(
+                onTap: () => context.go('/home'),
+                child: Text(
+                  'Go Home',
+                  style: AppTypography.labelMedium(
+                    color: context.textSecondary,
                   ),
-                  const SizedBox(width: 24),
-                  Tappable(
-                    onTap: () => _showRoastPicker(feedback),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('\u{1F525}', style: TextStyle(fontSize: 16)),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Roast Me',
-                          style: AppTypography.labelMedium(
-                            color: AppColors.error,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
@@ -848,84 +799,6 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
     }
   }
 
-  void _showRoastPicker(ConversationFeedback feedback) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => RoastIntensityPicker(
-        onSelected: (intensity) {
-          ref
-              .read(roastProvider.notifier)
-              .generateRoast(
-                transcript: widget.transcript,
-                overallScore: feedback.overallScore,
-                clarity: feedback.clarity,
-                confidence: feedback.confidence,
-                engagement: feedback.engagement,
-                relevance: feedback.relevance,
-                intensity: intensity,
-              );
-          _showRoastResult();
-        },
-      ),
-    );
-  }
-
-  void _showRoastResult() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => Consumer(
-        builder: (context, ref, _) {
-          final roastState = ref.watch(roastProvider);
-          if (roastState.status == RoastStatus.loading) {
-            return const SizedBox(
-              height: 200,
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
-            );
-          }
-          if (roastState.status == RoastStatus.loaded &&
-              roastState.roast != null) {
-            return RoastCard(
-              roastText: roastState.roast!,
-              intensity: roastState.intensity ?? RoastIntensity.honest,
-              scenarioTitle: widget.scenarioTitle,
-            );
-          }
-          if (roastState.status == RoastStatus.error) {
-            return SizedBox(
-              height: 200,
-              child: Center(
-                child: Text(
-                  'Roast failed. Even the AI was speechless.',
-                  style: AppTypography.bodyMedium(color: context.textSecondary),
-                ),
-              ),
-            );
-          }
-          return const SizedBox.shrink();
-        },
-      ),
-    );
-  }
-
-  Future<void> _shareScoreCard(ConversationFeedback feedback) async {
-    final image = await _screenshotController.capture();
-    if (image != null) {
-      await ShareService.shareScoreCardImage(
-        imageBytes: image,
-        scenarioTitle: widget.scenarioTitle,
-        overallScore: feedback.overallScore,
-      );
-    }
-  }
 }
 
 // --- Loading animation helpers ---

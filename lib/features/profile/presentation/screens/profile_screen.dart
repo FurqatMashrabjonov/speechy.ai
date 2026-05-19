@@ -15,7 +15,6 @@ import 'package:speech_coach/features/progress/presentation/utils/metric_helpers
 import 'package:speech_coach/features/progress/presentation/widgets/metric_row.dart';
 import 'package:speech_coach/features/progress/presentation/widgets/score_trend_chart.dart';
 import 'package:speech_coach/features/progress/presentation/widgets/xp_bar.dart';
-import 'package:speech_coach/features/speaker_dna/presentation/providers/speaker_dna_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -37,8 +36,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final progress = ref.watch(progressProvider);
-    final dnaState = ref.watch(speakerDNAProvider);
-    final historyState = ref.watch(sessionHistoryProvider);
+final historyState = ref.watch(sessionHistoryProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -142,40 +140,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             color: context.textSecondary,
                           ),
                         ),
-                        if (dnaState.dna != null) ...[
-                          const SizedBox(height: 8),
-                          Tappable(
-                            onTap: () => context.push('/speaker-dna-result'),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    AppColors.primary.withValues(alpha: 0.14),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.fingerprint_rounded,
-                                    color: AppColors.primary,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    dnaState.dna!.archetype,
-                                    style: AppTypography.labelSmall(
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ).animate().fadeIn(duration: 400.ms);
@@ -607,35 +571,6 @@ class _AccountSection extends StatelessWidget {
         const SizedBox(height: 16),
 
         // Features
-        Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardTheme.color ?? context.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE5E5E5), width: 2),
-          ),
-          child: Column(
-            children: [
-              ListTile(
-                leading:
-                    _icon(Icons.fingerprint_rounded, AppColors.primary),
-                title: const Text('Speaker DNA Quiz'),
-                trailing: Icon(Icons.chevron_right_rounded,
-                    color: context.textTertiary),
-                onTap: () => context.push('/speaker-dna-quiz'),
-              ),
-              const Divider(height: 1, indent: 60),
-              ListTile(
-                leading: _icon(
-                    Icons.auto_awesome_rounded, AppColors.secondary),
-                title: const Text('Voice Wrapped'),
-                trailing: Icon(Icons.chevron_right_rounded,
-                    color: context.textTertiary),
-                onTap: () => context.push('/voice-wrapped'),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
 
         // Account Actions
         Container(

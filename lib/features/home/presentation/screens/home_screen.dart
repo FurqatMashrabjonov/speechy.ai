@@ -23,65 +23,10 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-bool _isWrappedAvailable(UserProgress progress) {
-  final now = DateTime.now();
-  if (now.day > 7) return false;
-  final lastMonth = now.month > 1
-      ? DateTime(now.year, now.month - 1)
-      : DateTime(now.year - 1, 12);
-  return progress.sessionHistory.any(
-      (s) => s.date.year == lastMonth.year && s.date.month == lastMonth.month);
-}
-
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  bool _wrappedShown = false;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _maybeShowWrapped();
-    });
-  }
-
-  void _maybeShowWrapped() {
-    if (_wrappedShown) return;
-    final progress = ref.read(progressProvider);
-    if (_isWrappedAvailable(progress)) {
-      _wrappedShown = true;
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.auto_awesome_rounded,
-                  color: AppColors.primary, size: 48),
-              const SizedBox(height: 16),
-              Text('Monthly Wrapped Ready!',
-                  style: AppTypography.headlineSmall(),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              Text('Your voice recap for last month is ready.',
-                  style: AppTypography.bodySmall(color: ctx.textSecondary),
-                  textAlign: TextAlign.center),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx), child: const Text('Later')),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                context.push('/voice-wrapped');
-              },
-              child: const Text('View'),
-            ),
-          ],
-        ),
-      );
-    }
   }
 
   String get _greeting {

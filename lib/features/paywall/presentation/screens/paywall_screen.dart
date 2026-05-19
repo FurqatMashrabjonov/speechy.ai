@@ -7,7 +7,6 @@ import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
-import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
 /// Paywall screen with custom UI.
@@ -49,8 +48,6 @@ class _CustomPaywallFallback extends StatelessWidget {
   Widget build(BuildContext context) {
     final monthlyPkg = sub.monthlyPackage;
     final yearlyPkg = sub.yearlyPackage;
-    final lifetimePkg = sub.lifetimePackage;
-
     return Scaffold(
       body: SafeArea(
         child: Column(
