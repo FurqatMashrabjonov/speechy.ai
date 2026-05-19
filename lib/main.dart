@@ -14,35 +14,27 @@ import 'package:speech_coach/features/paywall/data/revenue_cat_service.dart';
 import 'package:speech_coach/shared/providers/user_provider.dart';
 
 void main() async {
-  debugPrint('[main] 1 start');
   WidgetsFlutterBinding.ensureInitialized();
-  debugPrint('[main] 2 ensureInitialized');
 
   // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  debugPrint('[main] 3 firebase done');
 
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
-  debugPrint('[main] 4 prefs done');
 
   // Initialize RevenueCat — skip in debug (simulator compat)
   if (kReleaseMode) {
     try {
       await RevenueCatService().init();
-    } catch (e) {
-      debugPrint('[main] RevenueCat init failed: $e');
-    }
+    } catch (_) {}
   }
 
   // Initialize Notifications
   try {
     await NotificationService.init();
-  } catch (e) {
-    debugPrint('[main] NotificationService init failed: $e');
-  }
+  } catch (_) {}
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -57,7 +49,6 @@ void main() async {
     ),
   );
 
-  debugPrint('[main] 5 before widgets');
   // Sync home screen widget data
   final progressRepo = ProgressRepository(prefs);
   final progress = progressRepo.load();
@@ -75,11 +66,7 @@ void main() async {
         roadmapTitle: plan.title,
       );
     }
-  } catch (e) {
-    debugPrint('[main] daily reminder schedule failed: $e');
-  }
-
-  debugPrint('[main] 6 runApp');
+  } catch (_) {}
 
   runApp(
     ProviderScope(

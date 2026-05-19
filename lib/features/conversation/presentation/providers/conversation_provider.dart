@@ -562,9 +562,9 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       'The session is over. Evaluate my performance based on our conversation and my vocal tone. Call the submit_session_feedback tool with the scores and feedback, then briefly say goodbye.',
     );
 
-    // Add a failsafe timeout. If Gemini doesn't call the tool within 8 seconds,
+    // Add a failsafe timeout. If Gemini doesn't call the tool within 15 seconds,
     // end the conversation anyway so the user isn't stuck.
-    Timer(const Duration(seconds: 8), () {
+    Timer(const Duration(seconds: 15), () {
       if (mounted && state.status == ConversationStatus.analyzing) {
         debugPrint(
           'requestFeedbackAndEnd: Timed out waiting for tool call. Falling back.',

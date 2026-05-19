@@ -15,6 +15,7 @@ import 'package:speech_coach/features/conversation/presentation/providers/conver
 import 'package:speech_coach/features/profile/presentation/providers/settings_provider.dart';
 import 'package:speech_coach/features/feedback/presentation/providers/feedback_provider.dart';
 import 'package:speech_coach/features/history/presentation/providers/session_history_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ConversationScreen extends ConsumerStatefulWidget {
   final String category;
@@ -482,6 +483,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                         .startConversation();
                   },
                 ),
+                if ((state.error ?? '').toLowerCase().contains('permission') ||
+                    (state.error ?? '').toLowerCase().contains('microphone')) ...[
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: () => launchUrl(Uri.parse('app-settings:')),
+                    icon: const Icon(Icons.settings_rounded, color: Colors.white54, size: 18),
+                    label: Text('Open Settings', style: AppTypography.labelMedium(color: Colors.white54)),
+                  ),
+                ],
               ] else ...[
                 // Character avatar as hero center
                 _HeroAvatar(

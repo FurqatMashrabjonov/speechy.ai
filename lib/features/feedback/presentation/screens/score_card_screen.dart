@@ -52,6 +52,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
   bool _celebrationShown = false;
   ChainResult? _chainResult;
   Map<String, int> _fillerWords = {};
+  int? _wpm;
 
   // Loading animation state
   late AnimationController _pulseController;
@@ -119,10 +120,17 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(progressProvider.notifier).addSession(feedbackState.feedback!);
 
-        // Detect filler words from transcript
+        // Detect filler words + WPM from transcript
         if (widget.transcript.isNotEmpty) {
           final fillers = FillerDetector.detect(widget.transcript);
-          if (mounted) setState(() => _fillerWords = fillers);
+          final userWords = widget.transcript
+              .split('\n')
+              .where((l) => l.startsWith('User:'))
+              .map((l) => l.replaceFirst('User:', '').trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length)
+              .fold(0, (a, b) => a + b);
+          final durationSecs = feedbackState.feedback!.durationSeconds;
+          final wpm = durationSecs > 0 ? (userWords / (durationSecs / 60)).round() : null;
+          if (mounted) setState(() { _fillerWords = fillers; _wpm = wpm; });
         }
 
         // Record session against free quota
@@ -645,6 +653,16 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                             icon: Icons.track_changes_rounded,
                             delay: const Duration(milliseconds: 350),
                           ),
+                          if (_wpm != null) ...[
+                            const SizedBox(height: 14),
+                            ProgressBar(
+                              value: (_wpm! / 200).clamp(0.0, 1.0),
+                              label: 'Speaking Pace',
+                              trailingText: '$_wpm wpm',
+                              icon: Icons.speed_rounded,
+                              delay: const Duration(milliseconds: 450),
+                            ),
+                          ],
                         ],
                       ),
                     ).animate().fadeIn(duration: 400.ms),
