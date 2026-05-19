@@ -33,7 +33,7 @@ class CharacterRepository {
     AICharacter(
       id: 'coach_alex',
       name: 'Alex',
-      voiceName: 'Kore',
+      voiceName: 'Alnilam', // Male
       description: 'Firm and professional coach',
       personality:
           'You are Alex, a firm professional speaking coach. '
@@ -49,7 +49,7 @@ class CharacterRepository {
     AICharacter(
       id: 'friend_sam',
       name: 'Sam',
-      voiceName: 'Puck',
+      voiceName: 'Kore', // Female
       description: 'Upbeat and friendly partner',
       personality:
           'You are Sam, an upbeat friendly conversation partner. '
@@ -97,7 +97,7 @@ class CharacterRepository {
     AICharacter(
       id: 'interviewer_riley',
       name: 'Riley',
-      voiceName: 'Achird',
+      voiceName: 'Aoede', // Female
       description: 'Friendly but thorough interviewer',
       personality:
           'You are Riley, a friendly but thorough interviewer. '
@@ -113,7 +113,7 @@ class CharacterRepository {
     AICharacter(
       id: 'storyteller_kai',
       name: 'Kai',
-      voiceName: 'Aoede',
+      voiceName: 'Puck', // Male
       description: 'Breezy and creative listener',
       personality:
           'You are Kai, a breezy creative listener. '
@@ -129,7 +129,7 @@ class CharacterRepository {
     AICharacter(
       id: 'executive_taylor',
       name: 'Taylor',
-      voiceName: 'Alnilam',
+      voiceName: 'Achird', // Male
       description: 'Firm executive presence',
       personality:
           'You are Taylor, a firm executive presence. '

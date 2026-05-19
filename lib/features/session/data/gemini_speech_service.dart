@@ -10,6 +10,7 @@ class GeminiSpeechService {
   GenerativeModel get model {
     return _model ??= FirebaseAI.googleAI().generativeModel(
       model: 'gemini-2.5-flash',
+      generationConfig: GenerationConfig(responseMimeType: 'application/json'),
     );
   }
 
@@ -19,7 +20,8 @@ class GeminiSpeechService {
     required String category,
     required String prompt,
   }) async {
-    final systemPrompt = '''
+    final systemPrompt =
+        '''
 You are an expert speaking coach. Analyze this speech recording for a "$category" practice session.
 The speaker's prompt was: "$prompt"
 

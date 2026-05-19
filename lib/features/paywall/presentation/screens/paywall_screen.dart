@@ -22,14 +22,15 @@ class PaywallScreen extends ConsumerWidget {
 
     ref.listen<SubscriptionState>(subscriptionProvider, (prev, next) {
       if (next.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error!)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(next.error!)));
       }
       if (prev?.isPro != true && next.isPro) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Welcome to Pro! Enjoy unlimited access.')),
+            content: Text('Welcome to Pro! Enjoy unlimited access.'),
+          ),
         );
         context.pop();
       }
@@ -78,8 +79,7 @@ class _CustomPaywallFallback extends StatelessWidget {
           children: [
             // Close button
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
                   Tappable(
@@ -99,23 +99,26 @@ class _CustomPaywallFallback extends StatelessWidget {
 
                     // Premium mascot
                     Image.asset(
-                      AppImages.mascotPremium,
-                      width: 200,
-                      height: 200,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: const Icon(
-                          Icons.workspace_premium_rounded,
-                          color: AppColors.white,
-                          size: 40,
-                        ),
-                      ),
-                    ).animate().fadeIn(duration: 400.ms).scale(
+                          AppImages.mascotPremium,
+                          width: 200,
+                          height: 200,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              gradient: AppColors.primaryGradient,
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: const Icon(
+                              Icons.workspace_premium_rounded,
+                              color: AppColors.white,
+                              size: 40,
+                            ),
+                          ),
+                        )
+                        .animate()
+                        .fadeIn(duration: 400.ms)
+                        .scale(
                           begin: const Offset(0.8, 0.8),
                           curve: Curves.easeOutBack,
                         ),
@@ -141,7 +144,10 @@ class _CustomPaywallFallback extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE5E5E5), width: 2),
+                        border: Border.all(
+                          color: const Color(0xFFE5E5E5),
+                          width: 2,
+                        ),
                       ),
                       child: Column(
                         children: [
@@ -199,18 +205,16 @@ class _CustomPaywallFallback extends StatelessWidget {
                         Expanded(
                           child: _PricingCard(
                             title: 'Monthly',
-                            price: monthlyPkg?.storeProduct.priceString ??
+                            price:
+                                monthlyPkg?.storeProduct.priceString ??
                                 '\$9.99',
                             period: '/month',
                             isPopular: false,
                             isLoading: sub.isPurchasing,
                             onTap: () {
-                              final pkg = monthlyPkg;
-                              if (pkg != null) {
-                                ref
-                                    .read(subscriptionProvider.notifier)
-                                    .purchase(pkg);
-                              }
+                              ref
+                                  .read(subscriptionProvider.notifier)
+                                  .purchase(monthlyPkg);
                             },
                           ),
                         ),
@@ -218,19 +222,17 @@ class _CustomPaywallFallback extends StatelessWidget {
                         Expanded(
                           child: _PricingCard(
                             title: 'Yearly',
-                            price: yearlyPkg?.storeProduct.priceString ??
+                            price:
+                                yearlyPkg?.storeProduct.priceString ??
                                 '\$59.99',
                             period: '/year',
                             savings: 'Save 50%',
                             isPopular: true,
                             isLoading: sub.isPurchasing,
                             onTap: () {
-                              final pkg = yearlyPkg;
-                              if (pkg != null) {
-                                ref
-                                    .read(subscriptionProvider.notifier)
-                                    .purchase(pkg);
-                              }
+                              ref
+                                  .read(subscriptionProvider.notifier)
+                                  .purchase(yearlyPkg);
                             },
                           ),
                         ),
@@ -252,14 +254,16 @@ class _CustomPaywallFallback extends StatelessWidget {
                           Text(
                             'Launch Deal - Lifetime',
                             style: AppTypography.titleMedium(
-                                color: AppColors.primary),
+                              color: AppColors.primary,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             lifetimePkg?.storeProduct.priceString ??
                                 '\$49.99 one-time',
                             style: AppTypography.displaySmall(
-                                color: AppColors.primary),
+                              color: AppColors.primary,
+                            ),
                           ),
                           Text(
                             'Limited time offer',
@@ -274,12 +278,9 @@ class _CustomPaywallFallback extends StatelessWidget {
                             onTap: sub.isPurchasing
                                 ? null
                                 : () {
-                                    final pkg = lifetimePkg;
-                                    if (pkg != null) {
-                                      ref
-                                          .read(subscriptionProvider.notifier)
-                                          .purchase(pkg);
-                                    }
+                                    ref
+                                        .read(subscriptionProvider.notifier)
+                                        .purchase(lifetimePkg);
                                   },
                           ),
                         ],
@@ -292,14 +293,13 @@ class _CustomPaywallFallback extends StatelessWidget {
                       onPressed: sub.isRestoring
                           ? null
                           : () => ref
-                              .read(subscriptionProvider.notifier)
-                              .restore(),
+                                .read(subscriptionProvider.notifier)
+                                .restore(),
                       child: sub.isRestoring
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : Text(
                               'Restore Purchases',
@@ -352,10 +352,7 @@ class _FeatureRow extends StatelessWidget {
       children: [
         Expanded(
           flex: 3,
-          child: Text(
-            feature,
-            style: AppTypography.bodySmall(),
-          ),
+          child: Text(feature, style: AppTypography.bodySmall()),
         ),
         Expanded(
           flex: 2,
@@ -418,9 +415,7 @@ class _PricingCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isPopular
-                ? AppColors.primaryLight
-                : AppColors.white,
+            color: isPopular ? AppColors.primaryLight : AppColors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isPopular ? AppColors.primary : const Color(0xFFE5E5E5),
@@ -432,7 +427,9 @@ class _PricingCard extends StatelessWidget {
               if (isPopular)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 2),
+                    horizontal: 10,
+                    vertical: 2,
+                  ),
                   margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
@@ -440,8 +437,7 @@ class _PricingCard extends StatelessWidget {
                   ),
                   child: Text(
                     'Most Popular',
-                    style:
-                        AppTypography.labelSmall(color: AppColors.white),
+                    style: AppTypography.labelSmall(color: AppColors.white),
                   ),
                 ),
               Text(title, style: AppTypography.labelMedium()),
@@ -449,16 +445,13 @@ class _PricingCard extends StatelessWidget {
               Text(price, style: AppTypography.headlineLarge()),
               Text(
                 period,
-                style: AppTypography.labelSmall(
-                  color: context.textSecondary,
-                ),
+                style: AppTypography.labelSmall(color: context.textSecondary),
               ),
               if (savings != null) ...[
                 const SizedBox(height: 4),
                 Text(
                   savings!,
-                  style:
-                      AppTypography.labelSmall(color: AppColors.success),
+                  style: AppTypography.labelSmall(color: AppColors.success),
                 ),
               ],
             ],

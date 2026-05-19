@@ -7,26 +7,28 @@ class WidgetService {
   static const _androidActivityWidget = 'ActivityWidgetProvider';
 
   static Future<void> updateWidgetData(UserProgress progress) async {
-    // Build activity grid: 35 cells (7 days × 5 weeks), row-major
-    // Row 0 = Mon across 5 weeks, Row 1 = Tue across 5 weeks, etc.
-    final activityGrid = _buildActivityGrid(progress.sessionHistory);
+    try {
+      final activityGrid = _buildActivityGrid(progress.sessionHistory);
 
-    await Future.wait([
-      HomeWidget.saveWidgetData<int>('streak', progress.streak),
-      HomeWidget.saveWidgetData<int>('level', progress.level),
-      HomeWidget.saveWidgetData<String>('levelTitle', progress.levelTitle),
-      HomeWidget.saveWidgetData<int>('totalXp', progress.totalXp),
-      HomeWidget.saveWidgetData<int>('totalSessions', progress.totalSessions),
-      HomeWidget.saveWidgetData<double>('xpProgress', progress.levelProgress),
-      HomeWidget.saveWidgetData<int>('xpForNext', progress.xpForNextLevel),
-      HomeWidget.saveWidgetData<String>('activityGrid', activityGrid),
-    ]);
+      await Future.wait([
+        HomeWidget.saveWidgetData<int>('streak', progress.streak),
+        HomeWidget.saveWidgetData<int>('level', progress.level),
+        HomeWidget.saveWidgetData<String>('levelTitle', progress.levelTitle),
+        HomeWidget.saveWidgetData<int>('totalXp', progress.totalXp),
+        HomeWidget.saveWidgetData<int>('totalSessions', progress.totalSessions),
+        HomeWidget.saveWidgetData<double>('xpProgress', progress.levelProgress),
+        HomeWidget.saveWidgetData<int>('xpForNext', progress.xpForNextLevel),
+        HomeWidget.saveWidgetData<String>('activityGrid', activityGrid),
+      ]);
 
-    await Future.wait([
-      HomeWidget.updateWidget(androidName: _androidStatsWidget),
-      HomeWidget.updateWidget(androidName: _androidPracticeWidget),
-      HomeWidget.updateWidget(androidName: _androidActivityWidget),
-    ]);
+      await Future.wait([
+        HomeWidget.updateWidget(androidName: _androidStatsWidget),
+        HomeWidget.updateWidget(androidName: _androidPracticeWidget),
+        HomeWidget.updateWidget(androidName: _androidActivityWidget),
+      ]);
+    } catch (_) {
+      // Home widget not configured — non-critical, skip silently
+    }
   }
 
   /// Builds a comma-separated string of 35 intensity levels (0-3).

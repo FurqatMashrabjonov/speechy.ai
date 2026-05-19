@@ -5,10 +5,7 @@ import 'package:speech_coach/app/theme/app_typography.dart';
 class CoachTipCard extends StatelessWidget {
   final String tip;
 
-  const CoachTipCard({
-    super.key,
-    required this.tip,
-  });
+  const CoachTipCard({super.key, required this.tip});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +20,7 @@ class CoachTipCard extends StatelessWidget {
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Left accent bar
           Container(
@@ -70,12 +67,13 @@ class CoachTipCard extends StatelessWidget {
                             const SizedBox(width: 4),
                             Text(
                               "COACH'S TIP",
-                              style: AppTypography.labelSmall(
-                                color: AppColors.primary,
-                              ).copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
-                              ),
+                              style:
+                                  AppTypography.labelSmall(
+                                    color: AppColors.primary,
+                                  ).copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.5,
+                                  ),
                             ),
                           ],
                         ),

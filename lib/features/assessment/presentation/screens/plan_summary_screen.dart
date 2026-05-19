@@ -30,7 +30,10 @@ class PlanSummaryScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               DuoButton.primary(
                 text: 'Go Home',
-                onTap: () => context.go('/home'),
+                onTap: () {
+                  ref.invalidate(hasAssessmentProvider);
+                  context.go('/home');
+                },
               ),
             ],
           ),
@@ -51,7 +54,10 @@ class PlanSummaryScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   Tappable(
-                    onTap: () => context.go('/home'),
+                    onTap: () {
+                      ref.invalidate(hasAssessmentProvider);
+                      context.go('/home');
+                    },
                     child: const Icon(Icons.close_rounded, size: 24),
                   ),
                   const Spacer(),
@@ -287,6 +293,7 @@ class PlanSummaryScreen extends ConsumerWidget {
                     : Icons.home_rounded,
                 width: double.infinity,
                 onTap: () {
+                  ref.invalidate(hasAssessmentProvider);
                   if (nextStep != null) {
                     context.push(
                       '/scenario/${Uri.encodeComponent(nextStep.scenarioId)}',

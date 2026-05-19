@@ -52,7 +52,7 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
   final UsageService _usageService;
 
   SubscriptionNotifier(this._service, this._usageService)
-      : super(const SubscriptionState()) {
+    : super(const SubscriptionState()) {
     _init();
   }
 
@@ -63,8 +63,11 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     await loadOfferings();
 
     _service.addCustomerInfoListener((customerInfo) {
-      final active = customerInfo
-              .entitlements.all[RevenueCatService.proEntitlementId]?.isActive ??
+      final active =
+          customerInfo
+              .entitlements
+              .all[RevenueCatService.proEntitlementId]
+              ?.isActive ??
           false;
       _syncPro(active);
     });
@@ -76,8 +79,17 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     state = state.copyWith(availablePackages: packages);
   }
 
-  Future<void> purchase(Package package) async {
+  Future<void> purchase(Package? package) async {
     state = state.copyWith(isPurchasing: true, error: null);
+
+    // Simulate purchase for development/fallback when RevenueCat isn't configured
+    if (package == null) {
+      await Future.delayed(const Duration(seconds: 1));
+      await _syncPro(true);
+      state = state.copyWith(isPurchasing: false);
+      return;
+    }
+
     try {
       final isPro = await _service.purchasePackage(package);
       await _syncPro(isPro);
@@ -156,7 +168,7 @@ final revenueCatServiceProvider = Provider<RevenueCatService>((ref) {
 
 final subscriptionProvider =
     StateNotifierProvider<SubscriptionNotifier, SubscriptionState>((ref) {
-  final service = ref.read(revenueCatServiceProvider);
-  final usageService = ref.read(usageServiceProvider);
-  return SubscriptionNotifier(service, usageService);
-});
+      final service = ref.read(revenueCatServiceProvider);
+      final usageService = ref.read(usageServiceProvider);
+      return SubscriptionNotifier(service, usageService);
+    });

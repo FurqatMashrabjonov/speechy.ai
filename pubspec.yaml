@@ -54,8 +54,8 @@ dependencies:
   shared_preferences: ^2.5.3
 
   # In-App Purchases
-  purchases_flutter: ^8.10.1
-  purchases_ui_flutter: ^8.10.1
+  purchases_flutter: ^10.1.0
+  purchases_ui_flutter: ^10.1.0
 
   # URL Launcher
   url_launcher: ^6.3.1

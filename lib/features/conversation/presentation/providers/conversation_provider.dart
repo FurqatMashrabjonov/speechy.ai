@@ -7,6 +7,7 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:record/record.dart';
 import 'package:speech_coach/features/conversation/data/gemini_live_service.dart';
 import 'package:speech_coach/features/conversation/domain/conversation_entity.dart';
+import 'package:speech_coach/features/feedback/domain/feedback_entity.dart';
 
 // --- Providers ---
 
@@ -16,9 +17,9 @@ final geminiLiveServiceProvider = Provider<GeminiLiveService>((ref) {
 
 final conversationProvider = StateNotifierProvider.autoDispose
     .family<ConversationNotifier, ConversationState, String>((ref, category) {
-  final service = ref.read(geminiLiveServiceProvider);
-  return ConversationNotifier(service, category);
-});
+      final service = ref.read(geminiLiveServiceProvider);
+      return ConversationNotifier(service, category);
+    });
 
 // --- State ---
 
@@ -40,6 +41,8 @@ class ConversationState {
   final String? characterPersonality;
   // Mic mute state
   final bool isMicMuted;
+  // Feedback from live tool call
+  final ConversationFeedback? sessionFeedback;
 
   const ConversationState({
     this.status = ConversationStatus.idle,
@@ -56,6 +59,7 @@ class ConversationState {
     this.characterVoice,
     this.characterPersonality,
     this.isMicMuted = false,
+    this.sessionFeedback,
   });
 
   Duration get remaining {
@@ -90,6 +94,7 @@ class ConversationState {
     String? characterVoice,
     String? characterPersonality,
     bool? isMicMuted,
+    ConversationFeedback? sessionFeedback,
   }) {
     return ConversationState(
       status: status ?? this.status,
@@ -106,6 +111,7 @@ class ConversationState {
       characterVoice: characterVoice ?? this.characterVoice,
       characterPersonality: characterPersonality ?? this.characterPersonality,
       isMicMuted: isMicMuted ?? this.isMicMuted,
+      sessionFeedback: sessionFeedback ?? this.sessionFeedback,
     );
   }
 }
@@ -135,9 +141,10 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   bool _micIsActive = false;
   int _turnAudioBytesSent = 0; // bytes fed to SoLoud this turn
   Timer? _micResumeTimer;
+  bool _wrapUpWarningSent = false;
 
   ConversationNotifier(this._service, this.category)
-      : super(const ConversationState());
+    : super(const ConversationState());
 
   void setScenario({
     required String scenarioId,
@@ -175,10 +182,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   /// Initialize SoLoud engine and set up a buffer stream for audio playback.
   Future<void> _initAudioPlayer() async {
     if (!SoLoud.instance.isInitialized) {
-      await SoLoud.instance.init(
-        sampleRate: 24000,
-        channels: Channels.mono,
-      );
+      await SoLoud.instance.init(sampleRate: 24000, channels: Channels.mono);
     }
     await _setupNewStream();
   }
@@ -220,10 +224,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       return;
     }
 
-    state = state.copyWith(
-      status: ConversationStatus.connecting,
-      error: null,
-    );
+    state = state.copyWith(status: ConversationStatus.connecting, error: null);
 
     try {
       final hasPerms = await _recorder.hasPermission();
@@ -389,17 +390,13 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
           state = state.copyWith(status: ConversationStatus.aiSpeaking);
         }
         for (final part in msg.modelTurn!.parts) {
-          if (part is InlineDataPart &&
-              part.mimeType.startsWith('audio')) {
+          if (part is InlineDataPart && part.mimeType.startsWith('audio')) {
             // Save for the message bubble
             _turnAudioBuffer.addAll(part.bytes);
             _turnAudioBytesSent += part.bytes.length;
             // Feed directly to SoLoud — no WAV wrapping, no buffering
             if (_audioStream != null) {
-              SoLoud.instance.addAudioDataStream(
-                _audioStream!,
-                part.bytes,
-              );
+              SoLoud.instance.addAudioDataStream(_audioStream!, part.bytes);
             }
           }
         }
@@ -418,7 +415,8 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         final newText = msg.inputTranscription!.text!;
         _pendingUserTranscription += newText;
 
-        if (state.status == ConversationStatus.active && newText.trim().isNotEmpty) {
+        if (state.status == ConversationStatus.active &&
+            newText.trim().isNotEmpty) {
           state = state.copyWith(status: ConversationStatus.userSpeaking);
         }
       }
@@ -426,6 +424,49 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       // Turn is complete — create the AI message bubble (audio already playing)
       if (msg.turnComplete == true) {
         _onAiTurnComplete();
+      }
+    } else if (msg is LiveServerToolCall) {
+      if (msg.functionCalls != null) {
+        for (final call in msg.functionCalls!) {
+          if (call.name == 'submit_session_feedback') {
+            try {
+              final args = call.args;
+              // Ensure correct fields for entity creation
+              final jsonMap = Map<String, dynamic>.from(args);
+              jsonMap['scenarioId'] = state.scenarioId ?? '';
+              jsonMap['category'] = category;
+              jsonMap['durationSeconds'] = state.elapsed.inSeconds;
+              jsonMap['createdAt'] = DateTime.now().toIso8601String();
+
+              final feedback = ConversationFeedback.fromMap(jsonMap);
+              debugPrint(
+                'LiveServerToolCall: Parsed feedback successfully. Score: \${feedback.overallScore}',
+              );
+
+              // We successfully parsed the feedback. Set the feedback and close the session.
+              state = state.copyWith(
+                sessionFeedback: feedback,
+                status: ConversationStatus.ended,
+              );
+
+              // Respond to the tool call so Gemini knows we received it
+              _service.sendToolResponse([
+                FunctionResponse(call.name, {'status': 'success'}, id: call.id),
+              ]);
+
+              // End the connection
+              endConversation();
+            } catch (e) {
+              debugPrint('LiveServerToolCall Error parsing feedback: $e');
+              _service.sendToolResponse([
+                FunctionResponse(call.name, {
+                  'status': 'error',
+                  'message': e.toString(),
+                }, id: call.id),
+              ]);
+            }
+          }
+        }
       }
     }
   }
@@ -441,9 +482,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         text: userText,
         timestamp: DateTime.now(),
       );
-      state = state.copyWith(
-        messages: [...state.messages, userMsg],
-      );
+      state = state.copyWith(messages: [...state.messages, userMsg]);
     }
   }
 
@@ -507,6 +546,34 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     });
   }
 
+  Future<void> requestFeedbackAndEnd() async {
+    if (state.status == ConversationStatus.ended ||
+        state.status == ConversationStatus.analyzing) {
+      return;
+    }
+
+    // Stop mic stream so user doesn't interrupt the final processing
+    await _stopMicStream();
+
+    state = state.copyWith(status: ConversationStatus.analyzing);
+
+    // Ask Gemini for the feedback tool call
+    await _service.sendText(
+      'The session is over. Evaluate my performance based on our conversation and my vocal tone. Call the submit_session_feedback tool with the scores and feedback, then briefly say goodbye.',
+    );
+
+    // Add a failsafe timeout. If Gemini doesn't call the tool within 8 seconds,
+    // end the conversation anyway so the user isn't stuck.
+    Timer(const Duration(seconds: 8), () {
+      if (mounted && state.status == ConversationStatus.analyzing) {
+        debugPrint(
+          'requestFeedbackAndEnd: Timed out waiting for tool call. Falling back.',
+        );
+        endConversation();
+      }
+    });
+  }
+
   Future<void> endConversation() async {
     _closed = true;
     _timer?.cancel();
@@ -526,15 +593,36 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
 
   void _startTimer() {
     _timer?.cancel();
+    _wrapUpWarningSent = false;
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         state = state.copyWith(
           elapsed: state.elapsed + const Duration(seconds: 1),
         );
 
-        // Auto-end when time limit is reached
-        if (state.isTimeUp && state.status != ConversationStatus.ended) {
-          endConversation();
+        if (state.durationLimitMinutes != null &&
+            state.status != ConversationStatus.ended &&
+            state.status != ConversationStatus.analyzing) {
+          final limit = Duration(minutes: state.durationLimitMinutes!);
+          final remaining = limit - state.elapsed;
+
+          // Send a wrap-up warning 30 seconds before the end
+          if (remaining.inSeconds <= 30 && !_wrapUpWarningSent) {
+            _wrapUpWarningSent = true;
+            _service.sendText(
+              'There are only 30 seconds left in our session. Please immediately start wrapping up the conversation naturally, ask a final quick question, or say your goodbyes.',
+            );
+          }
+
+          // Auto-end when time limit is reached
+          if (state.isTimeUp) {
+            if (state.scenarioId != null) {
+              // Trigger feedback tool and exit gracefully instead of hard cutoff
+              requestFeedbackAndEnd();
+            } else {
+              endConversation();
+            }
+          }
         }
       }
     });

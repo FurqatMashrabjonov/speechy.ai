@@ -11,6 +11,7 @@ class ProgressBar extends StatefulWidget {
   final Color? color;
   final Color? trackColor;
   final bool animate;
+  final Duration delay;
 
   const ProgressBar({
     super.key,
@@ -22,6 +23,7 @@ class ProgressBar extends StatefulWidget {
     this.color,
     this.trackColor,
     this.animate = true,
+    this.delay = Duration.zero,
   });
 
   @override
@@ -43,12 +45,15 @@ class _ProgressBarState extends State<ProgressBar>
     _animation = Tween<double>(
       begin: 0,
       end: widget.value.clamp(0.0, 1.0),
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     if (widget.animate) {
-      _controller.forward();
+      if (widget.delay > Duration.zero) {
+        Future.delayed(widget.delay, () {
+          if (mounted) _controller.forward();
+        });
+      } else {
+        _controller.forward();
+      }
     } else {
       _controller.value = 1.0;
     }
@@ -58,13 +63,13 @@ class _ProgressBarState extends State<ProgressBar>
   void didUpdateWidget(ProgressBar oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
-      _animation = Tween<double>(
-        begin: _animation.value,
-        end: widget.value.clamp(0.0, 1.0),
-      ).animate(CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOutCubic,
-      ));
+      _animation =
+          Tween<double>(
+            begin: _animation.value,
+            end: widget.value.clamp(0.0, 1.0),
+          ).animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+          );
       _controller
         ..reset()
         ..forward();
@@ -118,17 +123,15 @@ class _ProgressBarState extends State<ProgressBar>
                 height: widget.height,
                 child: Stack(
                   children: [
-                    Container(
-                      width: double.infinity,
-                      color: track,
-                    ),
+                    Container(width: double.infinity, color: track),
                     FractionallySizedBox(
                       widthFactor: _animation.value,
                       child: Container(
                         decoration: BoxDecoration(
                           color: barColor,
-                          borderRadius:
-                              BorderRadius.circular(widget.height / 2),
+                          borderRadius: BorderRadius.circular(
+                            widget.height / 2,
+                          ),
                         ),
                       ),
                     ),

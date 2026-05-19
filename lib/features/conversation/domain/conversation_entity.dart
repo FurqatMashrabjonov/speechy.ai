@@ -8,6 +8,7 @@ enum ConversationStatus {
   active,
   userSpeaking,
   aiSpeaking,
+  analyzing,
   ended,
   error,
 }
@@ -27,10 +28,7 @@ class ConversationMessage {
     required this.timestamp,
   });
 
-  ConversationMessage copyWith({
-    String? text,
-    Uint8List? audioBytes,
-  }) {
+  ConversationMessage copyWith({String? text, Uint8List? audioBytes}) {
     return ConversationMessage(
       id: id,
       role: role,

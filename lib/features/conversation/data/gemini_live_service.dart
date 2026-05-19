@@ -18,45 +18,45 @@ CRITICAL RULES — follow these at all times:
   static const _personas = {
     'Presentations':
         'You are David Chen, a Senior VP of Product at a Fortune 500 company, attending a presentation in the main conference room. '
-            'You take notes on a leather notebook. You ask pointed questions about ROI, timelines, and competitive positioning. '
-            'You nod when impressed but raise an eyebrow at vague claims. Start by saying "Alright, the floor is yours."',
+        'You take notes on a leather notebook. You ask pointed questions about ROI, timelines, and competitive positioning. '
+        'You nod when impressed but raise an eyebrow at vague claims. Start by saying "Alright, the floor is yours."',
     'Interviews':
         'You are Rachel Torres, Head of Talent at a fast-growing tech company called Vertex Labs. '
-            'You are sitting across a desk with the candidate\'s resume in front of you. '
-            'You ask a mix of behavioral and technical questions, listen carefully, and dig into specifics. '
-            'Start by introducing yourself and the role warmly.',
+        'You are sitting across a desk with the candidate\'s resume in front of you. '
+        'You ask a mix of behavioral and technical questions, listen carefully, and dig into specifics. '
+        'Start by introducing yourself and the role warmly.',
     'Public Speaking':
         'You are Marcus Webb, a veteran speech coach with 20 years of experience coaching TEDx speakers. '
-            'You are sitting in the third row of an auditorium. React as a real audience member — nod, lean forward when engaged, '
-            'look distracted if the speaker loses you. Ask one thoughtful question afterward.',
+        'You are sitting in the third row of an auditorium. React as a real audience member — nod, lean forward when engaged, '
+        'look distracted if the speaker loses you. Ask one thoughtful question afterward.',
     'Conversations':
         'You are Jamie, a friendly person who just moved to the area and is naturally curious about people. '
-            'You work in graphic design and love hiking, cooking, and indie films. '
-            'Share about yourself when asked, ask thoughtful follow-up questions, and keep the conversation flowing.',
+        'You work in graphic design and love hiking, cooking, and indie films. '
+        'Share about yourself when asked, ask thoughtful follow-up questions, and keep the conversation flowing.',
     'Debates':
         'You are Professor Elena Vasquez, a sharp political science professor who moderates university debates. '
-            'You argue the opposing position with evidence and logic. You acknowledge strong points but push back firmly. '
-            'You never get personal — always attack the argument, not the person.',
+        'You argue the opposing position with evidence and logic. You acknowledge strong points but push back firmly. '
+        'You never get personal — always attack the argument, not the person.',
     'Storytelling':
         'You are Nadia, a writer and podcast host who collects personal stories. '
-            'You react with genuine emotion — laugh at funny parts, gasp at surprises, lean in during tense moments. '
-            'Ask about sensory details: "What did that feel like?", "What were you thinking in that moment?"',
+        'You react with genuine emotion — laugh at funny parts, gasp at surprises, lean in during tense moments. '
+        'Ask about sensory details: "What did that feel like?", "What were you thinking in that moment?"',
     'Phone Anxiety':
         'You are the person on the other end of a phone call. '
-            'Respond naturally as if this is a real phone conversation. '
-            'Speak at a natural pace, occasionally say "mm-hmm" or "sure", and ask clarifying questions if something is unclear.',
+        'Respond naturally as if this is a real phone conversation. '
+        'Speak at a natural pace, occasionally say "mm-hmm" or "sure", and ask clarifying questions if something is unclear.',
     'Dating & Social':
         'You are Alex, a 28-year-old who works in marketing and loves trying new restaurants and weekend hikes. '
-            'You are warm but not overly eager. You ask genuine questions, share your own experiences, '
-            'and have natural conversational chemistry. Sometimes you tease playfully.',
+        'You are warm but not overly eager. You ask genuine questions, share your own experiences, '
+        'and have natural conversational chemistry. Sometimes you tease playfully.',
     'Conflict & Boundaries':
         'You are the person the speaker needs to have a difficult conversation with. '
-            'Be realistic — show some resistance initially, push back on vague requests, '
-            'then gradually respond to clear, assertive communication. Test their ability to stay calm and firm.',
+        'Be realistic — show some resistance initially, push back on vague requests, '
+        'then gradually respond to clear, assertive communication. Test their ability to stay calm and firm.',
     'Social Situations':
         'You are Chris, someone the speaker just met at a social gathering. You are a teacher who loves travel and live music. '
-            'Be friendly and open. Share stories naturally, find common ground, and keep the energy comfortable. '
-            'Ask about their interests and react with genuine curiosity.',
+        'Be friendly and open. Share stories naturally, find common ground, and keep the energy comfortable. '
+        'Ask about their interests and react with genuine curiosity.',
   };
 
   String _buildFullSystemPrompt({
@@ -74,8 +74,9 @@ CRITICAL RULES — follow these at all times:
       // If there's also a scenario, bridge the two
       if (scenarioPrompt != null && scenarioPrompt.isNotEmpty) {
         buffer.writeln(
-            'Apply the personality above to the role below. If they conflict, '
-            'prioritize the role but keep the personality\'s speech patterns.');
+          'Apply the personality above to the role below. If they conflict, '
+          'prioritize the role but keep the personality\'s speech patterns.',
+        );
         buffer.writeln();
       }
     }
@@ -92,7 +93,9 @@ CRITICAL RULES — follow these at all times:
     // Layer 3: Guardrails (always appended)
     buffer.writeln(_guardrails);
     if (durationMinutes != null) {
-      buffer.writeln('- This session lasts approximately $durationMinutes minutes.');
+      buffer.writeln(
+        '- This session lasts approximately $durationMinutes minutes.',
+      );
     }
 
     return buffer.toString().trim();
@@ -113,11 +116,52 @@ CRITICAL RULES — follow these at all times:
         durationMinutes: durationMinutes,
       );
 
-      debugPrint('GeminiLiveService: connecting with voice="${voiceName ?? "default"}"');
+      debugPrint(
+        'GeminiLiveService: connecting with voice="${voiceName ?? "default"}"',
+      );
+
+      final submitFeedbackTool = Tool.functionDeclarations([
+        FunctionDeclaration(
+          'submit_session_feedback',
+          'Submit the final evaluation and feedback for the user\'s speaking performance in this session. Call this tool immediately when the user indicates the session is over or you are instructed to evaluate.',
+          parameters: {
+            'clarity': Schema.integer(
+              description: 'Score from 0 to 100 for clarity of speech',
+            ),
+            'confidence': Schema.integer(
+              description:
+                  'Score from 0 to 100 for vocal confidence and delivery',
+            ),
+            'engagement': Schema.integer(
+              description:
+                  'Score from 0 to 100 for how engaging the speaker was',
+            ),
+            'relevance': Schema.integer(
+              description:
+                  'Score from 0 to 100 for how relevant their responses were to the scenario',
+            ),
+            'overallScore': Schema.integer(
+              description: 'Weighted overall score from 0 to 100',
+            ),
+            'summary': Schema.string(
+              description: 'A 2-3 sentence summary of their performance',
+            ),
+            'strengths': Schema.array(
+              items: Schema.string(),
+              description: 'List of 3 specific strengths',
+            ),
+            'improvements': Schema.array(
+              items: Schema.string(),
+              description: 'List of 3 specific areas for improvement',
+            ),
+          },
+        ),
+      ]);
 
       final liveModel = FirebaseAI.googleAI().liveGenerativeModel(
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         systemInstruction: Content.text(systemInstruction),
+        tools: [submitFeedbackTool],
         liveGenerationConfig: LiveGenerationConfig(
           responseModalities: [ResponseModalities.audio],
           speechConfig: voiceName != null
@@ -165,6 +209,11 @@ CRITICAL RULES — follow these at all times:
       input: Content('user', [TextPart(text)]),
       turnComplete: true,
     );
+  }
+
+  Future<void> sendToolResponse(List<FunctionResponse> responses) async {
+    if (_session == null) return;
+    await _session!.sendToolResponse(responses);
   }
 
   /// Send a single audio chunk in real-time (replaces deprecated sendMediaStream).

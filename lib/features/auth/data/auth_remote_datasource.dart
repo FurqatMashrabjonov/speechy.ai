@@ -17,11 +17,7 @@ class AuthRemoteDatasource {
     GoogleSignIn? googleSignIn,
   })  : _auth = auth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance,
-        _googleSignIn = googleSignIn ??
-            GoogleSignIn(
-              serverClientId:
-                  '542607824855-4vsj22g0m7rsfl3n6hdq7f95p5v5o3qt.apps.googleusercontent.com',
-            );
+        _googleSignIn = googleSignIn ?? GoogleSignIn();
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;

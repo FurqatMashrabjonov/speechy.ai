@@ -51,8 +51,8 @@ class RevenueCatService {
 
   Future<bool> purchasePackage(Package package) async {
     try {
-      final customerInfo = await Purchases.purchasePackage(package);
-      return customerInfo.entitlements.all[proEntitlementId]?.isActive ?? false;
+      final result = await Purchases.purchasePackage(package);
+      return result.customerInfo.entitlements.all[proEntitlementId]?.isActive ?? false;
     } on PlatformException catch (e) {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
       if (errorCode == PurchasesErrorCode.purchaseCancelledError) {

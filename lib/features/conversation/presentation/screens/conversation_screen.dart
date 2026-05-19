@@ -41,8 +41,7 @@ class ConversationScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ConversationScreen> createState() =>
-      _ConversationScreenState();
+  ConsumerState<ConversationScreen> createState() => _ConversationScreenState();
 }
 
 class _ConversationScreenState extends ConsumerState<ConversationScreen> {
@@ -55,8 +54,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final notifier =
-          ref.read(conversationProvider(widget.category).notifier);
+      final notifier = ref.read(conversationProvider(widget.category).notifier);
 
       if (widget.characterName != null && widget.scenarioId == null) {
         notifier.setCharacter(
@@ -152,8 +150,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           children: [
             // Top bar with back button
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
                   Tappable(
@@ -174,27 +171,32 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
                     // Scenario image
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: Image.asset(
-                        scenarioImage ?? categoryImage ?? '',
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(24),
+                          child: Image.asset(
+                            scenarioImage ?? categoryImage ?? '',
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.15,
+                                ),
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: const Icon(
+                                Icons.mic_rounded,
+                                color: AppColors.primary,
+                                size: 56,
+                              ),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.mic_rounded,
-                            color: AppColors.primary,
-                            size: 56,
-                          ),
-                        ),
-                      ),
-                    ).animate().fadeIn(duration: 400.ms).scale(
+                        )
+                        .animate()
+                        .fadeIn(duration: 400.ms)
+                        .scale(
                           begin: const Offset(0.8, 0.8),
                           curve: Curves.easeOutBack,
                         ),
@@ -209,8 +211,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                     const SizedBox(height: 20),
 
                     // Your Role card
-                    if (widget.userRole != null &&
-                        widget.userRole!.isNotEmpty)
+                    if (widget.userRole != null && widget.userRole!.isNotEmpty)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
@@ -248,9 +249,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                             ),
                           ],
                         ),
-                      )
-                          .animate()
-                          .fadeIn(delay: 200.ms, duration: 400.ms),
+                      ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
                     const SizedBox(height: 16),
 
                     // AI Partner row
@@ -324,9 +323,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                           ),
                         ],
                       ),
-                    )
-                        .animate()
-                        .fadeIn(delay: 300.ms, duration: 400.ms),
+                    ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -448,6 +445,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         statusLabel = 'Listening...';
       case ConversationStatus.connecting:
         statusLabel = 'Connecting...';
+      case ConversationStatus.analyzing:
+        statusLabel = 'Compiling Feedback...';
       case ConversationStatus.error:
         statusLabel = 'Error';
       default:
@@ -472,17 +471,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 Text(
                   state.error ?? 'Something went wrong',
                   textAlign: TextAlign.center,
-                  style: AppTypography.bodyMedium(
-                    color: Colors.white70,
-                  ),
+                  style: AppTypography.bodyMedium(color: Colors.white70),
                 ),
                 const SizedBox(height: 24),
                 DuoButton.primary(
                   text: 'Try Again',
                   onTap: () {
                     ref
-                        .read(
-                            conversationProvider(widget.category).notifier)
+                        .read(conversationProvider(widget.category).notifier)
                         .startConversation();
                   },
                 ),
@@ -490,12 +486,12 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 // Character avatar as hero center
                 _HeroAvatar(
                   imagePath: _characterImagePath,
-                  isAiSpeaking:
-                      state.status == ConversationStatus.aiSpeaking,
+                  isAiSpeaking: state.status == ConversationStatus.aiSpeaking,
                   isUserSpeaking:
                       state.status == ConversationStatus.userSpeaking,
                   isConnecting:
-                      state.status == ConversationStatus.connecting,
+                      state.status == ConversationStatus.connecting ||
+                      state.status == ConversationStatus.analyzing,
                 ),
                 const SizedBox(height: 16),
 
@@ -509,9 +505,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 // Status label
                 Text(
                   statusLabel,
-                  style: AppTypography.bodySmall(
-                    color: Colors.white54,
-                  ),
+                  style: AppTypography.bodySmall(color: Colors.white54),
                 ),
               ],
             ],
@@ -579,8 +573,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                gradient:
-                    state.isMicMuted ? null : AppColors.primaryGradient,
+                gradient: state.isMicMuted ? null : AppColors.primaryGradient,
                 color: state.isMicMuted ? const Color(0xFF4A4A4A) : null,
                 shape: BoxShape.circle,
                 boxShadow: state.isMicMuted
@@ -594,9 +587,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                       ],
               ),
               child: Icon(
-                state.isMicMuted
-                    ? Icons.mic_off_rounded
-                    : Icons.mic_rounded,
+                state.isMicMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
                 color: Colors.white,
                 size: 28,
               ),
@@ -646,19 +637,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'End Conversation?',
-          style: AppTypography.headlineSmall(),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('End Conversation?', style: AppTypography.headlineSmall()),
         content: Text(
           currentState.scenarioId != null
               ? 'This will end your session and generate your score card.'
               : 'This will end your current conversation session.',
-          style: AppTypography.bodyMedium(
-            color: AppColors.textSecondaryLight,
-          ),
+          style: AppTypography.bodyMedium(color: AppColors.textSecondaryLight),
         ),
         actions: [
           TextButton(
@@ -673,11 +658,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              ref
-                  .read(conversationProvider(widget.category).notifier)
-                  .endConversation();
               final s = ref.read(conversationProvider(widget.category));
-              if (s.scenarioId == null) {
+              if (s.scenarioId != null) {
+                ref
+                    .read(conversationProvider(widget.category).notifier)
+                    .requestFeedbackAndEnd();
+              } else {
+                ref
+                    .read(conversationProvider(widget.category).notifier)
+                    .endConversation();
                 context.pop();
               }
             },
@@ -695,35 +684,53 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     // Reset feedback provider to clean state before starting new analysis
     ref.read(feedbackProvider.notifier).reset();
 
-    // Start feedback analysis IMMEDIATELY (don't wait for Firestore)
-    ref.read(feedbackProvider.notifier).analyzeConversation(
-          transcript: state.fullTranscript,
-          category: widget.category,
-          scenarioTitle: state.scenarioTitle ?? widget.category,
-          scenarioPrompt: state.scenarioPrompt ?? '',
-          scenarioId: state.scenarioId ?? '',
-          durationSeconds: state.elapsed.inSeconds,
+    if (state.sessionFeedback != null) {
+      ref.read(feedbackProvider.notifier).setFeedback(state.sessionFeedback!);
+
+      // If we already have feedback, we don't need a pending session.
+      // We navigate immediately with sessionId: null, and ScoreCardScreen will
+      // save the completed session perfectly using saveSessionProvider.
+      if (mounted) {
+        context.pushReplacement(
+          '/score-card',
+          extra: {
+            'sessionId': null,
+            'scenarioId': state.scenarioId ?? '',
+            'scenarioTitle': state.scenarioTitle ?? widget.category,
+            'category': widget.category,
+            'transcript': state.fullTranscript,
+          },
         );
+      }
+    } else {
+      // REST API Fallback path
+      // Start feedback analysis IMMEDIATELY
+      ref
+          .read(feedbackProvider.notifier)
+          .analyzeConversation(
+            transcript: state.fullTranscript,
+            category: widget.category,
+            scenarioTitle: state.scenarioTitle ?? widget.category,
+            scenarioPrompt: state.scenarioPrompt ?? '',
+            scenarioId: state.scenarioId ?? '',
+            durationSeconds: state.elapsed.inSeconds,
+          );
 
-    // Save to Firestore in background (non-blocking, with timeout)
-    // This must NOT block navigation or feedback
-    String? sessionId;
-    _savePendingInBackground(state).then((id) {
-      sessionId = id;
-    });
+      // Create a pending session FIRST so ScoreCardScreen can update it when feedback is ready
+      final sessionId = await _savePendingInBackground(state);
 
-    // Navigate to score card immediately
-    if (mounted) {
-      context.pushReplacement(
-        '/score-card',
-        extra: {
-          'sessionId': sessionId,
-          'scenarioId': state.scenarioId ?? '',
-          'scenarioTitle': state.scenarioTitle ?? widget.category,
-          'category': widget.category,
-          'transcript': state.fullTranscript,
-        },
-      );
+      if (mounted) {
+        context.pushReplacement(
+          '/score-card',
+          extra: {
+            'sessionId': sessionId,
+            'scenarioId': state.scenarioId ?? '',
+            'scenarioTitle': state.scenarioTitle ?? widget.category,
+            'category': widget.category,
+            'transcript': state.fullTranscript,
+          },
+        );
+      }
     }
   }
 
@@ -846,10 +853,8 @@ class _HeroAvatarState extends State<_HeroAvatar>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final pulseScale =
-            1.0 + sin(_controller.value * pi * 2) * 0.06;
-        final ringOpacity =
-            0.3 + sin(_controller.value * pi * 2) * 0.3;
+        final pulseScale = 1.0 + sin(_controller.value * pi * 2) * 0.06;
+        final ringOpacity = 0.3 + sin(_controller.value * pi * 2) * 0.3;
 
         return SizedBox(
           width: 200,
@@ -867,8 +872,7 @@ class _HeroAvatarState extends State<_HeroAvatar>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: AppColors.primary
-                            .withValues(alpha: ringOpacity),
+                        color: AppColors.primary.withValues(alpha: ringOpacity),
                         width: 3,
                       ),
                     ),
@@ -893,8 +897,7 @@ class _HeroAvatarState extends State<_HeroAvatar>
                         width: 160,
                         height: 160,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _fallbackAvatar(),
+                        errorBuilder: (_, __, ___) => _fallbackAvatar(),
                       )
                     : _fallbackAvatar(),
               ),
@@ -930,11 +933,7 @@ class _HeroAvatarState extends State<_HeroAvatar>
         color: AppColors.primary.withValues(alpha: 0.15),
         shape: BoxShape.circle,
       ),
-      child: const Icon(
-        Icons.auto_awesome,
-        color: AppColors.primary,
-        size: 64,
-      ),
+      child: const Icon(Icons.auto_awesome, color: AppColors.primary, size: 64),
     );
   }
 }
@@ -1024,9 +1023,7 @@ class _CaptionOverlay extends StatelessWidget {
           if (currentTranscription.isNotEmpty)
             Text(
               'AI: $currentTranscription',
-              style: AppTypography.bodySmall(
-                color: Colors.white60,
-              ),
+              style: AppTypography.bodySmall(color: Colors.white60),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
