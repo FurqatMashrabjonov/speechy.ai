@@ -55,7 +55,6 @@ dependencies:
 
   # In-App Purchases
   purchases_flutter: ^10.1.0
-  purchases_ui_flutter: ^10.1.0
 
   # URL Launcher
   url_launcher: ^6.3.1

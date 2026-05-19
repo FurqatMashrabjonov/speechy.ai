@@ -2,7 +2,6 @@ import 'dart:developer';
 
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
 class RevenueCatService {
   static const _apiKey = 'test_wpYJJTxBrHOoUrDwlCMpNiCDbRJ';
@@ -81,27 +80,14 @@ class RevenueCatService {
     Purchases.addCustomerInfoUpdateListener(listener);
   }
 
-  /// Present RevenueCat's remote paywall UI.
-  /// Returns true if the user made a purchase.
-  Future<bool> presentPaywall() async {
-    final result = await RevenueCatUI.presentPaywall();
-    log('[RevenueCat] Paywall result: $result');
-    return result == PaywallResult.purchased;
-  }
+  /// No-op: use Flutter /paywall route instead of RevenueCat native UI.
+  Future<bool> presentPaywall() async => false;
 
-  /// Present paywall only if the user doesn't have the "pro" entitlement.
-  /// Returns true if the user made a purchase.
-  Future<bool> presentPaywallIfNeeded() async {
-    final result =
-        await RevenueCatUI.presentPaywallIfNeeded(proEntitlementId);
-    log('[RevenueCat] PaywallIfNeeded result: $result');
-    return result == PaywallResult.purchased;
-  }
+  /// No-op: use Flutter /paywall route instead of RevenueCat native UI.
+  Future<bool> presentPaywallIfNeeded() async => false;
 
-  /// Open RevenueCat Customer Center for subscription management.
-  Future<void> presentCustomerCenter() async {
-    await RevenueCatUI.presentCustomerCenter();
-  }
+  /// No-op: Customer Center not available without purchases_ui_flutter.
+  Future<void> presentCustomerCenter() async {}
 
   Future<void> logIn(String userId) async {
     try {
