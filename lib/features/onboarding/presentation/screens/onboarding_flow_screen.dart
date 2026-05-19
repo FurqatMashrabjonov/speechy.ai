@@ -28,25 +28,25 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     _OnboardingPage(
       icon: Icons.record_voice_over_rounded,
       iconColor: AppColors.primary,
-      title: 'Practice Real Conversations',
+      title: 'Real Conversations, Real Feedback',
       description:
-          'Talk with AI personas that respond in real-time voice. Practice interviews, debates, presentations, and more.',
+          'Talk out loud with an AI that responds in real-time voice — like a real interviewer, date, or boss. No scripts. Just natural conversation.',
       imagePath: AppImages.mascotWelcome,
     ),
     _OnboardingPage(
-      icon: Icons.insights_rounded,
+      icon: Icons.route_rounded,
       iconColor: AppColors.secondary,
-      title: 'Get AI Feedback',
+      title: 'Your Personal Roadmap',
       description:
-          'Receive detailed score cards after each session. Track clarity, confidence, engagement, and relevance.',
+          'Get a 15-step path built around your goal — job interview, social confidence, public speaking. Easy to hard, one step at a time.',
       imagePath: AppImages.mascotAnalyze,
     ),
     _OnboardingPage(
-      icon: Icons.trending_up_rounded,
+      icon: Icons.insights_rounded,
       iconColor: AppColors.lime,
-      title: 'Track Your Progress',
+      title: 'See Yourself Improve',
       description:
-          'Earn XP, maintain streaks, unlock badges, and watch your speaking skills improve over time.',
+          'After each session, get scored on clarity, confidence, and engagement. Track filler words, pass each step, unlock the next level.',
       imagePath: AppImages.mascotCelebrate,
     ),
   ];

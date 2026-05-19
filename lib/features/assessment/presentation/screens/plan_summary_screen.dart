@@ -138,7 +138,74 @@ class PlanSummaryScreen extends ConsumerWidget {
                               color: context.textSecondary,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
+
+                          // Event date + sessions/day
+                          if (plan.eventDate != null)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: plan.isIntensiveMode
+                                    ? AppColors.error.withValues(alpha: 0.08)
+                                    : AppColors.primary.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: plan.isIntensiveMode
+                                      ? AppColors.error.withValues(alpha: 0.25)
+                                      : AppColors.primary
+                                          .withValues(alpha: 0.15),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    plan.isIntensiveMode
+                                        ? Icons.local_fire_department_rounded
+                                        : Icons.event_rounded,
+                                    size: 16,
+                                    color: plan.isIntensiveMode
+                                        ? AppColors.error
+                                        : AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      plan.isIntensiveMode
+                                          ? '${plan.daysUntilEvent} days left — intensive mode active'
+                                          : '${plan.daysUntilEvent} days to your event',
+                                      style: AppTypography.labelSmall(
+                                        color: plan.isIntensiveMode
+                                            ? AppColors.error
+                                            : AppColors.primary,
+                                      ).copyWith(fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: plan.isIntensiveMode
+                                          ? AppColors.error
+                                              .withValues(alpha: 0.12)
+                                          : AppColors.primary
+                                              .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '${plan.sessionsPerDayTarget}×/day',
+                                      style: AppTypography.labelSmall(
+                                        color: plan.isIntensiveMode
+                                            ? AppColors.error
+                                            : AppColors.primary,
+                                      ).copyWith(fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
                           Row(
                             children: [
                               Expanded(
