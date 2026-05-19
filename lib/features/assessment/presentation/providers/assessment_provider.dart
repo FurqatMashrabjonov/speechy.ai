@@ -48,10 +48,44 @@ class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
     state = plan;
   }
 
-  Future<void> markCompleted(String scenarioId, double score) async {
-    if (state == null) return;
+  Future<ChainResult> markCompleted(String scenarioId, double score) async {
+    if (state == null) return ChainResult.needsRetry;
+    final step = state!.steps.cast<PlanStep?>().firstWhere(
+          (s) => s?.scenarioId == scenarioId,
+          orElse: () => null,
+        );
+    final passed = score >= (step?.minPassScore ?? 60);
+    if (!passed) {
+      await _repo.incrementRetryCount(scenarioId);
+    }
     await _repo.markStepCompleted(scenarioId, score);
     state = _repo.getLearningPlan();
+    return passed ? ChainResult.passed : ChainResult.needsRetry;
+  }
+
+  Future<void> unlockNextLevel() async {
+    if (state == null || !state!.isComplete) return;
+    final nextLevel = state!.chainLevel + 1;
+    final upgraded = state!.copyWith(
+      steps: state!.steps
+          .map((s) => PlanStep(
+                scenarioId: s.scenarioId,
+                order: s.order,
+                minPassScore: (s.minPassScore + 10).clamp(0, 95),
+                difficulty: _upgradeDifficulty(s.difficulty),
+                retryCount: 0,
+              ))
+          .toList(),
+      chainLevel: nextLevel,
+    );
+    await _repo.saveLearningPlan(upgraded);
+    state = upgraded;
+  }
+
+  String _upgradeDifficulty(String d) {
+    if (d == 'easy') return 'medium';
+    if (d == 'medium') return 'hard';
+    return 'hard';
   }
 
   PlanStep? get nextStep => state?.nextStep;

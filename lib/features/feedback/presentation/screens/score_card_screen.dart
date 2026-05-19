@@ -23,6 +23,8 @@ import 'package:speech_coach/features/roast/presentation/widgets/roast_intensity
 import 'package:speech_coach/features/sharing/data/share_service.dart';
 import 'package:speech_coach/shared/widgets/celebration_overlay.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
+import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dart';
+import 'package:speech_coach/features/filler_challenge/domain/filler_detector.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -53,6 +55,8 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
   bool _sessionSaved = false;
   bool _reviewChecked = false;
   bool _celebrationShown = false;
+  ChainResult? _chainResult;
+  Map<String, int> _fillerWords = {};
 
   // Loading animation state
   late AnimationController _pulseController;
@@ -120,31 +124,54 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(progressProvider.notifier).addSession(feedbackState.feedback!);
 
-        // Mark learning plan step as completed
-        ref.read(learningPlanProvider.notifier).markCompleted(
+        // Detect filler words from transcript
+        if (widget.transcript.isNotEmpty) {
+          final fillers = FillerDetector.detect(widget.transcript);
+          if (mounted) setState(() => _fillerWords = fillers);
+        }
+
+        // Mark learning plan step as completed, capture chain result
+        ref
+            .read(learningPlanProvider.notifier)
+            .markCompleted(
               widget.scenarioId,
               feedbackState.feedback!.overallScore.toDouble(),
-            );
+            )
+            .then((result) {
+              if (mounted) setState(() => _chainResult = result);
+            });
 
         if (!_sessionSaved) {
           _sessionSaved = true;
           // Save feedback to Firestore in background (non-blocking)
           if (widget.sessionId != null) {
-            ref.read(pendingSessionSaverProvider).completeFeedback(
+            ref
+                .read(pendingSessionSaverProvider)
+                .completeFeedback(
                   sessionId: widget.sessionId!,
                   feedback: feedbackState.feedback!,
-                ).timeout(const Duration(seconds: 5)).catchError((e) {
-                  debugPrint('ScoreCard: completeFeedback failed (non-critical): $e');
+                )
+                .timeout(const Duration(seconds: 5))
+                .catchError((e) {
+                  debugPrint(
+                    'ScoreCard: completeFeedback failed (non-critical): $e',
+                  );
                 });
           } else {
-            ref.read(saveSessionProvider).save(
+            ref
+                .read(saveSessionProvider)
+                .save(
                   scenarioId: widget.scenarioId,
                   scenarioTitle: widget.scenarioTitle,
                   category: widget.category,
                   feedback: feedbackState.feedback!,
                   transcript: widget.transcript,
-                ).timeout(const Duration(seconds: 5)).catchError((e) {
-                  debugPrint('ScoreCard: saveSession failed (non-critical): $e');
+                )
+                .timeout(const Duration(seconds: 5))
+                .catchError((e) {
+                  debugPrint(
+                    'ScoreCard: saveSession failed (non-critical): $e',
+                  );
                 });
           }
         }
@@ -205,7 +232,9 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                         height: 120 * scale,
                         decoration: ShapeDecoration(
                           shape: const CircleBorder(),
-                          color: AppColors.primary.withValues(alpha: outerOpacity),
+                          color: AppColors.primary.withValues(
+                            alpha: outerOpacity,
+                          ),
                         ),
                       ),
                       // Inner ring
@@ -247,9 +276,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
           Text(
             'Our AI coach is reviewing your performance',
             textAlign: TextAlign.center,
-            style: AppTypography.bodySmall(
-              color: context.textSecondary,
-            ),
+            style: AppTypography.bodySmall(color: context.textSecondary),
           ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
           const SizedBox(height: 32),
 
@@ -329,8 +356,8 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                     state: i < _currentStep
                         ? _StepState.done
                         : i == _currentStep
-                            ? _StepState.active
-                            : _StepState.pending,
+                        ? _StepState.active
+                        : _StepState.pending,
                     isLast: i == _analysisSteps.length - 1,
                   ),
               ],
@@ -344,7 +371,10 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
             currentIndex: _currentTipIndex,
             onTick: () {
               if (mounted) {
-                setState(() => _currentTipIndex = (_currentTipIndex + 1) % _tips.length);
+                setState(
+                  () =>
+                      _currentTipIndex = (_currentTipIndex + 1) % _tips.length,
+                );
               }
             },
           ).animate().fadeIn(delay: 500.ms, duration: 400.ms),
@@ -380,9 +410,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
             Text(
               error ?? 'Something went wrong',
               textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium(
-                color: context.textSecondary,
-              ),
+              style: AppTypography.bodyMedium(color: context.textSecondary),
             ),
             const SizedBox(height: 24),
             DuoButton.primary(
@@ -408,10 +436,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                 child: const Icon(Icons.close_rounded, size: 24),
               ),
               const Spacer(),
-              Text(
-                'Session Feedback',
-                style: AppTypography.titleMedium(),
-              ),
+              Text('Session Feedback', style: AppTypography.titleMedium()),
               const Spacer(),
               Tappable(
                 onTap: () => _shareScoreCard(feedback),
@@ -439,57 +464,125 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
 
                     // Decorative floating elements
                     SizedBox(
-                      height: 40,
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            left: 30,
-                            child: Transform.rotate(
-                              angle: -0.3,
-                              child: Icon(
-                                Icons.star_rounded,
-                                size: 20,
-                                color: AppColors.gold.withValues(alpha: 0.2),
+                          height: 40,
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                left: 30,
+                                child: Transform.rotate(
+                                  angle: -0.3,
+                                  child:
+                                      Icon(
+                                            Icons.star_rounded,
+                                            size: 20,
+                                            color: AppColors.gold.withValues(
+                                              alpha: 0.2,
+                                            ),
+                                          )
+                                          .animate(
+                                            onPlay: (controller) =>
+                                                controller.repeat(),
+                                          )
+                                          .moveY(
+                                            begin: 0,
+                                            end: 8,
+                                            duration: 2.seconds,
+                                            curve: Curves.easeInOutSine,
+                                          )
+                                          .then()
+                                          .moveY(
+                                            begin: 8,
+                                            end: 0,
+                                            duration: 2.seconds,
+                                            curve: Curves.easeInOutSine,
+                                          ),
+                                ),
                               ),
-                            ),
-                          ),
-                          Positioned(
-                            right: 40,
-                            top: 10,
-                            child: Transform.rotate(
-                              angle: 0.4,
-                              child: Icon(
-                                Icons.favorite_rounded,
-                                size: 16,
-                                color: AppColors.primary.withValues(alpha: 0.15),
+                              Positioned(
+                                right: 40,
+                                top: 10,
+                                child: Transform.rotate(
+                                  angle: 0.4,
+                                  child:
+                                      Icon(
+                                            Icons.favorite_rounded,
+                                            size: 16,
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.15,
+                                            ),
+                                          )
+                                          .animate(
+                                            onPlay: (controller) =>
+                                                controller.repeat(),
+                                          )
+                                          .moveY(
+                                            begin: 0,
+                                            end: -6,
+                                            duration: 1.8.seconds,
+                                            curve: Curves.easeInOutSine,
+                                          )
+                                          .then()
+                                          .moveY(
+                                            begin: -6,
+                                            end: 0,
+                                            duration: 1.8.seconds,
+                                            curve: Curves.easeInOutSine,
+                                          ),
+                                ),
                               ),
-                            ),
-                          ),
-                          Positioned(
-                            left: 80,
-                            top: 5,
-                            child: Transform.rotate(
-                              angle: 0.2,
-                              child: Icon(
-                                Icons.celebration_rounded,
-                                size: 18,
-                                color: AppColors.success.withValues(alpha: 0.15),
+                              Positioned(
+                                left: 80,
+                                top: 5,
+                                child: Transform.rotate(
+                                  angle: 0.2,
+                                  child:
+                                      Icon(
+                                            Icons.celebration_rounded,
+                                            size: 18,
+                                            color: AppColors.success.withValues(
+                                              alpha: 0.15,
+                                            ),
+                                          )
+                                          .animate(
+                                            onPlay: (controller) =>
+                                                controller.repeat(),
+                                          )
+                                          .moveY(
+                                            begin: 0,
+                                            end: 5,
+                                            duration: 1.5.seconds,
+                                            curve: Curves.easeInOutSine,
+                                          )
+                                          .then()
+                                          .moveY(
+                                            begin: 5,
+                                            end: 0,
+                                            duration: 1.5.seconds,
+                                            curve: Curves.easeInOutSine,
+                                          ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
+                        )
+                        .animate()
+                        .fadeIn(duration: 400.ms)
+                        .scale(
+                          begin: const Offset(0.5, 0.5),
+                          end: const Offset(1.0, 1.0),
+                          curve: Curves.elasticOut,
+                        ),
 
                     // Score Ring
                     Builder(
-                      builder: (context) => ScoreRing(
-                        score: feedback.overallScore,
-                        size: 160,
-                        strokeWidth: 6,
-                      ),
-                    ).animate()
-                        .fadeIn(delay: 200.ms, duration: 600.ms)
+                          builder: (context) => ScoreRing(
+                            score: feedback.overallScore,
+                            size: 160,
+                            strokeWidth: 6,
+                          ),
+                        )
+                        .animate()
+                        .fadeIn(duration: 400.ms)
                         .scale(begin: const Offset(0.8, 0.8)),
                     const SizedBox(height: 4),
 
@@ -501,7 +594,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                       style: AppTypography.headlineMedium(
                         color: _getScoreColor(feedback.overallScore),
                       ),
-                    ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
+                    ).animate().fadeIn(duration: 400.ms),
                     const SizedBox(height: 24),
 
                     // Score Breakdown
@@ -511,7 +604,10 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                       decoration: BoxDecoration(
                         color: AppColors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE5E5E5), width: 2),
+                        border: Border.all(
+                          color: const Color(0xFFE5E5E5),
+                          width: 2,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -521,33 +617,37 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                           ProgressBar(
                             value: feedback.clarity / 100,
                             label: 'Clarity',
-                            trailingText: '${feedback.clarity}%',
+                            trailingText: '\${feedback.clarity}%',
                             icon: Icons.waves_rounded,
+                            delay: const Duration(milliseconds: 50),
                           ),
                           const SizedBox(height: 14),
                           ProgressBar(
                             value: feedback.confidence / 100,
                             label: 'Confidence',
-                            trailingText: '${feedback.confidence}%',
+                            trailingText: '\${feedback.confidence}%',
                             icon: Icons.shield_rounded,
+                            delay: const Duration(milliseconds: 150),
                           ),
                           const SizedBox(height: 14),
                           ProgressBar(
                             value: feedback.engagement / 100,
                             label: 'Engagement',
-                            trailingText: '${feedback.engagement}%',
+                            trailingText: '\${feedback.engagement}%',
                             icon: Icons.people_rounded,
+                            delay: const Duration(milliseconds: 250),
                           ),
                           const SizedBox(height: 14),
                           ProgressBar(
                             value: feedback.relevance / 100,
                             label: 'Relevance',
-                            trailingText: '${feedback.relevance}%',
+                            trailingText: '\${feedback.relevance}%',
                             icon: Icons.track_changes_rounded,
+                            delay: const Duration(milliseconds: 350),
                           ),
                         ],
                       ),
-                    ).animate().fadeIn(delay: 500.ms, duration: 400.ms),
+                    ).animate().fadeIn(duration: 400.ms),
                     const SizedBox(height: 16),
 
                     // Coach's Tip
@@ -555,7 +655,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                       tip: feedback.summary.isNotEmpty
                           ? feedback.summary
                           : 'Try to maintain eye contact and use pauses effectively to emphasize key points.',
-                    ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
+                    ).animate().fadeIn(duration: 400.ms),
                     const SizedBox(height: 16),
 
                     // Strengths
@@ -565,7 +665,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                         items: feedback.strengths,
                         icon: Icons.check_circle_rounded,
                         iconColor: AppColors.success,
-                      ).animate().fadeIn(delay: 700.ms, duration: 400.ms),
+                      ), // Removed overall fadeIn here because _FeedbackList now handles its own staggered animations
                     if (feedback.strengths.isNotEmpty)
                       const SizedBox(height: 16),
 
@@ -576,7 +676,26 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                         items: feedback.improvements,
                         icon: Icons.arrow_upward_rounded,
                         iconColor: AppColors.warning,
-                      ).animate().fadeIn(delay: 800.ms, duration: 400.ms),
+                      ),
+                    if (feedback.improvements.isNotEmpty)
+                      const SizedBox(height: 16),
+
+                    // Filler Words
+                    if (_fillerWords.isNotEmpty)
+                      _FillerWordsCard(fillers: _fillerWords)
+                          .animate()
+                          .fadeIn(duration: 400.ms),
+                    if (_fillerWords.isNotEmpty) const SizedBox(height: 16),
+
+                    // Chain Result Banner
+                    if (_chainResult != null)
+                      _ChainResultBanner(
+                        result: _chainResult!,
+                        onNextStep: () => context.go('/home'),
+                        onRetry: () => context.go('/home'),
+                      ).animate().fadeIn(duration: 400.ms),
+                    if (_chainResult != null) const SizedBox(height: 16),
+
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -702,7 +821,9 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
       ),
       builder: (_) => RoastIntensityPicker(
         onSelected: (intensity) {
-          ref.read(roastProvider.notifier).generateRoast(
+          ref
+              .read(roastProvider.notifier)
+              .generateRoast(
                 transcript: widget.transcript,
                 overallScore: feedback.overallScore,
                 clarity: feedback.clarity,
@@ -749,9 +870,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
               child: Center(
                 child: Text(
                   'Roast failed. Even the AI was speechless.',
-                  style: AppTypography.bodyMedium(
-                    color: context.textSecondary,
-                  ),
+                  style: AppTypography.bodyMedium(color: context.textSecondary),
                 ),
               ),
             );
@@ -796,8 +915,8 @@ class _AnalysisStepRow extends StatelessWidget {
     final circleColor = state == _StepState.done
         ? AppColors.success
         : state == _StepState.active
-            ? AppColors.primary.withValues(alpha: 0.15)
-            : const Color(0xFFF0F0F0);
+        ? AppColors.primary.withValues(alpha: 0.15)
+        : const Color(0xFFF0F0F0);
 
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
@@ -813,38 +932,48 @@ class _AnalysisStepRow extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: state == _StepState.done
-                ? const Icon(Icons.check_rounded, size: 16, color: AppColors.white)
+                ? const Icon(
+                    Icons.check_rounded,
+                    size: 16,
+                    color: AppColors.white,
+                  )
                 : state == _StepState.active
-                    ? SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primary,
-                        ),
-                      )
-                    : Icon(icon, size: 14, color: const Color(0xFFBBBBBB)),
+                ? SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    ),
+                  )
+                : Icon(icon, size: 14, color: const Color(0xFFBBBBBB)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
-              style: AppTypography.bodySmall(
-                color: state == _StepState.done
-                    ? AppColors.success
-                    : state == _StepState.active
+              style:
+                  AppTypography.bodySmall(
+                    color: state == _StepState.done
+                        ? AppColors.success
+                        : state == _StepState.active
                         ? context.textPrimary
                         : context.textTertiary,
-              ).copyWith(
-                fontWeight: state == _StepState.active ? FontWeight.w700 : FontWeight.w600,
-              ),
+                  ).copyWith(
+                    fontWeight: state == _StepState.active
+                        ? FontWeight.w700
+                        : FontWeight.w600,
+                  ),
             ),
           ),
           if (state == _StepState.done)
             Text(
-              'Done',
-              style: AppTypography.labelSmall(color: AppColors.success),
-            ).animate().fadeIn(duration: 300.ms).scale(begin: const Offset(0.8, 0.8)),
+                  'Done',
+                  style: AppTypography.labelSmall(color: AppColors.success),
+                )
+                .animate()
+                .fadeIn(duration: 300.ms)
+                .scale(begin: const Offset(0.8, 0.8)),
         ],
       ),
     );
@@ -893,9 +1022,7 @@ class _CyclingTipCardState extends State<_CyclingTipCard> {
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.1),
-        ),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -914,10 +1041,7 @@ class _CyclingTipCardState extends State<_CyclingTipCard> {
                   'DID YOU KNOW?',
                   style: AppTypography.labelSmall(
                     color: AppColors.primary,
-                  ).copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
+                  ).copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.5),
                 ),
                 const SizedBox(height: 4),
                 AnimatedSwitcher(
@@ -954,9 +1078,81 @@ class _FeedbackList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(title, style: AppTypography.titleMedium()),
+        ),
+        ...List.generate(items.length, (index) {
+          final item = items[index];
+          return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: const Color(0xFFF0F0F0)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: iconColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, size: 20, color: iconColor),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: AppTypography.bodyMedium(
+                          color: context.textPrimary,
+                        ).copyWith(height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+              .animate(delay: (200 + (index * 150)).ms)
+              .fadeIn(duration: 400.ms)
+              .slideY(
+                begin: 0.2,
+                end: 0,
+                duration: 400.ms,
+                curve: Curves.easeOutCubic,
+              );
+        }),
+      ],
+    );
+  }
+}
+
+class _FillerWordsCard extends StatelessWidget {
+  final Map<String, int> fillers;
+
+  const _FillerWordsCard({required this.fillers});
+
+  @override
+  Widget build(BuildContext context) {
+    final total = fillers.values.fold(0, (a, b) => a + b);
+    final sorted = fillers.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
@@ -965,26 +1161,122 @@ class _FeedbackList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTypography.titleMedium()),
+          Row(
+            children: [
+              const Icon(Icons.chat_bubble_outline_rounded,
+                  size: 18, color: AppColors.warning),
+              const SizedBox(width: 8),
+              Text('Filler Words', style: AppTypography.titleMedium()),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: total > 10
+                      ? AppColors.error.withValues(alpha: 0.1)
+                      : AppColors.warning.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$total total',
+                  style: AppTypography.labelSmall(
+                    color: total > 10 ? AppColors.error : AppColors.warning,
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
-          ...items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(icon, size: 18, color: iconColor),
-                  const SizedBox(width: 8),
-                  Expanded(
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: sorted
+                .take(6)
+                .map(
+                  (e) => Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: Text(
-                      item,
-                      style: AppTypography.bodyMedium(
-                        color: context.textSecondary,
-                      ),
+                      '"${e.key}" ×${e.value}',
+                      style: AppTypography.bodySmall(
+                          color: AppColors.primary),
                     ),
                   ),
-                ],
-              ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tip: Replace filler words with a confident pause.',
+            style:
+                AppTypography.labelSmall(color: context.textTertiary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChainResultBanner extends StatelessWidget {
+  final ChainResult result;
+  final VoidCallback onNextStep;
+  final VoidCallback onRetry;
+
+  const _ChainResultBanner({
+    required this.result,
+    required this.onNextStep,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final passed = result == ChainResult.passed;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: passed
+            ? AppColors.success.withValues(alpha: 0.08)
+            : AppColors.warning.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: passed
+              ? AppColors.success.withValues(alpha: 0.3)
+              : AppColors.warning.withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            passed ? Icons.lock_open_rounded : Icons.refresh_rounded,
+            color: passed ? AppColors.success : AppColors.warning,
+            size: 28,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  passed ? 'Next step unlocked!' : 'Almost there',
+                  style: AppTypography.titleMedium(
+                    color: passed ? AppColors.success : AppColors.warning,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  passed
+                      ? 'Great work — continue your roadmap.'
+                      : 'Try once more to pass this step.',
+                  style: AppTypography.bodySmall(
+                      color: context.textSecondary),
+                ),
+              ],
             ),
           ),
         ],

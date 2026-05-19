@@ -15,6 +15,7 @@ import 'package:speech_coach/features/progress/presentation/providers/progress_p
 import 'package:speech_coach/features/auth/presentation/providers/auth_provider.dart';
 import 'package:speech_coach/features/progress/domain/progress_entity.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
+import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dart';
 import 'package:speech_coach/features/scenarios/data/scenario_repository.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -562,22 +563,56 @@ class _LearningPlanSection extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Your Learning Plan',
-              style: AppTypography.headlineSmall(),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(plan.title, style: AppTypography.headlineSmall()),
+                if (plan.chainLevel > 1)
+                  Text(
+                    'Level ${plan.chainLevel}',
+                    style: AppTypography.labelSmall(
+                        color: AppColors.primary),
+                  ),
+              ],
             ),
             Tappable(
               onTap: () => context.push('/plan-summary'),
               child: Text(
                 'See All',
-                style: AppTypography.labelMedium(
-                  color: AppColors.primary,
-                ),
+                style:
+                    AppTypography.labelMedium(color: AppColors.primary),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+
+        // Intensive mode urgency banner
+        if (plan.isIntensiveMode)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: AppColors.error.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.local_fire_department_rounded,
+                    size: 16, color: AppColors.error),
+                const SizedBox(width: 6),
+                Text(
+                  '${plan.daysUntilEvent} days to your event — intensive mode',
+                  style: AppTypography.labelSmall(color: AppColors.error)
+                      .copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
@@ -589,52 +624,55 @@ class _LearningPlanSection extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Progress header
               Row(
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.route_rounded,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
+                  Text(
+                    '${plan.completedCount}/${plan.totalSteps} steps',
+                    style: AppTypography.labelMedium(
+                        color: context.textSecondary),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          plan.title,
-                          style: AppTypography.titleMedium(),
-                        ),
-                        Text(
-                          '${plan.completedCount}/${plan.totalSteps} completed',
-                          style: AppTypography.labelSmall(
-                            color: context.textTertiary,
-                          ),
-                        ),
-                      ],
-                    ),
+                  const Spacer(),
+                  Text(
+                    '${(plan.progressPercent * 100).round()}%',
+                    style: AppTypography.labelMedium(
+                        color: AppColors.primary),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               ProgressBar(
                 value: plan.progressPercent,
                 height: 8,
                 color: AppColors.success,
               ),
+              const SizedBox(height: 16),
+
+              // Step nodes (horizontal scroll)
+              SizedBox(
+                height: 72,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: plan.steps.length,
+                  separatorBuilder: (_, __) => _StepConnector(),
+                  itemBuilder: (context, i) {
+                    final step = plan.steps[i];
+                    final isNext = nextStep?.scenarioId == step.scenarioId;
+                    return _StepNode(
+                      step: step,
+                      index: i,
+                      isNext: isNext,
+                    );
+                  },
+                ),
+              ),
+
+              // Next step CTA
               if (nextScenario != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 Tappable(
                   onTap: () => context.push(
-                    '/scenario/${Uri.encodeComponent(nextStep!.scenarioId)}',
+                    '/scenario/${Uri.encodeComponent(nextStep?.scenarioId ?? '')}',
                   ),
                   child: Container(
                     width: double.infinity,
@@ -648,21 +686,24 @@ class _LearningPlanSection extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.play_circle_filled_rounded,
-                          color: AppColors.primary,
-                          size: 24,
-                        ),
+                        Icon(Icons.play_circle_filled_rounded,
+                            color: AppColors.primary, size: 24),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Next Up',
-                                style: AppTypography.labelSmall(
-                                  color: AppColors.primary,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Next Up',
+                                    style: AppTypography.labelSmall(
+                                        color: AppColors.primary),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _DifficultyChip(
+                                      difficulty: nextStep?.difficulty ?? 'medium'),
+                                ],
                               ),
                               Text(
                                 nextScenario.title,
@@ -673,13 +714,45 @@ class _LearningPlanSection extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: context.textTertiary,
-                          size: 20,
-                        ),
+                        Icon(Icons.chevron_right_rounded,
+                            color: context.textTertiary, size: 20),
                       ],
                     ),
+                  ),
+                ),
+              ],
+
+              // Plan complete CTA
+              if (plan.isComplete) ...[
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppColors.success.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.emoji_events_rounded,
+                          color: AppColors.success, size: 24),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Chain Complete!',
+                                style: AppTypography.titleMedium(
+                                    color: AppColors.success)),
+                            Text('Ready for Level ${plan.chainLevel + 1}?',
+                                style: AppTypography.bodySmall(
+                                    color: context.textSecondary)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -691,6 +764,130 @@ class _LearningPlanSection extends ConsumerWidget {
         .animate()
         .fadeIn(delay: 200.ms, duration: 400.ms)
         .slideY(begin: 0.05);
+  }
+}
+
+class _StepNode extends StatelessWidget {
+  final PlanStep step;
+  final int index;
+  final bool isNext;
+
+  const _StepNode({
+    required this.step,
+    required this.index,
+    required this.isNext,
+  });
+
+  Color _difficultyColor() {
+    switch (step.difficulty) {
+      case 'easy':
+        return AppColors.success;
+      case 'hard':
+        return AppColors.error;
+      default:
+        return AppColors.warning;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = step.isCompleted
+        ? AppColors.success
+        : isNext
+            ? AppColors.primary
+            : const Color(0xFFD1D5DB);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: step.isCompleted
+                ? AppColors.success.withValues(alpha: 0.12)
+                : isNext
+                    ? AppColors.primary.withValues(alpha: 0.1)
+                    : const Color(0xFFF3F4F6),
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: isNext ? 2.5 : 1.5),
+          ),
+          child: Center(
+            child: step.isCompleted
+                ? const Icon(Icons.check_rounded,
+                    color: AppColors.success, size: 18)
+                : isNext
+                    ? const Icon(Icons.play_arrow_rounded,
+                        color: AppColors.primary, size: 18)
+                    : Text(
+                        '${index + 1}',
+                        style: AppTypography.labelSmall(
+                            color: const Color(0xFF9CA3AF)),
+                      ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        if (step.isCompleted && step.score != null)
+          Text(
+            '${step.score!.round()}',
+            style: AppTypography.labelSmall(color: AppColors.success)
+                .copyWith(fontSize: 10),
+          )
+        else
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: _difficultyColor(),
+              shape: BoxShape.circle,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _StepConnector extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 12,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 17),
+          Container(height: 1.5, color: const Color(0xFFE5E7EB)),
+        ],
+      ),
+    );
+  }
+}
+
+class _DifficultyChip extends StatelessWidget {
+  final String difficulty;
+
+  const _DifficultyChip({required this.difficulty});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = difficulty == 'easy'
+        ? AppColors.success
+        : difficulty == 'hard'
+            ? AppColors.error
+            : AppColors.warning;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        difficulty,
+        style: AppTypography.labelSmall(color: color)
+            .copyWith(fontSize: 10, fontWeight: FontWeight.w700),
+      ),
+    );
   }
 }
 

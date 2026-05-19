@@ -97,116 +97,198 @@ const assessmentQuestions = [
       AssessmentOption(id: '15min', label: '15+ minutes', emoji: '\u{1F525}'),
     ],
   ),
+  AssessmentQuestion(
+    id: 'event_date',
+    text: 'When is your target event?',
+    options: [
+      AssessmentOption(
+          id: 'this_week', label: 'This week', emoji: '\u{1F525}'),
+      AssessmentOption(
+          id: 'this_month', label: 'This month', emoji: '\u{1F4C5}'),
+      AssessmentOption(
+          id: 'two_months', label: 'In 2+ months', emoji: '\u{1F5D3}'),
+      AssessmentOption(
+          id: 'no_date', label: 'No specific date', emoji: '\u{1F3AF}'),
+    ],
+  ),
 ];
 
-// --- Plan Templates ---
+// --- Chain Step Config ---
 
-class _PlanTemplate {
+class _ChainStep {
+  final String scenarioId;
+  final String difficulty;
+  final int minPassScore;
+
+  const _ChainStep({
+    required this.scenarioId,
+    required this.difficulty,
+    required this.minPassScore,
+  });
+}
+
+// --- Chain Templates ---
+
+class _ChainTemplate {
   final String id;
   final String title;
   final String description;
-  final List<String> scenarioIds;
+  final List<_ChainStep> steps;
 
-  const _PlanTemplate({
+  const _ChainTemplate({
     required this.id,
     required this.title,
     required this.description,
-    required this.scenarioIds,
+    required this.steps,
   });
 }
 
 const _templates = [
-  _PlanTemplate(
+  _ChainTemplate(
     id: 'career_confidence',
-    title: 'Career Confidence Builder',
+    title: 'Interview Prep',
     description:
-        'Master interviews and professional speaking, from elevator pitches to salary negotiations.',
-    scenarioIds: [
-      'int_1', // Tell Me About Yourself (Easy)
-      'pres_1', // Elevator Pitch (Easy)
-      'conv_5', // Giving Difficult Feedback (Medium)
-      'int_2', // Behavioral: Conflict Resolution (Medium)
-      'pres_2', // Quarterly Business Review (Medium)
-      'conf_1', // Ask for a Raise (Medium)
-      'int_5', // Why Should We Hire You? (Medium)
-      'int_4', // Salary Negotiation (Hard)
-      'pres_4', // Team All-Hands Update (Medium)
-      'int_3', // Technical: System Design (Hard)
+        'Master every stage of the interview process — from first impressions to salary negotiation.',
+    steps: [
+      _ChainStep(scenarioId: 'int_1', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'int_6', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'int_7', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'int_2', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'int_8', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'int_9', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'int_10', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'int_5', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'int_11', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'int_12', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'conf_1', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'pres_1', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'int_13', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'int_4', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'int_3', difficulty: 'hard', minPassScore: 80),
     ],
   ),
-  _PlanTemplate(
+  _ChainTemplate(
     id: 'social_butterfly',
-    title: 'Social Confidence Path',
+    title: 'Social Confidence',
     description:
-        'Build your social skills step by step, from small talk to deeper connections.',
-    scenarioIds: [
-      'soc_5', // Waiting Room Conversation (Easy)
-      'soc_4', // Chat With a Neighbor (Easy)
-      'soc_1', // Party Small Talk (Easy)
-      'conv_1', // Networking Event Small Talk (Easy)
-      'date_4', // Meeting Through Mutual Friends (Easy)
-      'date_5', // Reconnecting With an Old Friend (Easy)
-      'soc_3', // Dinner Party Guest (Medium)
-      'date_1', // First Date Conversation (Medium)
-      'date_2', // Ask Someone Out (Medium)
-      'conv_2', // Asking Someone on a Date (Medium)
+        'Build real social skills step by step — from small talk to confident connections.',
+    steps: [
+      _ChainStep(scenarioId: 'soc_5', difficulty: 'easy', minPassScore: 50),
+      _ChainStep(scenarioId: 'soc_4', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'soc_1', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'conv_1', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'date_4', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'date_5', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'soc_3', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'date_1', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'soc_2', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'date_2', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'conv_2', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'date_3', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'conf_4', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'conv_3', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'conv_5', difficulty: 'hard', minPassScore: 75),
     ],
   ),
-  _PlanTemplate(
+  _ChainTemplate(
     id: 'stage_ready',
-    title: 'Stage Ready Program',
+    title: 'Public Speaking',
     description:
-        'Go from nervous speaker to commanding the stage with confidence.',
-    scenarioIds: [
-      'pres_1', // Elevator Pitch (Easy)
-      'story_1', // Share a Childhood Memory (Easy)
-      'story_4', // A Lesson Learned (Medium)
-      'pres_3', // Product Demo (Medium)
-      'pub_1', // Wedding Toast (Medium)
-      'deb_2', // Remote vs Office Work (Medium)
-      'pub_2', // Acceptance Speech (Medium)
-      'pub_3', // Motivational Talk (Hard)
-      'pres_5', // Investor Pitch Deck (Hard)
-      'pub_4', // TED-Style Talk (Hard)
+        'Go from nervous speaker to commanding any stage with confidence.',
+    steps: [
+      _ChainStep(scenarioId: 'pres_1', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'story_1', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'story_2', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'pub_2', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'pub_1', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'story_4', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'pres_3', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'deb_1', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'deb_2', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'pres_2', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'story_5', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'deb_3', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'pub_3', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'pres_5', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'pub_4', difficulty: 'hard', minPassScore: 80),
     ],
   ),
-  _PlanTemplate(
+  _ChainTemplate(
     id: 'anxiety_buster',
     title: 'Anxiety Buster',
     description:
-        'Gentle, progressive practice starting with low-pressure situations to build your comfort zone.',
-    scenarioIds: [
-      'phone_4', // Make a Restaurant Reservation (Easy)
-      'phone_1', // Order Food by Phone (Easy)
-      'soc_5', // Waiting Room Conversation (Easy)
-      'phone_2', // Call the Doctor's Office (Easy)
-      'soc_4', // Chat With a Neighbor (Easy)
-      'phone_3', // Call in Sick to Work (Medium)
-      'conv_1', // Networking Small Talk (Easy)
-      'phone_5', // Return an Item by Phone (Medium)
-      'story_1', // Share a Childhood Memory (Easy)
-      'conf_5', // Handle Criticism Gracefully (Medium)
+        'Gentle progressive practice — start low-pressure, build to real confidence.',
+    steps: [
+      _ChainStep(scenarioId: 'phone_4', difficulty: 'easy', minPassScore: 50),
+      _ChainStep(scenarioId: 'phone_1', difficulty: 'easy', minPassScore: 50),
+      _ChainStep(scenarioId: 'soc_5', difficulty: 'easy', minPassScore: 50),
+      _ChainStep(scenarioId: 'phone_2', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'soc_4', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'phone_3', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'phone_5', difficulty: 'medium', minPassScore: 60),
+      _ChainStep(scenarioId: 'conv_1', difficulty: 'medium', minPassScore: 60),
+      _ChainStep(scenarioId: 'story_1', difficulty: 'medium', minPassScore: 60),
+      _ChainStep(scenarioId: 'conf_5', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'soc_3', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'conf_2', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'conf_3', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'conf_4', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'conf_1', difficulty: 'hard', minPassScore: 70),
     ],
   ),
-  _PlanTemplate(
+  _ChainTemplate(
     id: 'well_rounded',
     title: 'Well-Rounded Speaker',
     description:
-        'A balanced mix of speaking scenarios to develop all-around communication skills.',
-    scenarioIds: [
-      'soc_1', // Party Small Talk (Easy)
-      'pres_1', // Elevator Pitch (Easy)
-      'story_2', // Describe Your Proudest Moment (Easy)
-      'int_1', // Tell Me About Yourself (Easy)
-      'conv_1', // Networking Event Small Talk (Easy)
-      'deb_1', // Should AI Replace Teachers? (Medium)
-      'pub_1', // Wedding Toast (Medium)
-      'conf_1', // Ask for a Raise (Medium)
-      'pres_5', // Investor Pitch Deck (Hard)
-      'pub_4', // TED-Style Talk (Hard)
+        'A balanced path across all speaking situations — social, professional, and public.',
+    steps: [
+      _ChainStep(scenarioId: 'soc_1', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'story_1', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'phone_1', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'int_1', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'pres_1', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'conv_1', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'date_1', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'conf_5', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'deb_1', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'pub_1', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'conf_1', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'int_5', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'int_4', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'pres_5', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'pub_4', difficulty: 'hard', minPassScore: 75),
     ],
   ),
 ];
+
+// --- Event Date → Sessions Per Day ---
+
+int _sessionsPerDay(String? eventDateId) {
+  switch (eventDateId) {
+    case 'this_week':
+      return 3;
+    case 'this_month':
+      return 1;
+    case 'two_months':
+      return 1;
+    default:
+      return 1;
+  }
+}
+
+DateTime? _eventDate(String? eventDateId) {
+  final now = DateTime.now();
+  switch (eventDateId) {
+    case 'this_week':
+      return now.add(const Duration(days: 5));
+    case 'this_month':
+      return now.add(const Duration(days: 25));
+    case 'two_months':
+      return now.add(const Duration(days: 60));
+    default:
+      return null;
+  }
+}
 
 // --- Mapping Engine ---
 
@@ -236,15 +318,29 @@ LearningPlan generatePlan(AssessmentResult result) {
     orElse: () => _templates.last,
   );
 
+  final answerMap = {
+    for (final a in result.answers) a.questionId: a.optionId
+  };
+  final eventDateId = answerMap['event_date'];
+
   return LearningPlan(
     templateId: template.id,
     title: template.title,
     description: template.description,
-    steps: template.scenarioIds
+    steps: template.steps
         .asMap()
         .entries
-        .map((e) => PlanStep(scenarioId: e.value, order: e.key))
+        .map(
+          (e) => PlanStep(
+            scenarioId: e.value.scenarioId,
+            order: e.key,
+            difficulty: e.value.difficulty,
+            minPassScore: e.value.minPassScore,
+          ),
+        )
         .toList(),
     createdAt: DateTime.now(),
+    eventDate: _eventDate(eventDateId),
+    sessionsPerDayTarget: _sessionsPerDay(eventDateId),
   );
 }

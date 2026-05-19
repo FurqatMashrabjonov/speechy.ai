@@ -58,4 +58,16 @@ class AssessmentRepository {
 
     await saveLearningPlan(plan.copyWith(steps: updatedSteps));
   }
+
+  Future<void> incrementRetryCount(String scenarioId) async {
+    final plan = getLearningPlan();
+    if (plan == null) return;
+    final updatedSteps = plan.steps.map((step) {
+      if (step.scenarioId == scenarioId && !step.isCompleted) {
+        return step.incrementRetry();
+      }
+      return step;
+    }).toList();
+    await saveLearningPlan(plan.copyWith(steps: updatedSteps));
+  }
 }
