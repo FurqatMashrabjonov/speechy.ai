@@ -6,6 +6,7 @@ import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/profile/presentation/providers/settings_provider.dart';
 import 'package:speech_coach/shared/providers/theme_provider.dart';
 import 'package:speech_coach/shared/providers/user_provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 final micQualityProvider = StateProvider<String>((ref) {
@@ -47,7 +48,7 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, size: 22),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/profile'),
         ),
         title: const Text('Settings'),
       ),

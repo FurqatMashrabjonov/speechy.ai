@@ -204,7 +204,7 @@ class _Header extends StatelessWidget {
               : null,
           child: Builder(builder: (ctx) {
             return Tappable(
-              onTap: () => ctx.go('/settings'),
+              onTap: () => ctx.push('/settings'),
               child: Container(
                 width: 38,
                 height: 38,

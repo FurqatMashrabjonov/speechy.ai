@@ -242,7 +242,7 @@ class ScenarioDetailScreen extends ConsumerWidget {
   }
 }
 
-class _CharacterPicker extends StatefulWidget {
+class _CharacterPicker extends StatelessWidget {
   final String category;
   final AICharacter selectedCharacter;
   final void Function(AICharacter) onSelect;
@@ -254,18 +254,8 @@ class _CharacterPicker extends StatefulWidget {
   });
 
   @override
-  State<_CharacterPicker> createState() => _CharacterPickerState();
-}
-
-class _CharacterPickerState extends State<_CharacterPicker> {
-  bool _showAll = false;
-
-  @override
   Widget build(BuildContext context) {
-    final recommended = CharacterRepository.getForCategory(widget.category);
-    final others = CharacterRepository.characters
-        .where((c) => !recommended.contains(c))
-        .toList();
+    final recommended = CharacterRepository.getForCategory(category);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,24 +264,9 @@ class _CharacterPickerState extends State<_CharacterPicker> {
         const SizedBox(height: 4),
         Text(
           'Each character has a unique voice and personality',
-          style: AppTypography.bodySmall(
-            color: context.textSecondary,
-          ),
+          style: AppTypography.bodySmall(color: context.textSecondary),
         ),
         const SizedBox(height: 12),
-
-        // Recommended section
-        Row(
-          children: [
-            Icon(Icons.star_rounded, size: 16, color: AppColors.gold),
-            const SizedBox(width: 4),
-            Text(
-              'Recommended',
-              style: AppTypography.labelMedium(color: AppColors.gold),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
         SizedBox(
           height: 108,
           child: ListView.builder(
@@ -299,63 +274,10 @@ class _CharacterPickerState extends State<_CharacterPicker> {
             itemCount: recommended.length,
             itemBuilder: (context, index) => _CharacterCard(
               character: recommended[index],
-              isSelected: recommended[index].id == widget.selectedCharacter.id,
-              onTap: () => widget.onSelect(recommended[index]),
-              badge: 'Best fit',
+              isSelected: recommended[index].id == selectedCharacter.id,
+              onTap: () => onSelect(recommended[index]),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-
-        // All Characters toggle
-        Tappable(
-          onTap: () => setState(() => _showAll = !_showAll),
-          child: Row(
-            children: [
-              Text(
-                'All Characters',
-                style: AppTypography.labelMedium(),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '(${others.length})',
-                style: AppTypography.labelSmall(color: context.textTertiary),
-              ),
-              const Spacer(),
-              AnimatedRotation(
-                turns: _showAll ? 0.5 : 0,
-                duration: const Duration(milliseconds: 200),
-                child: Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 20,
-                  color: context.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Expandable all-characters grid
-        AnimatedCrossFade(
-          firstChild: const SizedBox.shrink(),
-          secondChild: Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: SizedBox(
-              height: 108,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: others.length,
-                itemBuilder: (context, index) => _CharacterCard(
-                  character: others[index],
-                  isSelected: others[index].id == widget.selectedCharacter.id,
-                  onTap: () => widget.onSelect(others[index]),
-                ),
-              ),
-            ),
-          ),
-          crossFadeState:
-              _showAll ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 250),
         ),
         const SizedBox(height: 8),
 
@@ -364,20 +286,20 @@ class _CharacterPickerState extends State<_CharacterPicker> {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: widget.selectedCharacter.color.withValues(alpha: 0.08),
+            color: selectedCharacter.color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
               ClipOval(
                 child: Image.asset(
-                  widget.selectedCharacter.imagePath,
+                  selectedCharacter.imagePath,
                   width: 24,
                   height: 24,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Icon(
-                    widget.selectedCharacter.icon,
-                    color: widget.selectedCharacter.color,
+                    selectedCharacter.icon,
+                    color: selectedCharacter.color,
                     size: 20,
                   ),
                 ),
@@ -388,13 +310,13 @@ class _CharacterPickerState extends State<_CharacterPicker> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.selectedCharacter.name,
+                      selectedCharacter.name,
                       style: AppTypography.labelMedium(
-                        color: widget.selectedCharacter.color,
+                        color: selectedCharacter.color,
                       ),
                     ),
                     Text(
-                      widget.selectedCharacter.description,
+                      selectedCharacter.description,
                       style: AppTypography.bodySmall(
                         color: context.textSecondary,
                       ),
@@ -414,13 +336,11 @@ class _CharacterCard extends StatelessWidget {
   final AICharacter character;
   final bool isSelected;
   final VoidCallback onTap;
-  final String? badge;
 
   const _CharacterCard({
     required this.character,
     required this.isSelected,
     required this.onTap,
-    this.badge,
   });
 
   @override
@@ -477,13 +397,6 @@ class _CharacterCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            if (badge != null)
-              Text(
-                badge!,
-                style: AppTypography.labelSmall(
-                  color: context.textTertiary,
-                ),
-              ),
           ],
         ),
       ),

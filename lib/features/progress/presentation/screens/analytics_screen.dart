@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,8 +8,6 @@ import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/progress/domain/progress_entity.dart';
 import 'package:speech_coach/features/progress/presentation/providers/progress_provider.dart';
-import 'package:speech_coach/features/progress/presentation/utils/metric_helpers.dart';
-import 'package:speech_coach/features/progress/presentation/widgets/metric_row.dart';
 import 'package:speech_coach/features/progress/presentation/widgets/score_trend_chart.dart';
 import 'package:speech_coach/shared/widgets/skeleton.dart';
 
@@ -21,7 +18,6 @@ class AnalyticsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final realProgress = ref.watch(progressProvider);
 
-    // Use real data if available, otherwise show demo data
     final progress = realProgress.sessionHistory.isNotEmpty
         ? realProgress
         : _demoProgress;
@@ -99,25 +95,6 @@ class AnalyticsScreen extends ConsumerWidget {
     final bestScore = sessions.isNotEmpty
         ? sessions.map((s) => s.overallScore).reduce(max)
         : 0;
-    final totalMinutes = progress.totalMinutes;
-
-    // Category breakdown
-    final categoryMap = <String, int>{};
-    for (final s in sessions) {
-      categoryMap[s.category] = (categoryMap[s.category] ?? 0) + 1;
-    }
-    final sortedCategories = categoryMap.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    // Weekly sessions (last 7 days)
-    final now = DateTime.now();
-    final weekSessions = List<int>.filled(7, 0);
-    for (final s in sessions) {
-      final diff = now.difference(s.date).inDays;
-      if (diff >= 0 && diff < 7) {
-        weekSessions[6 - diff]++;
-      }
-    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -190,7 +167,7 @@ class AnalyticsScreen extends ConsumerWidget {
           ],
           const SizedBox(height: 20),
 
-          // ============ OVERVIEW STATS ============
+          // Stats row
           Row(
             children: [
               _BigStatCard(
@@ -215,7 +192,7 @@ class AnalyticsScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               _BigStatCard(
-                value: '${totalMinutes}m',
+                value: '${progress.totalMinutes}m',
                 label: 'Practice',
                 icon: Icons.timer_rounded,
                 color: AppColors.skyBlue,
@@ -224,96 +201,20 @@ class AnalyticsScreen extends ConsumerWidget {
           ).animate().fadeIn(delay: 80.ms, duration: 400.ms),
           const SizedBox(height: 20),
 
-          // ============ ACTIVITY HEATMAP ============
-          _ActivityHeatmap(sessions: sessions)
-              .animate()
-              .fadeIn(delay: 160.ms, duration: 400.ms),
-          const SizedBox(height: 20),
-
-          // ============ WEEKLY BAR CHART ============
-          _SectionCard(
-            title: 'This Week',
-            child: SizedBox(
-              height: 160,
-              child: _WeeklyBarChart(weekSessions: weekSessions),
-            ),
-          ).animate().fadeIn(delay: 240.ms, duration: 400.ms),
-          const SizedBox(height: 16),
-
-          // ============ CATEGORY BREAKDOWN ============
-          if (sortedCategories.isNotEmpty)
-            _SectionCard(
-              title: 'Categories',
-              child: Column(
-                children: sortedCategories.take(5).map((entry) {
-                  final pct = entry.value / sessions.length;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _CategoryBar(
-                      category: entry.key,
-                      count: entry.value,
-                      percentage: pct,
-                      color: _categoryColor(entry.key),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ).animate().fadeIn(delay: 320.ms, duration: 400.ms),
-          if (sortedCategories.isNotEmpty) const SizedBox(height: 16),
-
-          // ============ SCORE TREND ============
-          if (sessions.length >= 2)
+          // Score trend
+          if (sessions.length >= 2) ...[
             _SectionCard(
               title: 'Score Trend',
               child: SizedBox(
                 height: 200,
                 child: ScoreTrendChart(sessions: sessions),
               ),
-            ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
-          if (sessions.length >= 2) const SizedBox(height: 16),
+            ).animate().fadeIn(delay: 160.ms, duration: 400.ms),
+            const SizedBox(height: 16),
+          ],
 
-          // ============ CORE METRICS ============
-          Text('Core Metrics', style: AppTypography.headlineSmall())
-              .animate()
-              .fadeIn(delay: 480.ms, duration: 400.ms),
-          const SizedBox(height: 12),
-          MetricRow(
-            icon: Icons.shield_rounded,
-            label: 'Confidence',
-            description: getMetricDescription('confidence', progress),
-            valueText: getMetricLevel('confidence', progress),
-            valueColor: AppColors.success,
-          ).animate().fadeIn(delay: 520.ms, duration: 400.ms),
-          const SizedBox(height: 8),
-          MetricRow(
-            icon: Icons.waves_rounded,
-            label: 'Clarity',
-            description: getMetricDescription('clarity', progress),
-            valueText: getMetricValue('clarity', progress),
-            valueColor: AppColors.primary,
-          ).animate().fadeIn(delay: 560.ms, duration: 400.ms),
-          const SizedBox(height: 8),
-          MetricRow(
-            icon: Icons.favorite_rounded,
-            label: 'Emotion',
-            description: getMetricDescription('emotion', progress),
-            valueText: getMetricLevel('emotion', progress),
-            valueColor: AppColors.success,
-          ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
-          const SizedBox(height: 20),
-
-          // ============ SCORE DISTRIBUTION ============
-          _SectionCard(
-            title: 'Score Distribution',
-            child: SizedBox(
-              height: 140,
-              child: _ScoreDistribution(sessions: sessions),
-            ),
-          ).animate().fadeIn(delay: 640.ms, duration: 400.ms),
-          const SizedBox(height: 16),
-
-          // ============ BADGES ============
-          if (progress.badges.isNotEmpty)
+          // Badges
+          if (progress.badges.isNotEmpty) ...[
             _SectionCard(
               title: 'Badges (${progress.badges.length})',
               child: Wrap(
@@ -323,38 +224,12 @@ class AnalyticsScreen extends ConsumerWidget {
                     .map((b) => _BadgeChip(badge: b))
                     .toList(),
               ),
-            ).animate().fadeIn(delay: 700.ms, duration: 400.ms),
+            ).animate().fadeIn(delay: 240.ms, duration: 400.ms),
+          ],
           const SizedBox(height: 32),
         ],
       ),
     );
-  }
-
-  static Color _categoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'interviews':
-        return AppColors.primary;
-      case 'presentations':
-        return AppColors.secondary;
-      case 'public speaking':
-        return const Color(0xFFCE82FF);
-      case 'conversations':
-        return AppColors.success;
-      case 'debates':
-        return AppColors.error;
-      case 'storytelling':
-        return AppColors.gold;
-      case 'phone anxiety':
-        return AppColors.skyBlue;
-      case 'dating & social':
-        return const Color(0xFFFF6B9D);
-      case 'conflict & boundaries':
-        return const Color(0xFFFF8C42);
-      case 'social situations':
-        return const Color(0xFF4ECDC4);
-      default:
-        return AppColors.primary;
-    }
   }
 }
 
@@ -400,490 +275,6 @@ class _BigStatCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ─── Activity Heatmap (GitHub-style, 30 days, primary color) ────────────────
-
-class _ActivityHeatmap extends StatelessWidget {
-  final List<SessionRecord> sessions;
-
-  const _ActivityHeatmap({required this.sessions});
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    // Build a map of date → session count for last 35 days (5 weeks)
-    final activityMap = <DateTime, int>{};
-    for (final s in sessions) {
-      final d = DateTime(s.date.year, s.date.month, s.date.day);
-      final diff = today.difference(d).inDays;
-      if (diff >= 0 && diff < 35) {
-        activityMap[d] = (activityMap[d] ?? 0) + 1;
-      }
-    }
-
-    // 5 weeks × 7 days grid, aligned to start on Monday
-    final daysBack = 34 + (today.weekday - 1); // align to Monday
-    final startDate = today.subtract(Duration(days: daysBack));
-    final weeks = <List<_HeatmapDay>>[];
-    var current = startDate;
-    var week = <_HeatmapDay>[];
-
-    while (!current.isAfter(today)) {
-      final count = activityMap[current] ?? 0;
-      final isFuture = current.isAfter(today);
-      week.add(_HeatmapDay(date: current, count: count, isFuture: isFuture));
-      if (week.length == 7) {
-        weeks.add(week);
-        week = [];
-      }
-      current = current.add(const Duration(days: 1));
-    }
-    if (week.isNotEmpty) {
-      // Pad remaining days as future
-      while (week.length < 7) {
-        week.add(_HeatmapDay(
-          date: current,
-          count: 0,
-          isFuture: true,
-        ));
-        current = current.add(const Duration(days: 1));
-      }
-      weeks.add(week);
-    }
-
-    // Count active days this month
-    final activeDays = activityMap.keys
-        .where((d) => today.difference(d).inDays < 30)
-        .length;
-
-    const dayLabels = ['Mon', '', 'Wed', '', 'Fri', '', 'Sun'];
-
-    // Month name for header
-    final monthName = _monthName(today.month);
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5E5), width: 2),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Activity', style: AppTypography.titleLarge()),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$monthName ${today.year}',
-                    style: AppTypography.bodySmall(
-                        color: context.textSecondary),
-                  ),
-                ],
-              ),
-              // Active days badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.calendar_today_rounded,
-                        color: AppColors.primary, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$activeDays active days',
-                      style: AppTypography.labelMedium(
-                          color: AppColors.primary),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Heatmap grid
-          LayoutBuilder(builder: (context, constraints) {
-            final labelWidth = 32.0;
-            final gridWidth = constraints.maxWidth - labelWidth - 4;
-            final cellGap = 3.0;
-            final numWeeks = weeks.length;
-            final cellSize =
-                (gridWidth - (numWeeks - 1) * cellGap) / numWeeks;
-
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Day labels
-                SizedBox(
-                  width: labelWidth,
-                  child: Column(
-                    children: dayLabels.map((label) {
-                      return SizedBox(
-                        height: cellSize + cellGap,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            label,
-                            style: AppTypography.labelSmall(
-                                    color: context.textTertiary)
-                                .copyWith(fontSize: 10),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                // Grid
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: weeks.map((weekDays) {
-                      return Column(
-                        children: weekDays.map((day) {
-                          return Container(
-                            width: cellSize,
-                            height: cellSize,
-                            margin: EdgeInsets.only(bottom: cellGap),
-                            decoration: BoxDecoration(
-                              color: day.isFuture
-                                  ? Colors.transparent
-                                  : _heatColor(day.count),
-                              borderRadius: BorderRadius.circular(4),
-                              border: day.isFuture
-                                  ? Border.all(
-                                      color: const Color(0xFFE5E5E5),
-                                      width: 1,
-                                    )
-                                  : null,
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            );
-          }),
-          const SizedBox(height: 12),
-
-          // Legend
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${sessions.length} total sessions',
-                style: AppTypography.labelSmall(
-                    color: context.textSecondary),
-              ),
-              Row(
-                children: [
-                  Text('Less',
-                      style: AppTypography.labelSmall(
-                              color: context.textTertiary)
-                          .copyWith(fontSize: 10)),
-                  const SizedBox(width: 4),
-                  for (final level in [0, 1, 2, 3])
-                    Container(
-                      width: 14,
-                      height: 14,
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        color: _heatColor(level),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                  const SizedBox(width: 4),
-                  Text('More',
-                      style: AppTypography.labelSmall(
-                              color: context.textTertiary)
-                          .copyWith(fontSize: 10)),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  static Color _heatColor(int count) {
-    if (count == 0) return const Color(0xFFEBEDF0);
-    if (count == 1) return AppColors.primary.withValues(alpha: 0.25);
-    if (count == 2) return AppColors.primary.withValues(alpha: 0.55);
-    return AppColors.primary;
-  }
-
-  static String _monthName(int month) {
-    const months = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    return months[month];
-  }
-}
-
-class _HeatmapDay {
-  final DateTime date;
-  final int count;
-  final bool isFuture;
-
-  const _HeatmapDay({
-    required this.date,
-    required this.count,
-    this.isFuture = false,
-  });
-}
-
-// ─── Weekly Bar Chart ───────────────────────────────────────────────────────
-
-class _WeeklyBarChart extends StatelessWidget {
-  final List<int> weekSessions;
-
-  const _WeeklyBarChart({required this.weekSessions});
-
-  @override
-  Widget build(BuildContext context) {
-    final maxVal = weekSessions.reduce(max).toDouble();
-    final dayLabels = _last7DayLabels();
-
-    return BarChart(
-      BarChartData(
-        alignment: BarChartAlignment.spaceAround,
-        maxY: maxVal > 0 ? maxVal + 1 : 4,
-        barTouchData: BarTouchData(
-          touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              return BarTooltipItem(
-                '${rod.toY.toInt()} sessions',
-                AppTypography.labelSmall(color: AppColors.white),
-              );
-            },
-          ),
-        ),
-        titlesData: FlTitlesData(
-          show: true,
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (value, meta) {
-                final idx = value.toInt();
-                if (idx >= 0 && idx < dayLabels.length) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      dayLabels[idx],
-                      style: AppTypography.labelSmall(
-                              color: context.textTertiary)
-                          .copyWith(fontSize: 10),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-              reservedSize: 24,
-            ),
-          ),
-          leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-        ),
-        gridData: const FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        barGroups: List.generate(7, (i) {
-          return BarChartGroupData(
-            x: i,
-            barRods: [
-              BarChartRodData(
-                toY: weekSessions[i].toDouble(),
-                color: weekSessions[i] > 0
-                    ? AppColors.primary
-                    : const Color(0xFFE5E5E5),
-                width: 24,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(6),
-                ),
-              ),
-            ],
-          );
-        }),
-      ),
-    );
-  }
-
-  List<String> _last7DayLabels() {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final now = DateTime.now();
-    return List.generate(7, (i) {
-      final d = now.subtract(Duration(days: 6 - i));
-      return days[d.weekday - 1];
-    });
-  }
-}
-
-// ─── Category Breakdown Bar ─────────────────────────────────────────────────
-
-class _CategoryBar extends StatelessWidget {
-  final String category;
-  final int count;
-  final double percentage;
-  final Color color;
-
-  const _CategoryBar({
-    required this.category,
-    required this.count,
-    required this.percentage,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              category,
-              style: AppTypography.labelMedium(),
-            ),
-            Text(
-              '$count sessions',
-              style:
-                  AppTypography.labelSmall(color: context.textSecondary),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: percentage,
-            backgroundColor: const Color(0xFFE5E5E5),
-            color: color,
-            minHeight: 8,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── Score Distribution ─────────────────────────────────────────────────────
-
-class _ScoreDistribution extends StatelessWidget {
-  final List<SessionRecord> sessions;
-
-  const _ScoreDistribution({required this.sessions});
-
-  @override
-  Widget build(BuildContext context) {
-    // Bucket scores: 0-20, 20-40, 40-60, 60-80, 80-100
-    final buckets = List<int>.filled(5, 0);
-    for (final s in sessions) {
-      final idx = (s.overallScore / 20).floor().clamp(0, 4);
-      buckets[idx]++;
-    }
-    final maxBucket = buckets.reduce(max).toDouble();
-    final labels = ['0-20', '21-40', '41-60', '61-80', '81-100'];
-    final colors = [
-      AppColors.error,
-      AppColors.warning,
-      AppColors.gold,
-      AppColors.primary,
-      AppColors.success,
-    ];
-
-    return BarChart(
-      BarChartData(
-        alignment: BarChartAlignment.spaceAround,
-        maxY: maxBucket > 0 ? maxBucket + 1 : 4,
-        barTouchData: BarTouchData(
-          touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              return BarTooltipItem(
-                '${rod.toY.toInt()} sessions',
-                AppTypography.labelSmall(color: AppColors.white),
-              );
-            },
-          ),
-        ),
-        titlesData: FlTitlesData(
-          show: true,
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (value, meta) {
-                final idx = value.toInt();
-                if (idx >= 0 && idx < labels.length) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      labels[idx],
-                      style: AppTypography.labelSmall(
-                              color: context.textTertiary)
-                          .copyWith(fontSize: 9),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-              reservedSize: 24,
-            ),
-          ),
-          leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-        ),
-        gridData: const FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        barGroups: List.generate(5, (i) {
-          return BarChartGroupData(
-            x: i,
-            barRods: [
-              BarChartRodData(
-                toY: buckets[i].toDouble(),
-                color: colors[i],
-                width: 32,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(6),
-                ),
-              ),
-            ],
-          );
-        }),
       ),
     );
   }

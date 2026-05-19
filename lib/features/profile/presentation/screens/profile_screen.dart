@@ -11,9 +11,6 @@ import 'package:speech_coach/features/auth/presentation/providers/auth_provider.
 import 'package:speech_coach/features/history/presentation/providers/session_history_provider.dart';
 import 'package:speech_coach/features/history/domain/session_history_entity.dart';
 import 'package:speech_coach/features/progress/presentation/providers/progress_provider.dart';
-import 'package:speech_coach/features/progress/presentation/utils/metric_helpers.dart';
-import 'package:speech_coach/features/progress/presentation/widgets/metric_row.dart';
-import 'package:speech_coach/features/progress/presentation/widgets/score_trend_chart.dart';
 import 'package:speech_coach/features/progress/presentation/widgets/xp_bar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -201,83 +198,7 @@ final historyState = ref.watch(sessionHistoryProvider);
                   .fadeIn(delay: 120.ms, duration: 400.ms),
               const SizedBox(height: 24),
 
-              // 5. Progress section
-              if (progress.sessionHistory.isNotEmpty) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Progress', style: AppTypography.headlineSmall()),
-                    Tappable(
-                      onTap: () => context.push('/progress'),
-                      child: Text(
-                        'See All',
-                        style: AppTypography.labelMedium(
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ).animate().fadeIn(delay: 140.ms, duration: 400.ms),
-                const SizedBox(height: 12),
-
-                MetricRow(
-                  icon: Icons.shield_rounded,
-                  label: 'Confidence',
-                  description:
-                      getMetricDescription('confidence', progress),
-                  valueText: getMetricLevel('confidence', progress),
-                  valueColor: AppColors.success,
-                ).animate().fadeIn(delay: 160.ms, duration: 400.ms),
-                const SizedBox(height: 8),
-                MetricRow(
-                  icon: Icons.waves_rounded,
-                  label: 'Clarity',
-                  description:
-                      getMetricDescription('clarity', progress),
-                  valueText: getMetricValue('clarity', progress),
-                  valueColor: AppColors.primary,
-                ).animate().fadeIn(delay: 180.ms, duration: 400.ms),
-                const SizedBox(height: 8),
-                MetricRow(
-                  icon: Icons.favorite_rounded,
-                  label: 'Emotion',
-                  description:
-                      getMetricDescription('emotion', progress),
-                  valueText: getMetricLevel('emotion', progress),
-                  valueColor: AppColors.success,
-                ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
-
-                // Mini score trend chart
-                if (progress.sessionHistory.length >= 2) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: const Color(0xFFE5E5E5), width: 2),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Score Trend',
-                            style: AppTypography.titleMedium()),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 150,
-                          child: ScoreTrendChart(
-                            sessions: progress.sessionHistory,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ).animate().fadeIn(delay: 220.ms, duration: 400.ms),
-                ],
-                const SizedBox(height: 24),
-              ],
-
-              // 6. Badges section
+              // 5. Badges section
               if (progress.badges.isNotEmpty) ...[
                 Container(
                   width: double.infinity,
