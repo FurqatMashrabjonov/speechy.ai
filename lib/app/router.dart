@@ -438,15 +438,10 @@ class _ShellScreen extends StatelessWidget {
             case 0:
               context.go('/home');
             case 1:
-              context.go('/practice');
-            case 2:
               context.go('/progress');
-            case 3:
+            case 2:
               context.go('/profile');
           }
-        },
-        onMicTap: () {
-          context.push('/conversation/${Uri.encodeComponent('Freestyle')}');
         },
       ),
     );
@@ -455,9 +450,8 @@ class _ShellScreen extends StatelessWidget {
   int _calculateIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/home')) return 0;
-    if (location.startsWith('/practice')) return 1;
-    if (location.startsWith('/progress')) return 2;
-    if (location.startsWith('/profile')) return 3;
+    if (location.startsWith('/progress')) return 1;
+    if (location.startsWith('/profile')) return 2;
     return 0;
   }
 }

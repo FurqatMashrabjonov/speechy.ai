@@ -7,13 +7,11 @@ import 'package:speech_coach/core/extensions/context_extensions.dart';
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
-  final VoidCallback? onMicTap;
 
   const BottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
-    this.onMicTap,
   });
 
   @override
@@ -42,27 +40,18 @@ class BottomNavBar extends StatelessWidget {
                 onTap: () => onTap(0),
               ),
               _NavItem(
-                icon: Icons.grid_view_outlined,
-                activeIcon: Icons.grid_view_rounded,
-                label: 'Practice',
-                isSelected: currentIndex == 1,
-                onTap: () => onTap(1),
-              ),
-              // Center mic FAB
-              _CenterMicFab(onTap: onMicTap),
-              _NavItem(
                 icon: Icons.bar_chart_outlined,
                 activeIcon: Icons.bar_chart_rounded,
-                label: 'Results',
-                isSelected: currentIndex == 2,
-                onTap: () => onTap(2),
+                label: 'Progress',
+                isSelected: currentIndex == 1,
+                onTap: () => onTap(1),
               ),
               _NavItem(
                 icon: Icons.person_outline_rounded,
                 activeIcon: Icons.person_rounded,
                 label: 'Profile',
-                isSelected: currentIndex == 3,
-                onTap: () => onTap(3),
+                isSelected: currentIndex == 2,
+                onTap: () => onTap(2),
               ),
             ],
           ),
@@ -72,44 +61,6 @@ class BottomNavBar extends StatelessWidget {
   }
 }
 
-class _CenterMicFab extends StatelessWidget {
-  final VoidCallback? onTap;
-
-  const _CenterMicFab({this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.mediumImpact();
-        onTap?.call();
-      },
-      child: Transform.translate(
-        offset: const Offset(0, -12),
-        child: Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryDark,
-                blurRadius: 0,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.mic_rounded,
-            color: AppColors.white,
-            size: 28,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _NavItem extends StatelessWidget {
   final IconData icon;
