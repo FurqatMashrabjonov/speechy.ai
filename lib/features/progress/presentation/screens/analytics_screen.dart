@@ -8,7 +8,6 @@ import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/progress/domain/progress_entity.dart';
 import 'package:speech_coach/features/progress/presentation/providers/progress_provider.dart';
-import 'package:speech_coach/features/progress/presentation/widgets/score_trend_chart.dart';
 import 'package:speech_coach/shared/widgets/skeleton.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
@@ -54,22 +53,15 @@ class AnalyticsScreen extends ConsumerWidget {
     final rng = Random(42);
     final now = DateTime.now();
     final categories = [
-      'Interviews',
-      'Presentations',
-      'Public Speaking',
-      'Conversations',
-      'Debates',
-      'Storytelling',
-      'Phone Anxiety',
-      'Dating & Social',
+      'Interviews', 'Presentations', 'Public Speaking',
+      'Conversations', 'Debates', 'Storytelling',
     ];
 
-    final sessions = <SessionRecord>[];
-    for (int i = 0; i < 47; i++) {
+    return List.generate(47, (i) {
       final daysAgo = (i * 1.9).toInt() + rng.nextInt(2);
       final cat = categories[rng.nextInt(categories.length)];
       final base = 55 + rng.nextInt(35);
-      sessions.add(SessionRecord(
+      return SessionRecord(
         scenarioId: 'demo_$i',
         category: cat,
         overallScore: base,
@@ -80,9 +72,25 @@ class AnalyticsScreen extends ConsumerWidget {
         durationSeconds: 120 + rng.nextInt(300),
         xpEarned: 30 + rng.nextInt(70),
         date: now.subtract(Duration(days: daysAgo, hours: rng.nextInt(12))),
-      ));
-    }
-    return sessions;
+      );
+    });
+  }
+
+  // Returns (label, emoji, color) based on avg score
+  static (String, String, Color) _speechLevel(double avg) {
+    if (avg >= 85) return ('Expert Speaker', '🏆', AppColors.gold);
+    if (avg >= 75) return ('Strong Speaker', '🔥', AppColors.success);
+    if (avg >= 60) return ('Good Speaker', '⭐', AppColors.primary);
+    if (avg >= 40) return ('Getting Better', '📈', AppColors.skyBlue);
+    return ('Just Starting', '🌱', const Color(0xFF4CAF50));
+  }
+
+  static String? _nextLevelHint(double avg) {
+    if (avg >= 85) return "You're at the top — keep your streak going!";
+    if (avg >= 75) return 'Score 85+ avg to reach Expert Speaker';
+    if (avg >= 60) return 'Score 75+ avg to reach Strong Speaker';
+    if (avg >= 40) return 'Score 60+ avg to reach Good Speaker';
+    return null;
   }
 
   Widget _buildContent(BuildContext context, UserProgress progress,
@@ -92,9 +100,9 @@ class AnalyticsScreen extends ConsumerWidget {
         ? sessions.map((s) => s.overallScore).reduce((a, b) => a + b) /
             sessions.length
         : 0.0;
-    final bestScore = sessions.isNotEmpty
-        ? sessions.map((s) => s.overallScore).reduce(max)
-        : 0;
+
+    final (label, emoji, levelColor) = _speechLevel(avgScore);
+    final nextHint = _nextLevelHint(avgScore);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -107,7 +115,7 @@ class AnalyticsScreen extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Text('Results', style: AppTypography.headlineLarge()),
+                child: Text('Progress', style: AppTypography.headlineLarge()),
               ),
               Container(
                 padding:
@@ -119,17 +127,12 @@ class AnalyticsScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.local_fire_department_rounded,
-                      color: AppColors.primary,
-                      size: 18,
-                    ),
+                    const Icon(Icons.local_fire_department_rounded,
+                        color: AppColors.primary, size: 18),
                     const SizedBox(width: 4),
-                    Text(
-                      '${progress.streak}',
-                      style:
-                          AppTypography.titleMedium(color: AppColors.primary),
-                    ),
+                    Text('${progress.streak}',
+                        style: AppTypography.titleMedium(
+                            color: AppColors.primary)),
                   ],
                 ),
               ),
@@ -141,24 +144,24 @@ class AnalyticsScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                ),
+                    color: AppColors.primary.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.auto_awesome_rounded,
+                  const Icon(Icons.auto_awesome_rounded,
                       color: AppColors.primary, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Sample data — complete sessions to see your real stats',
-                      style: AppTypography.labelSmall(
-                          color: AppColors.primary),
+                      style:
+                          AppTypography.labelSmall(color: AppColors.primary),
                     ),
                   ),
                 ],
@@ -167,62 +170,87 @@ class AnalyticsScreen extends ConsumerWidget {
           ],
           const SizedBox(height: 20),
 
-          // Stats row
+          // ── Level card ────────────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: levelColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                  color: levelColor.withValues(alpha: 0.3), width: 2),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$emoji  $label',
+                  style: AppTypography.headlineMedium(color: levelColor),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  sessions.isEmpty
+                      ? 'Complete your first session to get your score'
+                      : '${sessions.length} sessions completed · avg ${avgScore.toStringAsFixed(0)}/100',
+                  style: AppTypography.bodySmall(
+                      color: context.textSecondary),
+                ),
+                if (nextHint != null) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(Icons.arrow_upward_rounded,
+                          size: 14, color: context.textTertiary),
+                      const SizedBox(width: 4),
+                      Text(
+                        nextHint,
+                        style: AppTypography.labelSmall(
+                            color: context.textTertiary),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ).animate().fadeIn(delay: 80.ms, duration: 400.ms),
+          const SizedBox(height: 14),
+
+          // ── 3 mini stats ──────────────────────────────────────────────────
           Row(
             children: [
-              _BigStatCard(
-                value: '${progress.totalSessions}',
-                label: 'Sessions',
+              _MiniStat(
+                icon: Icons.local_fire_department_rounded,
+                value: '${progress.streak}',
+                label: 'Day Streak',
+                color: AppColors.secondary,
+              ),
+              const SizedBox(width: 10),
+              _MiniStat(
                 icon: Icons.mic_rounded,
+                value: '${sessions.length}',
+                label: 'Sessions',
                 color: AppColors.primary,
               ),
               const SizedBox(width: 10),
-              _BigStatCard(
-                value: avgScore.toStringAsFixed(0),
-                label: 'Avg Score',
-                icon: Icons.speed_rounded,
-                color: AppColors.success,
-              ),
-              const SizedBox(width: 10),
-              _BigStatCard(
-                value: '$bestScore',
-                label: 'Best',
-                icon: Icons.emoji_events_rounded,
-                color: AppColors.gold,
-              ),
-              const SizedBox(width: 10),
-              _BigStatCard(
+              _MiniStat(
+                icon: Icons.timer_rounded,
                 value: '${progress.totalMinutes}m',
                 label: 'Practice',
-                icon: Icons.timer_rounded,
                 color: AppColors.skyBlue,
               ),
             ],
-          ).animate().fadeIn(delay: 80.ms, duration: 400.ms),
+          ).animate().fadeIn(delay: 160.ms, duration: 400.ms),
           const SizedBox(height: 20),
 
-          // Score trend
-          if (sessions.length >= 2) ...[
-            _SectionCard(
-              title: 'Score Trend',
-              child: SizedBox(
-                height: 200,
-                child: ScoreTrendChart(sessions: sessions),
-              ),
-            ).animate().fadeIn(delay: 160.ms, duration: 400.ms),
-            const SizedBox(height: 16),
-          ],
-
-          // Badges
+          // ── Badges ────────────────────────────────────────────────────────
           if (progress.badges.isNotEmpty) ...[
             _SectionCard(
               title: 'Badges (${progress.badges.length})',
               child: Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: progress.badges
-                    .map((b) => _BadgeChip(badge: b))
-                    .toList(),
+                children:
+                    progress.badges.map((b) => _BadgeChip(badge: b)).toList(),
               ),
             ).animate().fadeIn(delay: 240.ms, duration: 400.ms),
           ],
@@ -233,18 +261,18 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 }
 
-// ─── Overview Stat Card ─────────────────────────────────────────────────────
+// ─── Mini Stat ───────────────────────────────────────────────────────────────
 
-class _BigStatCard extends StatelessWidget {
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
   final String value;
   final String label;
-  final IconData icon;
   final Color color;
 
-  const _BigStatCard({
+  const _MiniStat({
+    required this.icon,
     required this.value,
     required this.label,
-    required this.icon,
     required this.color,
   });
 
@@ -280,7 +308,7 @@ class _BigStatCard extends StatelessWidget {
   }
 }
 
-// ─── Section Card ───────────────────────────────────────────────────────────
+// ─── Section Card ────────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
   final String title;
@@ -310,7 +338,7 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-// ─── Badge Chip ─────────────────────────────────────────────────────────────
+// ─── Badge Chip ──────────────────────────────────────────────────────────────
 
 class _BadgeChip extends StatelessWidget {
   final String badge;
@@ -350,17 +378,15 @@ class _BadgeChip extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: AppColors.gold),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: AppTypography.labelSmall(color: AppColors.gold),
-          ),
+          Text(label,
+              style: AppTypography.labelSmall(color: AppColors.gold)),
         ],
       ),
     );
   }
 }
 
-// ─── Skeleton ───────────────────────────────────────────────────────────────
+// ─── Skeleton ────────────────────────────────────────────────────────────────
 
 class AnalyticsSkeleton extends StatelessWidget {
   const AnalyticsSkeleton({super.key});
@@ -374,19 +400,12 @@ class AnalyticsSkeleton extends StatelessWidget {
         children: [
           const SizedBox(height: 16),
           const SkeletonLine(width: 180, height: 32),
-          const SizedBox(height: 6),
-          const SkeletonLine(width: 100, height: 14),
           const SizedBox(height: 24),
-          Skeleton(height: 100, borderRadius: BorderRadius.circular(20)),
-          const SizedBox(height: 16),
+          Skeleton(height: 120, borderRadius: BorderRadius.circular(20)),
+          const SizedBox(height: 14),
           Skeleton(height: 80, borderRadius: BorderRadius.circular(16)),
-          const SizedBox(height: 24),
-          const SkeletonLine(width: 140, height: 20),
-          const SizedBox(height: 12),
-          for (int i = 0; i < 3; i++) ...[
-            Skeleton(height: 72, borderRadius: BorderRadius.circular(16)),
-            const SizedBox(height: 8),
-          ],
+          const SizedBox(height: 20),
+          Skeleton(height: 100, borderRadius: BorderRadius.circular(16)),
         ],
       ),
     );

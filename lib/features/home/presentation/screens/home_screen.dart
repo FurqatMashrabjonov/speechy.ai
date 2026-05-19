@@ -357,6 +357,7 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
   @override
   Widget build(BuildContext context) {
     final plan = ref.watch(learningPlanProvider);
+    final progress = ref.watch(progressProvider);
 
     if (plan == null) {
       return _NoRoadmapCard();
@@ -552,6 +553,9 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
               ),
             ),
           ),
+
+          // ── Week heatmap ───────────────────────────────────────────────────
+          _WeekHeatmap(sessions: progress.sessionHistory),
 
           // ── Next step CTA ──────────────────────────────────────────────────
           if (plan.isComplete)
@@ -1039,6 +1043,87 @@ class HomeSkeleton extends StatelessWidget {
                       height: 100,
                       borderRadius: BorderRadius.circular(16))),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Week Heatmap ──────────────────────────────────────────────────────────────
+
+class _WeekHeatmap extends StatelessWidget {
+  final List<SessionRecord> sessions;
+
+  const _WeekHeatmap({required this.sessions});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    final today = now.weekday - 1; // 0 = Mon, 6 = Sun
+
+    final practicedDays = <int>{};
+    for (final s in sessions) {
+      final diff = DateTime(s.date.year, s.date.month, s.date.day)
+          .difference(DateTime(monday.year, monday.month, monday.day))
+          .inDays;
+      if (diff >= 0 && diff < 7) practicedDays.add(diff);
+    }
+
+    const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 4, 18, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'This week',
+            style: AppTypography.labelSmall(color: context.textTertiary),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (i) {
+              final practiced = practicedDays.contains(i);
+              final isFuture = i > today;
+              return Column(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: practiced
+                          ? AppColors.primary
+                          : isFuture
+                              ? Colors.transparent
+                              : AppColors.primary.withValues(alpha: 0.06),
+                      border: Border.all(
+                        color: practiced
+                            ? AppColors.primary
+                            : const Color(0xFFDDDDDD),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: practiced
+                        ? const Icon(Icons.check_rounded,
+                            size: 14, color: AppColors.white)
+                        : null,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    dayLabels[i],
+                    style: AppTypography.labelSmall(
+                      color: practiced
+                          ? AppColors.primary
+                          : context.textTertiary,
+                    ).copyWith(fontSize: 11),
+                  ),
+                ],
+              );
+            }),
           ),
         ],
       ),
