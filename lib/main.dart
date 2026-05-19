@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_coach/app/app.dart';
+import 'package:speech_coach/features/assessment/data/assessment_repository.dart';
 import 'package:speech_coach/features/progress/data/progress_repository.dart';
 import 'package:speech_coach/features/widgets/data/widget_service.dart';
 import 'package:speech_coach/firebase_options.dart';
@@ -37,12 +38,10 @@ void main() async {
   }
 
   // Initialize Notifications
-  if (kReleaseMode) {
-    try {
-      await NotificationService.init();
-    } catch (e) {
-      debugPrint('[main] NotificationService init failed: $e');
-    }
+  try {
+    await NotificationService.init();
+  } catch (e) {
+    debugPrint('[main] NotificationService init failed: $e');
   }
 
   // Set preferred orientations
@@ -63,6 +62,23 @@ void main() async {
   final progressRepo = ProgressRepository(prefs);
   final progress = progressRepo.load();
   WidgetService.updateWidgetData(progress);
+
+  // Schedule daily reminder if user has an active learning plan
+  try {
+    final assessmentRepo = AssessmentRepository(prefs);
+    final plan = assessmentRepo.getLearningPlan();
+    if (plan != null) {
+      final nextStep = plan.nextStep;
+      final stepNumber = nextStep != null ? (nextStep.order + 1) : plan.steps.length;
+      await NotificationService.scheduleDailyReminder(
+        currentStep: stepNumber,
+        roadmapTitle: plan.title,
+      );
+    }
+  } catch (e) {
+    debugPrint('[main] daily reminder schedule failed: $e');
+  }
+
   debugPrint('[main] 6 runApp');
 
   runApp(

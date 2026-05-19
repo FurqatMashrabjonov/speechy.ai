@@ -144,9 +144,18 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
             )
             .then((result) {
               if (mounted) setState(() => _chainResult = result);
-              // Notify user if step unlocked
               if (result == ChainResult.passed) {
                 NotificationService.scheduleStepUnlocked(widget.scenarioTitle);
+              }
+              // Reschedule daily reminder with updated next-step info
+              final plan = ref.read(learningPlanProvider);
+              if (plan != null) {
+                final next = plan.nextStep;
+                final stepNumber = next != null ? (next.order + 1) : plan.steps.length;
+                NotificationService.scheduleDailyReminder(
+                  currentStep: stepNumber,
+                  roadmapTitle: plan.title,
+                );
               }
             });
 
