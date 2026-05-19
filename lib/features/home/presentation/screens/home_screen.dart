@@ -452,8 +452,11 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
                     children: [
                       Row(
                         children: [
-                          Text(plan.title,
-                              style: AppTypography.titleMedium()),
+                          Flexible(
+                            child: Text(plan.title,
+                                style: AppTypography.titleMedium(),
+                                overflow: TextOverflow.ellipsis),
+                          ),
                           if (plan.chainLevel > 1) ...[
                             const SizedBox(width: 6),
                             Container(
