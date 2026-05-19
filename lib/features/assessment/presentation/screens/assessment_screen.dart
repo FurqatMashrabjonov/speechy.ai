@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
+import 'package:speech_coach/shared/providers/user_provider.dart';
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/progress_bar.dart';
 import '../../data/assessment_data.dart';
@@ -22,6 +23,16 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
   final Map<String, String> _answers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    final prefs = ref.read(sharedPreferencesProvider);
+    final saved = prefs.getString('onboarding_event_date');
+    if (saved != null) {
+      _answers['event_date'] = saved;
+    }
+  }
 
   @override
   void dispose() {

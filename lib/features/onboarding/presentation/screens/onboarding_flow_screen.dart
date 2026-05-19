@@ -8,6 +8,7 @@ import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
+import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/shared/providers/user_provider.dart';
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
@@ -23,6 +24,9 @@ class OnboardingFlowScreen extends ConsumerStatefulWidget {
 class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  String? _selectedEventDate;
+
+  static const _totalPages = 4;
 
   final _pages = const [
     _OnboardingPage(
@@ -59,17 +63,19 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isLastPage = _currentPage == _totalPages - 1;
+    final canProceed = !isLastPage || _selectedEventDate != null;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (_currentPage < _pages.length - 1)
+                  if (!isLastPage)
                     Tappable(
                       onTap: () => _completeOnboarding(),
                       child: Text(
@@ -83,25 +89,26 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
               ),
             ),
 
-            // Page view
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                itemCount: _pages.length,
+                itemCount: _totalPages,
                 onPageChanged: (index) {
                   setState(() => _currentPage = index);
                 },
                 itemBuilder: (context, index) {
-                  return _buildPage(_pages[index]);
+                  if (index < _pages.length) {
+                    return _buildInfoPage(_pages[index]);
+                  }
+                  return _buildEventDatePage();
                 },
               ),
             ),
 
-            // Page indicators
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                _pages.length,
+                _totalPages,
                 (index) => AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -118,7 +125,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Action button
             Padding(
               padding: EdgeInsets.fromLTRB(
                 20,
@@ -126,13 +132,14 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 20,
                 MediaQuery.of(context).padding.bottom + 20,
               ),
-              child: DuoButton.primary(
-                text: _currentPage < _pages.length - 1
-                    ? 'Next'
-                    : 'Get Started',
+              child: DuoButton(
+                text: isLastPage ? 'Build My Plan' : 'Next',
                 width: double.infinity,
+                color: AppColors.primary,
+                shadowColor: AppColors.primaryDark,
+                disabled: !canProceed,
                 onTap: () {
-                  if (_currentPage < _pages.length - 1) {
+                  if (!isLastPage) {
                     _pageController.nextPage(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
@@ -149,7 +156,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     );
   }
 
-  Widget _buildPage(_OnboardingPage page) {
+  Widget _buildInfoPage(_OnboardingPage page) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Column(
@@ -205,37 +212,153 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     );
   }
 
+  Widget _buildEventDatePage() {
+    final options = [
+      _EventDateOption(
+        id: 'this_week',
+        emoji: '🔥',
+        label: 'This week',
+        sublabel: 'Intensive mode — 3 sessions/day',
+        color: AppColors.error,
+      ),
+      _EventDateOption(
+        id: 'this_month',
+        emoji: '📅',
+        label: 'This month',
+        sublabel: '1 session/day, steady pace',
+        color: AppColors.primary,
+      ),
+      _EventDateOption(
+        id: 'two_months',
+        emoji: '🗓️',
+        label: 'In 2+ months',
+        sublabel: 'Relaxed — every other day',
+        color: AppColors.secondary,
+      ),
+      _EventDateOption(
+        id: 'no_date',
+        emoji: '🎯',
+        label: 'Just exploring',
+        sublabel: 'Go at your own pace',
+        color: AppColors.lime,
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'When\'s your next big moment?',
+            style: AppTypography.displaySmall(),
+          ).animate().fadeIn(duration: 400.ms),
+          const SizedBox(height: 8),
+          Text(
+            'We\'ll build your roadmap around your timeline.',
+            style: AppTypography.bodyLarge(color: context.textSecondary),
+          ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
+          const SizedBox(height: 32),
+          ...options.asMap().entries.map((entry) {
+            final i = entry.key;
+            final opt = entry.value;
+            final selected = _selectedEventDate == opt.id;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Tappable(
+                onTap: () => setState(() => _selectedEventDate = opt.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? opt.color.withValues(alpha: 0.08)
+                        : context.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: selected
+                          ? opt.color
+                          : context.divider,
+                      width: selected ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(opt.emoji, style: const TextStyle(fontSize: 24)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              opt.label,
+                              style: AppTypography.titleMedium(
+                                color: selected ? opt.color : null,
+                              ),
+                            ),
+                            Text(
+                              opt.sublabel,
+                              style: AppTypography.labelSmall(
+                                color: context.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (selected)
+                        Icon(
+                          Icons.check_circle_rounded,
+                          color: opt.color,
+                          size: 22,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ).animate().fadeIn(
+                  delay: (200 + i * 80).ms,
+                  duration: 300.ms,
+                );
+          }),
+        ],
+      ),
+    );
+  }
+
   Future<void> _requestMicPermission() async {
     final recorder = AudioRecorder();
     final hasPermission = await recorder.hasPermission();
     await recorder.dispose();
 
-    if (hasPermission || !mounted) {
-      _completeOnboarding();
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Microphone access is needed for voice conversations. You can enable it in Settings.'),
+    if (!mounted) return;
+    if (!hasPermission) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Microphone access is needed for voice conversations. Enable it in Settings.',
           ),
-        );
-        _completeOnboarding();
-      }
+        ),
+      );
     }
+    _completeOnboarding();
   }
 
   Future<void> _completeOnboarding() async {
     final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setBool(AppConstants.keyOnboardingCompleted, true);
-    if (mounted) {
-      // Route to Speaker DNA quiz if not already taken
-      final hasDNA = prefs.getString('speaker_dna') != null;
-      if (hasDNA) {
-        context.go('/home');
-      } else {
-        context.go('/speaker-dna-quiz');
-      }
+    if (_selectedEventDate != null) {
+      await prefs.setString('onboarding_event_date', _selectedEventDate!);
+    }
+    if (!mounted) return;
+    final hasAssessment = ref.read(hasAssessmentProvider);
+    if (hasAssessment) {
+      context.go('/home');
+    } else {
+      context.go('/assessment');
     }
   }
 }
@@ -253,5 +376,21 @@ class _OnboardingPage {
     required this.title,
     required this.description,
     this.imagePath,
+  });
+}
+
+class _EventDateOption {
+  final String id;
+  final String emoji;
+  final String label;
+  final String sublabel;
+  final Color color;
+
+  const _EventDateOption({
+    required this.id,
+    required this.emoji,
+    required this.label,
+    required this.sublabel,
+    required this.color,
   });
 }
