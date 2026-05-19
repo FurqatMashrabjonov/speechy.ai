@@ -10,8 +10,7 @@ import 'package:speech_coach/features/paywall/presentation/providers/subscriptio
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
-/// Paywall screen that shows RevenueCat's remote paywall when available,
-/// or falls back to a custom UI when no offering is configured yet.
+/// Paywall screen with custom UI.
 class PaywallScreen extends ConsumerWidget {
   const PaywallScreen({super.key});
 
@@ -34,26 +33,6 @@ class PaywallScreen extends ConsumerWidget {
         context.pop();
       }
     });
-
-    // If RevenueCat has packages configured, show the remote PaywallView.
-    // Otherwise, show our custom fallback UI.
-    final hasRemoteOffering = sub.availablePackages.isNotEmpty;
-
-    if (hasRemoteOffering) {
-      return Scaffold(
-        body: SafeArea(
-          child: PaywallView(
-            onDismiss: () => context.pop(),
-            onRestoreCompleted: (_) {
-              // Pro status syncs automatically via the listener
-            },
-            onPurchaseCompleted: (_, storeTransaction) {
-              // Pro status syncs automatically via the listener
-            },
-          ),
-        ),
-      );
-    }
 
     return _CustomPaywallFallback(sub: sub, ref: ref);
   }
