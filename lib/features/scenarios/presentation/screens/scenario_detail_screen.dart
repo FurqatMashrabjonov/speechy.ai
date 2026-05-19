@@ -12,6 +12,7 @@ import 'package:speech_coach/shared/widgets/tappable.dart';
 import 'package:speech_coach/features/characters/presentation/providers/character_provider.dart';
 import 'package:speech_coach/features/scenarios/domain/scenario_entity.dart';
 import 'package:speech_coach/features/scenarios/presentation/providers/scenario_provider.dart';
+import 'package:speech_coach/features/paywall/data/usage_service.dart';
 
 class ScenarioDetailScreen extends ConsumerWidget {
   final String scenarioId;
@@ -220,6 +221,11 @@ class ScenarioDetailScreen extends ConsumerWidget {
 
   void _startPractice(BuildContext context, WidgetRef ref, Scenario scenario,
       AICharacter character) {
+    final usage = ref.read(usageServiceProvider);
+    if (!usage.canStartSession()) {
+      context.push('/paywall');
+      return;
+    }
     context.push(
       '/conversation/${Uri.encodeComponent(scenario.category)}',
       extra: {

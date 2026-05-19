@@ -103,12 +103,12 @@ class _CustomPaywallFallback extends StatelessWidget {
                     const SizedBox(height: 20),
 
                     Text(
-                      'Upgrade to Pro',
+                      'Unlock Your Roadmap',
                       style: AppTypography.displaySmall(),
                     ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
                     const SizedBox(height: 8),
                     Text(
-                      'Unlock unlimited practice sessions and take your speaking skills to the next level',
+                      'You\'ve used your 3 free sessions. Buy once, own it forever — no subscription.',
                       style: AppTypography.bodyMedium(
                         color: context.textSecondary,
                       ),
@@ -130,8 +130,8 @@ class _CustomPaywallFallback extends StatelessWidget {
                       child: Column(
                         children: [
                           _FeatureRow(
-                            feature: 'Daily conversations',
-                            free: '3 per day',
+                            feature: 'Sessions',
+                            free: '3 total',
                             pro: 'Unlimited',
                           ),
                           const Divider(height: 24),
@@ -177,48 +177,40 @@ class _CustomPaywallFallback extends StatelessWidget {
                     ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
                     const SizedBox(height: 24),
 
-                    // Pricing cards
+                    // Pricing cards — one-time purchases
                     Row(
                       children: [
                         Expanded(
                           child: _PricingCard(
-                            title: 'Monthly',
-                            price:
-                                monthlyPkg?.storeProduct.priceString ??
-                                '\$9.99',
-                            period: '/month',
+                            title: 'This Roadmap',
+                            price: monthlyPkg?.storeProduct.priceString ?? '\$9.99',
+                            period: 'one-time',
                             isPopular: false,
                             isLoading: sub.isPurchasing,
-                            onTap: () {
-                              ref
-                                  .read(subscriptionProvider.notifier)
-                                  .purchase(monthlyPkg);
-                            },
+                            onTap: () => ref
+                                .read(subscriptionProvider.notifier)
+                                .purchase(monthlyPkg),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: _PricingCard(
-                            title: 'Yearly',
-                            price:
-                                yearlyPkg?.storeProduct.priceString ??
-                                '\$59.99',
-                            period: '/year',
-                            savings: 'Save 50%',
+                            title: 'All 5 Roadmaps',
+                            price: yearlyPkg?.storeProduct.priceString ?? '\$34.99',
+                            period: 'one-time',
+                            savings: 'Save 65%',
                             isPopular: true,
                             isLoading: sub.isPurchasing,
-                            onTap: () {
-                              ref
-                                  .read(subscriptionProvider.notifier)
-                                  .purchase(yearlyPkg);
-                            },
+                            onTap: () => ref
+                                .read(subscriptionProvider.notifier)
+                                .purchase(yearlyPkg),
                           ),
                         ),
                       ],
                     ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
                     const SizedBox(height: 16),
 
-                    // Lifetime deal
+                    // What you get
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -228,39 +220,35 @@ class _CustomPaywallFallback extends StatelessWidget {
                         border: Border.all(color: AppColors.primary, width: 2),
                       ),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Launch Deal - Lifetime',
-                            style: AppTypography.titleMedium(
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            lifetimePkg?.storeProduct.priceString ??
-                                '\$49.99 one-time',
-                            style: AppTypography.displaySmall(
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          Text(
-                            'Limited time offer',
-                            style: AppTypography.labelSmall(
-                              color: AppColors.primaryDark,
-                            ),
+                            'What you get',
+                            style: AppTypography.titleMedium(color: AppColors.primary),
                           ),
                           const SizedBox(height: 12),
-                          DuoButton.primary(
-                            text: 'Get Lifetime Access',
-                            width: double.infinity,
-                            onTap: sub.isPurchasing
-                                ? null
-                                : () {
-                                    ref
-                                        .read(subscriptionProvider.notifier)
-                                        .purchase(lifetimePkg);
-                                  },
-                          ),
+                          for (final item in [
+                            '15 progressive sessions (easy → hard)',
+                            'AI adapts to your pace and level',
+                            'XP, streak & achievement badges',
+                            'Smart daily notifications',
+                            'No subscription — own it forever',
+                          ])
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.check_circle_rounded,
+                                      size: 16, color: AppColors.primary),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(item,
+                                        style: AppTypography.bodySmall(
+                                            color: AppColors.primaryDark)),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ).animate().fadeIn(delay: 400.ms, duration: 400.ms),

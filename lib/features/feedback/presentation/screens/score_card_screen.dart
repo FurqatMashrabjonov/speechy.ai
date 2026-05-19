@@ -27,6 +27,8 @@ import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dar
 import 'package:speech_coach/features/filler_challenge/domain/filler_detector.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_coach/features/paywall/data/usage_service.dart';
+import 'package:speech_coach/features/notifications/data/notification_service.dart';
 
 class ScoreCardScreen extends ConsumerStatefulWidget {
   final String? sessionId;
@@ -130,6 +132,9 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
           if (mounted) setState(() => _fillerWords = fillers);
         }
 
+        // Record session against free quota
+        ref.read(usageServiceProvider).recordSession();
+
         // Mark learning plan step as completed, capture chain result
         ref
             .read(learningPlanProvider.notifier)
@@ -139,6 +144,10 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
             )
             .then((result) {
               if (mounted) setState(() => _chainResult = result);
+              // Notify user if step unlocked
+              if (result == ChainResult.passed) {
+                NotificationService.scheduleStepUnlocked(widget.scenarioTitle);
+              }
             });
 
         if (!_sessionSaved) {

@@ -27,6 +27,16 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
     final local = _repository.load();
     state = local;
 
+    // Schedule re-engagement if inactive 3+ days
+    if (local.lastSessionDate != null) {
+      final daysSinceLast =
+          DateTime.now().difference(local.lastSessionDate!).inDays;
+      if (daysSinceLast >= 3) {
+        final plan = _planTitle(local);
+        NotificationService.scheduleReEngagement(plan);
+      }
+    }
+
     // Then try to merge with cloud (with timeout so it doesn't hang)
     try {
       final remote = await _remoteRepository
@@ -170,13 +180,36 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
     // Update home screen widgets
     WidgetService.updateWidgetData(state);
 
-    // Cancel streak reminder since user practiced today
-    await NotificationService.cancelAll();
+    // Cancel streak warning — user practiced today
+    await NotificationService.cancelStreakWarning();
 
-    // Schedule next reminder if user has a streak going
-    if (newStreak > 0) {
-      await NotificationService.scheduleStreakReminder(newStreak);
+    // Schedule tomorrow's streak warning (8pm) and daily reminder (9am)
+    await NotificationService.scheduleStreakWarning(newStreak);
+
+    // Schedule weekly summary on Sundays
+    final now2 = DateTime.now();
+    if (now2.weekday == DateTime.sunday) {
+      final weekSessions = state.sessionHistory
+          .where((s) {
+            final diff = now2.difference(s.date).inDays;
+            return diff < 7;
+          })
+          .length;
+      final weekXp = state.sessionHistory
+          .where((s) => now2.difference(s.date).inDays < 7)
+          .fold(0, (sum, s) => sum + s.xpEarned);
+      await NotificationService.scheduleWeeklySummary(
+        sessionsThisWeek: weekSessions,
+        xpThisWeek: weekXp,
+        streak: newStreak,
+      );
     }
+  }
+
+  String _planTitle(UserProgress p) {
+    if (p.sessionHistory.isEmpty) return 'your roadmap';
+    final cat = p.sessionHistory.last.category;
+    return cat.isNotEmpty ? cat : 'your roadmap';
   }
 
   /// Grants a streak freeze (e.g., for Pro users monthly)
