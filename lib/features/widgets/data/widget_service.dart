@@ -3,9 +3,6 @@ import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dar
 import 'package:speech_coach/features/progress/domain/progress_entity.dart';
 
 class WidgetService {
-  static const _androidStatsWidget = 'StatsWidgetProvider';
-  static const _androidPracticeWidget = 'PracticeWidgetProvider';
-  static const _androidActivityWidget = 'ActivityWidgetProvider';
   static const _androidRoadmapWidget = 'RoadmapWidgetProvider';
 
   static Future<void> updateWidgetData(
@@ -37,12 +34,7 @@ class WidgetService {
 
       await Future.wait(saves);
 
-      await Future.wait([
-        HomeWidget.updateWidget(androidName: _androidStatsWidget),
-        HomeWidget.updateWidget(androidName: _androidPracticeWidget),
-        HomeWidget.updateWidget(androidName: _androidActivityWidget),
-        HomeWidget.updateWidget(androidName: _androidRoadmapWidget),
-      ]);
+      await HomeWidget.updateWidget(androidName: _androidRoadmapWidget);
     } catch (_) {
       // Home widget not configured — non-critical, skip silently
     }
