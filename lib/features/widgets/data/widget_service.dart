@@ -1,16 +1,21 @@
 import 'package:home_widget/home_widget.dart';
+import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dart';
 import 'package:speech_coach/features/progress/domain/progress_entity.dart';
 
 class WidgetService {
   static const _androidStatsWidget = 'StatsWidgetProvider';
   static const _androidPracticeWidget = 'PracticeWidgetProvider';
   static const _androidActivityWidget = 'ActivityWidgetProvider';
+  static const _androidRoadmapWidget = 'RoadmapWidgetProvider';
 
-  static Future<void> updateWidgetData(UserProgress progress) async {
+  static Future<void> updateWidgetData(
+    UserProgress progress, {
+    LearningPlan? plan,
+  }) async {
     try {
       final activityGrid = _buildActivityGrid(progress.sessionHistory);
 
-      await Future.wait([
+      final saves = <Future>[
         HomeWidget.saveWidgetData<int>('streak', progress.streak),
         HomeWidget.saveWidgetData<int>('level', progress.level),
         HomeWidget.saveWidgetData<String>('levelTitle', progress.levelTitle),
@@ -19,12 +24,24 @@ class WidgetService {
         HomeWidget.saveWidgetData<double>('xpProgress', progress.levelProgress),
         HomeWidget.saveWidgetData<int>('xpForNext', progress.xpForNextLevel),
         HomeWidget.saveWidgetData<String>('activityGrid', activityGrid),
-      ]);
+      ];
+
+      if (plan != null) {
+        final currentStep = plan.completedCount + 1;
+        saves.addAll([
+          HomeWidget.saveWidgetData<String>('roadmapTitle', plan.title),
+          HomeWidget.saveWidgetData<int>('roadmapCurrentStep', currentStep.clamp(1, plan.totalSteps)),
+          HomeWidget.saveWidgetData<int>('roadmapTotalSteps', plan.totalSteps),
+        ]);
+      }
+
+      await Future.wait(saves);
 
       await Future.wait([
         HomeWidget.updateWidget(androidName: _androidStatsWidget),
         HomeWidget.updateWidget(androidName: _androidPracticeWidget),
         HomeWidget.updateWidget(androidName: _androidActivityWidget),
+        HomeWidget.updateWidget(androidName: _androidRoadmapWidget),
       ]);
     } catch (_) {
       // Home widget not configured — non-critical, skip silently

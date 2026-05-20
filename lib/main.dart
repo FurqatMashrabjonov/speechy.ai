@@ -49,15 +49,14 @@ void main() async {
     ),
   );
 
-  // Sync home screen widget data
+  // Sync home screen widget data + schedule notification
   final progressRepo = ProgressRepository(prefs);
   final progress = progressRepo.load();
-  WidgetService.updateWidgetData(progress);
+  final assessmentRepo = AssessmentRepository(prefs);
+  final plan = assessmentRepo.getLearningPlan();
+  WidgetService.updateWidgetData(progress, plan: plan);
 
-  // Schedule daily reminder if user has an active learning plan
   try {
-    final assessmentRepo = AssessmentRepository(prefs);
-    final plan = assessmentRepo.getLearningPlan();
     if (plan != null) {
       final nextStep = plan.nextStep;
       final stepNumber = nextStep != null ? (nextStep.order + 1) : plan.steps.length;

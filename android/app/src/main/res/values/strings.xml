@@ -3,4 +3,5 @@
     <string name="stats_widget_description">View your streak, level, XP, and sessions at a glance</string>
     <string name="practice_widget_description">Quick access to start a practice session</string>
     <string name="activity_widget_description">See your practice activity heatmap at a glance</string>
+    <string name="roadmap_widget_description">Track your current roadmap progress, streak, and XP</string>
 </resources>
