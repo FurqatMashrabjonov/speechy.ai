@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,15 +12,19 @@ import 'package:speech_coach/app/constants/app_constants.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
+import 'package:speech_coach/features/assessment/data/assessment_data.dart';
+import 'package:speech_coach/features/assessment/domain/assessment_entity.dart';
+import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/auth/presentation/providers/auth_provider.dart';
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
-// Step indices
-const _kFeatureCount = 3;
-const _kStepNotification = _kFeatureCount;     // index 3
-const _kStepLogin = _kFeatureCount + 1;         // index 4
-const _kTotalSteps = _kFeatureCount + 2;        // 5 total
+// Page indices
+const _kIntroPage = 0;
+const _kQuestionCount = 6; // assessmentQuestions.length
+const _kWidgetPage = _kIntroPage + 1 + _kQuestionCount; // 7
+const _kNotifPage = _kWidgetPage + 1;                    // 8
+const _kLoginPage = _kNotifPage + 1;                     // 9
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -29,42 +34,75 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  final PageController _pageController = PageController();
+  final _pageController = PageController();
   int _currentPage = 0;
+  final Map<String, String> _answers = {};
+  bool _generatingPlan = false;
 
-  static const _features = [
-    _FeaturePage(
-      icon: Icons.people_rounded,
-      color: AppColors.primary,
-      title: 'Talk to AI characters',
-      description: 'Practice real conversations — job interviews, presentations, dates — with AI partners that respond like real people.',
-    ),
-    _FeaturePage(
-      icon: Icons.auto_awesome_rounded,
-      color: AppColors.secondary,
-      title: 'Get honest feedback',
-      description: 'Our AI listens to your actual voice and scores clarity, confidence, pace, and engagement in real time.',
-    ),
-    _FeaturePage(
-      icon: Icons.trending_up_rounded,
-      color: AppColors.skyBlue,
-      title: 'Follow your roadmap',
-      description: 'Unlock harder scenarios as you improve. Track your progress and see yourself grow step by step.',
-    ),
-  ];
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   Future<void> _markOnboardingDone() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(AppConstants.keyOnboardingCompleted, true);
   }
 
-  void _next() {
-    if (_currentPage < _kTotalSteps - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutCubic,
-      );
+  void _goTo(int page) {
+    _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _next() => _goTo(_currentPage + 1);
+
+  // Called when user taps "I already have an account"
+  Future<void> _goToLogin() async {
+    await _markOnboardingDone();
+    _goTo(_kLoginPage);
+  }
+
+  // Called after answering last question
+  Future<void> _generatePlan() async {
+    if (_generatingPlan) return;
+    setState(() => _generatingPlan = true);
+    try {
+      final answers = _answers.entries
+          .map((e) => AssessmentAnswer(questionId: e.key, optionId: e.value))
+          .toList();
+      await ref.read(learningPlanProvider.notifier).generateFromAssessment(answers);
+    } catch (_) {}
+    if (mounted) {
+      setState(() => _generatingPlan = false);
+      _next(); // go to widget page
     }
+  }
+
+  void _onOptionSelected(String questionId, String optionId) {
+    HapticFeedback.lightImpact();
+    setState(() => _answers[questionId] = optionId);
+
+    final questionIndex = _currentPage - 1; // page 1 = question 0
+    final isLastQuestion = questionIndex == _kQuestionCount - 1;
+
+    Future.delayed(const Duration(milliseconds: 380), () {
+      if (!mounted) return;
+      if (isLastQuestion) {
+        _generatePlan();
+      } else {
+        _next();
+      }
+    });
+  }
+
+  Future<void> _onLoginDone() async {
+    await _markOnboardingDone();
+    if (!mounted) return;
+    context.go('/home');
   }
 
   Future<void> _requestNotifications() async {
@@ -80,14 +118,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ?.requestNotificationsPermission();
       }
     } catch (_) {}
-    if (!mounted) return;
-    _next();
+    if (mounted) _next();
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+  bool get _showProgressBar =>
+      _currentPage > _kIntroPage && _currentPage < _kLoginPage;
+
+  double get _progressValue {
+    if (_currentPage <= _kIntroPage) return 0;
+    if (_currentPage >= _kLoginPage) return 1;
+    return _currentPage / (_kLoginPage - 1);
   }
 
   @override
@@ -96,74 +136,75 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Progress + Skip ──────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: LinearProgressIndicator(
-                        value: (_currentPage + 1) / _kTotalSteps,
-                        minHeight: 4,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.14),
-                        valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-                      ),
-                    ),
-                  ),
-                  if (_currentPage < _kStepLogin) ...[
-                    const SizedBox(width: 16),
-                    TextButton(
-                      onPressed: () async {
-                        await _markOnboardingDone();
-                        if (mounted) {
-                          _pageController.jumpToPage(_kStepLogin);
-                        }
-                      },
-                      child: Text(
-                        'Skip',
-                        style: AppTypography.bodyMedium(color: context.textSecondary),
+            // ── Top bar ───────────────────────────────────────────────────
+            if (_showProgressBar)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: Row(
+                  children: [
+                    if (_currentPage > _kIntroPage + 1 && _currentPage < _kWidgetPage)
+                      GestureDetector(
+                        onTap: () => _goTo(_currentPage - 1),
+                        child: const Icon(Icons.arrow_back_rounded, size: 22),
+                      )
+                    else
+                      const SizedBox(width: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: _progressValue,
+                          minHeight: 6,
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                          valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                        ),
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
 
-            // ── Pages ────────────────────────────────────────────────────
+            // ── Pages ─────────────────────────────────────────────────────
             Expanded(
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (i) => setState(() => _currentPage = i),
                 children: [
-                  // Feature slides
-                  for (final f in _features)
-                    _FeatureSlide(page: f),
+                  // 0 — Intro
+                  _IntroPage(
+                    onGetStarted: _next,
+                    onAlreadyHaveAccount: _goToLogin,
+                  ),
 
-                  // Notification permission
-                  _NotificationStep(
+                  // 1-6 — Assessment questions
+                  for (int i = 0; i < _kQuestionCount; i++)
+                    _QuestionPage(
+                      question: assessmentQuestions[i],
+                      selectedOptionId: _answers[assessmentQuestions[i].id],
+                      isGenerating: _generatingPlan && i == _kQuestionCount - 1,
+                      onSelect: (optionId) =>
+                          _onOptionSelected(assessmentQuestions[i].id, optionId),
+                    ),
+
+                  // 7 — Widget
+                  _WidgetPage(onContinue: _next),
+
+                  // 8 — Notifications
+                  _NotifPage(
                     onAllow: _requestNotifications,
                     onSkip: _next,
                   ),
 
-                  // Login (last)
-                  _LoginStep(onDone: _markOnboardingDone),
+                  // 9 — Login
+                  _LoginPage(
+                    onDone: _onLoginDone,
+                    onAlreadyHaveAccount: _goToLogin,
+                  ),
                 ],
               ),
             ),
-
-            // ── Bottom CTA (feature slides only) ─────────────────────────
-            if (_currentPage < _kStepNotification)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                child: DuoButton.primary(
-                  text: _currentPage == _kStepNotification - 1 ? 'Continue' : 'Next',
-                  width: double.infinity,
-                  onTap: _next,
-                ),
-              ),
           ],
         ),
       ),
@@ -171,96 +212,466 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 }
 
-// ─── Feature Slide ───────────────────────────────────────────────────────────
+// ─── Intro Page ──────────────────────────────────────────────────────────────
 
-class _FeatureSlide extends StatelessWidget {
-  final _FeaturePage page;
-  const _FeatureSlide({required this.page});
+class _IntroPage extends StatelessWidget {
+  final VoidCallback onGetStarted;
+  final VoidCallback onAlreadyHaveAccount;
+
+  const _IntroPage({
+    required this.onGetStarted,
+    required this.onAlreadyHaveAccount,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const Spacer(flex: 2),
+
+          // Mascot
           Container(
-            width: 140,
-            height: 140,
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
-              color: page.color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(40),
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(36),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            child: Icon(page.icon, color: page.color, size: 64),
+            child: const Icon(Icons.mic_rounded, color: Colors.white, size: 56),
           )
               .animate()
-              .fadeIn(duration: 400.ms)
-              .scale(begin: const Offset(0.8, 0.8), duration: 400.ms),
-          const SizedBox(height: 48),
+              .fadeIn(duration: 500.ms)
+              .scale(begin: const Offset(0.7, 0.7), curve: Curves.easeOutBack),
+
+          const SizedBox(height: 32),
+
           Text(
-            page.title,
-            style: AppTypography.displaySmall(),
+            'Speechy AI',
+            style: AppTypography.displayLarge(),
             textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.2, duration: 400.ms),
-          const SizedBox(height: 16),
+          ).animate().fadeIn(delay: 200.ms),
+
+          const SizedBox(height: 10),
+
           Text(
-            page.description,
+            'Your personal AI speaking coach',
             style: AppTypography.bodyLarge(color: context.textSecondary),
             textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.2, duration: 400.ms),
+          ).animate().fadeIn(delay: 300.ms),
+
+          const Spacer(flex: 2),
+
+          // Get Started
+          DuoButton.primary(
+            text: 'Get Started',
+            width: double.infinity,
+            onTap: onGetStarted,
+          ).animate().fadeIn(delay: 450.ms).slideY(begin: 0.2),
+
+          const SizedBox(height: 14),
+
+          // Already have account
+          Tappable(
+            onTap: onAlreadyHaveAccount,
+            child: Container(
+              width: double.infinity,
+              height: 52,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: context.divider, width: 1.5),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'I already have an account',
+                style: AppTypography.titleMedium(color: context.textSecondary),
+              ),
+            ),
+          ).animate().fadeIn(delay: 500.ms),
+
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
 }
 
-// ─── Notification Step ───────────────────────────────────────────────────────
+// ─── Question Page ────────────────────────────────────────────────────────────
 
-class _NotificationStep extends StatelessWidget {
-  final VoidCallback onAllow;
-  final VoidCallback onSkip;
+class _QuestionPage extends StatelessWidget {
+  final AssessmentQuestion question;
+  final String? selectedOptionId;
+  final bool isGenerating;
+  final ValueChanged<String> onSelect;
 
-  const _NotificationStep({required this.onAllow, required this.onSkip});
+  const _QuestionPage({
+    required this.question,
+    required this.selectedOptionId,
+    required this.isGenerating,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
+
+          // Mascot + speech bubble
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: context.surface,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                    border: Border.all(color: context.divider),
+                  ),
+                  child: Text(
+                    question.text,
+                    style: AppTypography.titleMedium(),
+                  ),
+                ),
+              ),
+            ],
+          ).animate().fadeIn(duration: 350.ms),
+
+          const SizedBox(height: 28),
+
+          // Options
+          ...question.options.asMap().entries.map((entry) {
+            final i = entry.key;
+            final option = entry.value;
+            final isSelected = option.id == selectedOptionId;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: GestureDetector(
+                onTap: isGenerating ? null : () => onSelect(option.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.08)
+                        : AppColors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected ? AppColors.primary : const Color(0xFFE5E5E5),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(option.emoji, style: const TextStyle(fontSize: 24)),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          option.label,
+                          style: AppTypography.titleMedium(
+                            color: isSelected ? AppColors.primary : context.textPrimary,
+                          ),
+                        ),
+                      ),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? AppColors.primary : const Color(0xFFE5E5E5),
+                            width: 2,
+                          ),
+                        ),
+                        child: isSelected
+                            ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ).animate().fadeIn(delay: Duration(milliseconds: 80 + i * 60)).slideY(begin: 0.1);
+          }),
+
+          if (isGenerating) ...[
+            const SizedBox(height: 20),
+            const Center(child: CircularProgressIndicator()),
+          ],
+
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Widget Page ──────────────────────────────────────────────────────────────
+
+class _WidgetPage extends StatelessWidget {
+  final VoidCallback onContinue;
+
+  const _WidgetPage({required this.onContinue});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const Spacer(),
+
+          // Mascot + speech bubble
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: context.surface,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                    border: Border.all(color: context.divider),
+                  ),
+                  child: Text(
+                    "I'll support you from your home screen!",
+                    style: AppTypography.titleMedium(),
+                  ),
+                ),
+              ),
+            ],
+          ).animate().fadeIn(duration: 400.ms),
+
+          const SizedBox(height: 32),
+
+          // Widget preview card
           Container(
-            width: 140,
-            height: 140,
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.secondary.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(40),
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            child: const Icon(
-              Icons.notifications_rounded,
-              color: AppColors.secondary,
-              size: 64,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.mic_rounded, color: Colors.white, size: 28),
+                const SizedBox(height: 10),
+                Text(
+                  'Speechy AI',
+                  style: AppTypography.titleMedium(color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tap to practice today',
+                  style: AppTypography.bodySmall(
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    const Icon(Icons.local_fire_department_rounded,
+                        color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Text('0 day streak',
+                        style: AppTypography.labelSmall(color: Colors.white)),
+                    const SizedBox(width: 16),
+                    const Icon(Icons.bolt_rounded, color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Text('0 XP',
+                        style: AppTypography.labelSmall(color: Colors.white)),
+                  ],
+                ),
+              ],
             ),
-          ).animate().fadeIn(duration: 400.ms).scale(begin: const Offset(0.8, 0.8)),
-          const SizedBox(height: 40),
+          ).animate().fadeIn(delay: 200.ms).scale(
+                begin: const Offset(0.9, 0.9),
+                curve: Curves.easeOutBack,
+              ),
+
+          const SizedBox(height: 12),
           Text(
-            'Stay on track',
-            style: AppTypography.displaySmall(),
+            'Add the widget from your home screen by long-pressing an empty area.',
+            style: AppTypography.bodySmall(color: context.textSecondary),
             textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 150.ms),
-          const SizedBox(height: 16),
+          ).animate().fadeIn(delay: 350.ms),
+
+          const Spacer(),
+
+          DuoButton.primary(
+            text: 'Continue',
+            width: double.infinity,
+            onTap: onContinue,
+          ).animate().fadeIn(delay: 400.ms),
+
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Notification Page ────────────────────────────────────────────────────────
+
+class _NotifPage extends StatelessWidget {
+  final VoidCallback onAllow;
+  final VoidCallback onSkip;
+
+  const _NotifPage({required this.onAllow, required this.onSkip});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        children: [
+          const Spacer(),
+
+          // Mascot + speech bubble
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: context.surface,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                    border: Border.all(color: context.divider),
+                  ),
+                  child: Text(
+                    "Can I remind you to practice every day?",
+                    style: AppTypography.titleMedium(),
+                  ),
+                ),
+              ),
+            ],
+          ).animate().fadeIn(duration: 400.ms),
+
+          const SizedBox(height: 32),
+
+          // Notification preview
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: context.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: context.divider),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.mic_rounded, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Speechy AI', style: AppTypography.labelMedium()),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Ready to practice? Step 1 of Interview Prep is waiting.',
+                        style: AppTypography.bodySmall(color: context.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ).animate().fadeIn(delay: 200.ms),
+
+          const SizedBox(height: 12),
           Text(
-            'Get daily reminders to practice and streak alerts so you never lose your momentum.',
-            style: AppTypography.bodyLarge(color: context.textSecondary),
+            'Daily reminders + streak alerts. No spam.',
+            style: AppTypography.bodySmall(color: context.textSecondary),
             textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 250.ms),
-          const SizedBox(height: 48),
+          ).animate().fadeIn(delay: 300.ms),
+
+          const Spacer(),
+
           DuoButton.primary(
             text: 'Allow Notifications',
             width: double.infinity,
             onTap: onAllow,
           ).animate().fadeIn(delay: 350.ms),
-          const SizedBox(height: 16),
+
+          const SizedBox(height: 14),
+
           TextButton(
             onPressed: onSkip,
             child: Text(
@@ -268,23 +679,30 @@ class _NotificationStep extends StatelessWidget {
               style: AppTypography.bodyMedium(color: context.textSecondary),
             ),
           ).animate().fadeIn(delay: 400.ms),
+
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
 }
 
-// ─── Login Step ──────────────────────────────────────────────────────────────
+// ─── Login Page ───────────────────────────────────────────────────────────────
 
-class _LoginStep extends ConsumerStatefulWidget {
+class _LoginPage extends ConsumerStatefulWidget {
   final Future<void> Function() onDone;
-  const _LoginStep({required this.onDone});
+  final VoidCallback onAlreadyHaveAccount;
+
+  const _LoginPage({
+    required this.onDone,
+    required this.onAlreadyHaveAccount,
+  });
 
   @override
-  ConsumerState<_LoginStep> createState() => _LoginStepState();
+  ConsumerState<_LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginStepState extends ConsumerState<_LoginStep> {
+class _LoginPageState extends ConsumerState<_LoginPage> {
   bool _showEmailForm = false;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -298,10 +716,7 @@ class _LoginStepState extends ConsumerState<_LoginStep> {
     super.dispose();
   }
 
-  Future<void> _afterLogin() async {
-    await widget.onDone();
-    if (mounted) context.go('/home');
-  }
+  Future<void> _afterLogin() => widget.onDone();
 
   Future<void> _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
@@ -328,38 +743,54 @@ class _LoginStepState extends ConsumerState<_LoginStep> {
       child: Column(
         children: [
           const SizedBox(height: 32),
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: const Icon(Icons.mic_rounded, color: Colors.white, size: 48),
-          ).animate().fadeIn(duration: 400.ms).scale(begin: const Offset(0.8, 0.8)),
-          const SizedBox(height: 28),
-          Text(
-            'Create your account',
-            style: AppTypography.displaySmall(),
-            textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 100.ms),
-          const SizedBox(height: 8),
-          Text(
-            'Save your progress and continue on any device.',
-            style: AppTypography.bodyMedium(color: context.textSecondary),
-            textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 180.ms),
-          const SizedBox(height: 40),
+
+          // Mascot + speech bubble
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: context.surface,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                    border: Border.all(color: context.divider),
+                  ),
+                  child: Text(
+                    'Save your progress — create a free account!',
+                    style: AppTypography.titleMedium(),
+                  ),
+                ),
+              ),
+            ],
+          ).animate().fadeIn(duration: 350.ms),
+
+          const SizedBox(height: 32),
 
           // Google
           _SocialButton(
             label: 'Continue with Google',
             isLoading: authState.isLoading,
             onTap: () async {
-              final success = await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+              final success =
+                  await ref.read(authNotifierProvider.notifier).signInWithGoogle();
               if (success && mounted) _afterLogin();
             },
-          ).animate().fadeIn(delay: 260.ms),
+          ).animate().fadeIn(delay: 100.ms),
 
           // Apple (iOS release only)
           if (Platform.isIOS && kReleaseMode) ...[
@@ -369,13 +800,14 @@ class _LoginStepState extends ConsumerState<_LoginStep> {
               icon: Icons.apple_rounded,
               isLoading: authState.isLoading,
               onTap: () async {
-                final success = await ref.read(authNotifierProvider.notifier).signInWithApple();
+                final success =
+                    await ref.read(authNotifierProvider.notifier).signInWithApple();
                 if (success && mounted) _afterLogin();
               },
-            ).animate().fadeIn(delay: 310.ms),
+            ).animate().fadeIn(delay: 150.ms),
           ],
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // Email toggle
           if (!_showEmailForm)
@@ -385,7 +817,7 @@ class _LoginStepState extends ConsumerState<_LoginStep> {
                 'Sign in with email',
                 style: AppTypography.labelMedium(color: context.textSecondary),
               ),
-            ).animate().fadeIn(delay: 360.ms)
+            ).animate().fadeIn(delay: 200.ms)
           else
             Form(
               key: _formKey,
@@ -397,7 +829,8 @@ class _LoginStepState extends ConsumerState<_LoginStep> {
                     decoration: InputDecoration(
                       labelText: 'Email',
                       prefixIcon: const Icon(Icons.email_outlined, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14)),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Enter email';
@@ -411,14 +844,22 @@ class _LoginStepState extends ConsumerState<_LoginStep> {
                     obscureText: _obscure,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                      prefixIcon:
+                          const Icon(Icons.lock_outline_rounded, size: 20),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
+                        icon: Icon(
+                          _obscure
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          size: 20,
+                        ),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14)),
                     ),
-                    validator: (v) => v == null || v.isEmpty ? 'Enter password' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Enter password' : null,
                   ),
                   const SizedBox(height: 16),
                   DuoButton.primary(
@@ -430,7 +871,7 @@ class _LoginStepState extends ConsumerState<_LoginStep> {
               ),
             ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
           Text(
             'By continuing, you agree to our Terms & Privacy Policy.',
             style: AppTypography.labelSmall(color: context.textTertiary),
@@ -443,7 +884,7 @@ class _LoginStepState extends ConsumerState<_LoginStep> {
   }
 }
 
-// ─── Social Button ───────────────────────────────────────────────────────────
+// ─── Social Button ────────────────────────────────────────────────────────────
 
 class _SocialButton extends StatelessWidget {
   final String label;
@@ -479,9 +920,17 @@ class _SocialButton extends StatelessWidget {
               Container(
                 width: 22,
                 height: 22,
-                decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                decoration: const BoxDecoration(
+                    shape: BoxShape.circle, color: Colors.white),
                 child: const Center(
-                  child: Text('G', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF4285F4))),
+                  child: Text(
+                    'G',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF4285F4),
+                    ),
+                  ),
                 ),
               ),
             const SizedBox(width: 12),
@@ -491,20 +940,4 @@ class _SocialButton extends StatelessWidget {
       ),
     );
   }
-}
-
-// ─── Data ────────────────────────────────────────────────────────────────────
-
-class _FeaturePage {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String description;
-
-  const _FeaturePage({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.description,
-  });
 }
