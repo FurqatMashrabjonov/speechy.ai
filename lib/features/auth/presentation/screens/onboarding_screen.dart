@@ -784,11 +784,13 @@ class _WidgetPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+          24, 20, 24, MediaQuery.of(context).padding.bottom + 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Spacer(),
+          // Mascot bubble
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -796,8 +798,8 @@ class _WidgetPage extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: context.surface,
                     borderRadius: const BorderRadius.only(
@@ -808,15 +810,15 @@ class _WidgetPage extends StatelessWidget {
                     border: Border.all(color: context.divider),
                   ),
                   child: Text(
-                    "I'll support you from your home screen!",
+                    'We have a home screen widget — see your streak without opening the app!',
                     style: AppTypography.titleMedium(),
                   ),
                 ),
               ),
             ],
-          ).animate().fadeIn(duration: 400.ms),
-          const SizedBox(height: 28),
-          // Widget preview
+          ).animate().fadeIn(duration: 350.ms),
+          const SizedBox(height: 24),
+          // Widget preview card
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -834,14 +836,20 @@ class _WidgetPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.mic_rounded, color: Colors.white, size: 28),
-                const SizedBox(height: 10),
-                Text('Speechy AI',
-                    style: AppTypography.titleMedium(color: Colors.white)),
-                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.mic_rounded,
+                        color: Colors.white, size: 26),
+                    const SizedBox(width: 8),
+                    Text('Speechy AI',
+                        style:
+                            AppTypography.titleMedium(color: Colors.white)),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 Text('Tap to practice today',
                     style: AppTypography.bodySmall(
-                        color: Colors.white.withValues(alpha: 0.7))),
+                        color: Colors.white.withValues(alpha: 0.75))),
                 const SizedBox(height: 14),
                 Row(
                   children: [
@@ -849,33 +857,97 @@ class _WidgetPage extends StatelessWidget {
                         color: Colors.white, size: 16),
                     const SizedBox(width: 4),
                     Text('0 day streak',
-                        style: AppTypography.labelSmall(color: Colors.white)),
+                        style:
+                            AppTypography.labelSmall(color: Colors.white)),
                     const SizedBox(width: 16),
                     const Icon(Icons.bolt_rounded,
                         color: Colors.white, size: 16),
                     const SizedBox(width: 4),
                     Text('0 XP',
-                        style: AppTypography.labelSmall(color: Colors.white)),
+                        style:
+                            AppTypography.labelSmall(color: Colors.white)),
                   ],
                 ),
               ],
             ),
-          ).animate().fadeIn(delay: 200.ms).scale(
-                begin: const Offset(0.9, 0.9),
+          ).animate().fadeIn(delay: 150.ms).scale(
+                begin: const Offset(0.92, 0.92),
                 curve: Curves.easeOutBack,
               ),
+          const SizedBox(height: 24),
+          Text('How to add it',
+                  style: AppTypography.titleMedium())
+              .animate()
+              .fadeIn(delay: 250.ms),
           const SizedBox(height: 12),
-          Text(
-            'Add from your home screen — long press an empty area.',
-            style: AppTypography.bodySmall(color: context.textSecondary),
-            textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 350.ms),
-          const Spacer(),
+          ...[
+            (
+              icon: Icons.touch_app_rounded,
+              step: '1',
+              text: 'Long press empty area on your home screen',
+            ),
+            (
+              icon: Icons.add_circle_outline_rounded,
+              step: '2',
+              text: 'Tap "+" or "Edit" → "Add Widget"',
+            ),
+            (
+              icon: Icons.search_rounded,
+              step: '3',
+              text: 'Search for "Speechy"',
+            ),
+            (
+              icon: Icons.widgets_rounded,
+              step: '4',
+              text: 'Select the widget and tap "Add Widget"',
+            ),
+          ].asMap().entries.map((e) {
+            final s = e.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(s.icon,
+                        size: 18, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(s.text,
+                        style: AppTypography.bodyMedium(
+                            color: context.textPrimary)),
+                  ),
+                ],
+              )
+                  .animate()
+                  .fadeIn(delay: Duration(milliseconds: 300 + e.key * 60))
+                  .slideX(begin: 0.05),
+            );
+          }),
+          const SizedBox(height: 28),
           DuoButton.primary(
-            text: 'Continue',
+            text: 'Got it!',
+            icon: Icons.thumb_up_rounded,
             width: double.infinity,
             onTap: onContinue,
-          ).animate().fadeIn(delay: 400.ms),
+          ).animate().fadeIn(delay: 550.ms),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: onContinue,
+            child: Center(
+              child: Text(
+                'Maybe later',
+                style: AppTypography.labelMedium(
+                    color: context.textSecondary),
+              ),
+            ),
+          ).animate().fadeIn(delay: 600.ms),
           const SizedBox(height: 32),
         ],
       ),
