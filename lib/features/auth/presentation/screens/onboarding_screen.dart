@@ -555,11 +555,16 @@ class _RoadmapSelectionPage extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                Text(meta.title,
+                                Flexible(
+                                  child: Text(
+                                    meta.title,
                                     style: AppTypography.titleMedium(
                                         color: isSelected
                                             ? meta.color
-                                            : context.textPrimary)),
+                                            : context.textPrimary),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                                 if (isRecommended) ...[
                                   const SizedBox(width: 6),
                                   Container(
