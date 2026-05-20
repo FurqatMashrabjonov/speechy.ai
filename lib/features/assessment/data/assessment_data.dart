@@ -11,6 +11,8 @@ class RoadmapMeta {
   final String description;
   final String emoji;
   final Color color;
+  final int stepCount;
+  final String difficultyLabel;
 
   const RoadmapMeta({
     required this.id,
@@ -18,6 +20,8 @@ class RoadmapMeta {
     required this.description,
     required this.emoji,
     required this.color,
+    required this.stepCount,
+    required this.difficultyLabel,
   });
 }
 
@@ -28,6 +32,8 @@ const allRoadmapMetas = [
     description: 'Master every stage — from first impressions to salary negotiation.',
     emoji: '\u{1F4BC}',
     color: Color(0xFF4F8EF7),
+    stepCount: 15,
+    difficultyLabel: 'Easy → Hard',
   ),
   RoadmapMeta(
     id: 'social_butterfly',
@@ -35,6 +41,8 @@ const allRoadmapMetas = [
     description: 'Build real social skills step by step — small talk to confident connections.',
     emoji: '\u{1F91D}',
     color: Color(0xFF9B5CF6),
+    stepCount: 15,
+    difficultyLabel: 'Easy → Hard',
   ),
   RoadmapMeta(
     id: 'stage_ready',
@@ -42,6 +50,8 @@ const allRoadmapMetas = [
     description: 'Go from nervous speaker to commanding any stage with confidence.',
     emoji: '\u{1F3A4}',
     color: Color(0xFFE84D8A),
+    stepCount: 15,
+    difficultyLabel: 'Easy → Hard',
   ),
   RoadmapMeta(
     id: 'anxiety_buster',
@@ -49,6 +59,8 @@ const allRoadmapMetas = [
     description: 'Gentle progressive practice — start low-pressure, build to real confidence.',
     emoji: '\u{1F4AA}',
     color: Color(0xFF10B981),
+    stepCount: 15,
+    difficultyLabel: 'Gentle Pace',
   ),
   RoadmapMeta(
     id: 'well_rounded',
@@ -56,6 +68,8 @@ const allRoadmapMetas = [
     description: 'Balanced path across all speaking situations — social, professional, public.',
     emoji: '\u{1F31F}',
     color: Color(0xFFF59E0B),
+    stepCount: 15,
+    difficultyLabel: 'Easy → Hard',
   ),
 ];
 

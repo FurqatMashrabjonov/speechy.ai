@@ -520,106 +520,15 @@ class _RoadmapSelectionPage extends StatelessWidget {
 
               return GestureDetector(
                 onTap: () => onSelect(meta.id),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? meta.color.withValues(alpha: 0.08)
-                        : AppColors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isSelected ? meta.color : const Color(0xFFE5E5E5),
-                      width: isSelected ? 2.5 : 2,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: meta.color.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Text(meta.emoji,
-                              style: const TextStyle(fontSize: 22)),
-                        ),
+                child: isRecommended
+                    ? _ExpandedRoadmapCard(
+                        meta: meta,
+                        isSelected: isSelected,
+                      )
+                    : _CompactRoadmapCard(
+                        meta: meta,
+                        isSelected: isSelected,
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    meta.title,
-                                    style: AppTypography.titleMedium(
-                                        color: isSelected
-                                            ? meta.color
-                                            : context.textPrimary),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (isRecommended) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 7, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: meta.color.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Recommended',
-                                      style: AppTypography.labelSmall(
-                                              color: meta.color)
-                                          .copyWith(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 10),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              meta.description,
-                              style: AppTypography.bodySmall(
-                                  color: context.textSecondary),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 22,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          color: isSelected ? meta.color : Colors.transparent,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isSelected
-                                ? meta.color
-                                : const Color(0xFFE5E5E5),
-                            width: 2,
-                          ),
-                        ),
-                        child: isSelected
-                            ? const Icon(Icons.check_rounded,
-                                size: 14, color: Colors.white)
-                            : null,
-                      ),
-                    ],
-                  ),
-                ),
               ).animate().fadeIn(delay: Duration(milliseconds: 60 + i * 50));
             },
           ),
@@ -637,6 +546,232 @@ class _RoadmapSelectionPage extends StatelessWidget {
                 ).animate().fadeIn(delay: 300.ms),
         ),
       ],
+    );
+  }
+}
+
+// ─── Roadmap Cards ────────────────────────────────────────────────────────────
+
+class _ExpandedRoadmapCard extends StatelessWidget {
+  final RoadmapMeta meta;
+  final bool isSelected;
+
+  const _ExpandedRoadmapCard({required this.meta, required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? meta.color.withValues(alpha: 0.09)
+            : meta.color.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isSelected ? meta.color : meta.color.withValues(alpha: 0.4),
+          width: isSelected ? 2.5 : 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: meta.color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(
+                  child: Text(meta.emoji,
+                      style: const TextStyle(fontSize: 26)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: meta.color,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Best match for you',
+                        style: AppTypography.labelSmall(color: Colors.white)
+                            .copyWith(
+                                fontWeight: FontWeight.w700, fontSize: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      meta.title,
+                      style: AppTypography.headlineSmall(color: meta.color),
+                    ),
+                  ],
+                ),
+              ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: isSelected ? meta.color : Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? meta.color : meta.color.withValues(alpha: 0.4),
+                    width: 2,
+                  ),
+                ),
+                child: isSelected
+                    ? const Icon(Icons.check_rounded,
+                        size: 15, color: Colors.white)
+                    : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            meta.description,
+            style: AppTypography.bodySmall(color: context.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _InfoChip(
+                icon: Icons.format_list_numbered_rounded,
+                label: '${meta.stepCount} steps',
+                color: meta.color,
+              ),
+              const SizedBox(width: 8),
+              _InfoChip(
+                icon: Icons.trending_up_rounded,
+                label: meta.difficultyLabel,
+                color: meta.color,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactRoadmapCard extends StatelessWidget {
+  final RoadmapMeta meta;
+  final bool isSelected;
+
+  const _CompactRoadmapCard({required this.meta, required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isSelected ? meta.color.withValues(alpha: 0.08) : AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected ? meta.color : const Color(0xFFE5E5E5),
+          width: isSelected ? 2.5 : 2,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: meta.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child:
+                  Text(meta.emoji, style: const TextStyle(fontSize: 21)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  meta.title,
+                  style: AppTypography.titleMedium(
+                      color: isSelected ? meta.color : context.textPrimary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  meta.description,
+                  style:
+                      AppTypography.bodySmall(color: context.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: isSelected ? meta.color : Colors.transparent,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color:
+                    isSelected ? meta.color : const Color(0xFFE5E5E5),
+                width: 2,
+              ),
+            ),
+            child: isSelected
+                ? const Icon(Icons.check_rounded,
+                    size: 13, color: Colors.white)
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _InfoChip(
+      {required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTypography.labelSmall(color: color)
+                .copyWith(fontWeight: FontWeight.w700, fontSize: 11),
+          ),
+        ],
+      ),
     );
   }
 }
