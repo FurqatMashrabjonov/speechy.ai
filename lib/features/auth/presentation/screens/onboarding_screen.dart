@@ -153,7 +153,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
                   children: [
-                    if (_currentPage > _kIntroPage + 1 &&
+                    if (_currentPage > _kIntroPage &&
                         _currentPage <= _kRoadmapPage)
                       GestureDetector(
                         onTap: () {
