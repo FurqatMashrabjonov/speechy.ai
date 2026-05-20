@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +8,6 @@ import 'package:speech_coach/app/constants/app_constants.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
-import 'package:speech_coach/features/auth/presentation/providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -27,19 +27,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     await Future.delayed(AppConstants.splashDuration);
     if (!mounted) return;
 
-    final authState = ref.read(authStateProvider);
-    final isLoggedIn =
-        authState.whenOrNull(data: (user) => user != null) ?? false;
+    // currentUser is synchronous and available immediately after Firebase.initializeApp()
+    // Do NOT use authStateProvider here — it's a stream and may still be AsyncLoading
+    final user = FirebaseAuth.instance.currentUser;
 
-    if (isLoggedIn) {
+    if (user != null) {
       context.go('/home');
-    } else {
-      final prefs = await SharedPreferences.getInstance();
-      final onboardingDone =
-          prefs.getBool(AppConstants.keyOnboardingCompleted) ?? false;
-      if (mounted) {
-        context.go(onboardingDone ? '/login' : '/onboarding');
-      }
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingDone =
+        prefs.getBool(AppConstants.keyOnboardingCompleted) ?? false;
+    if (mounted) {
+      context.go(onboardingDone ? '/login' : '/onboarding');
     }
   }
 
