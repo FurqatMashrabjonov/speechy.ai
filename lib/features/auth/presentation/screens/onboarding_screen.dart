@@ -20,11 +20,12 @@ import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
 // Page indices
-const _kIntroPage = 0;
-const _kQuestionCount = 6; // assessmentQuestions.length
-const _kWidgetPage = _kIntroPage + 1 + _kQuestionCount; // 7
-const _kNotifPage = _kWidgetPage + 1;                    // 8
-const _kLoginPage = _kNotifPage + 1;                     // 9
+const _kIntroPage    = 0;
+const _kQuestionCount = 6;
+const _kRoadmapPage  = _kIntroPage + 1 + _kQuestionCount; // 7
+const _kWidgetPage   = _kRoadmapPage + 1;                  // 8
+const _kNotifPage    = _kWidgetPage + 1;                   // 9
+const _kLoginPage    = _kNotifPage + 1;                    // 10
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -38,6 +39,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _currentPage = 0;
   final Map<String, String> _answers = {};
   bool _generatingPlan = false;
+  String _recommendedTemplateId = 'well_rounded';
+  String _selectedTemplateId    = 'well_rounded';
 
   @override
   void dispose() {
@@ -50,62 +53,64 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await prefs.setBool(AppConstants.keyOnboardingCompleted, true);
   }
 
-  void _goTo(int page) {
-    _pageController.animateToPage(
-      page,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-    );
-  }
+  void _goTo(int page) => _pageController.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
 
   void _next() => _goTo(_currentPage + 1);
 
-  // Called when user taps "I already have an account"
   Future<void> _goToLogin() async {
+    HapticFeedback.lightImpact();
     await _markOnboardingDone();
     _goTo(_kLoginPage);
   }
 
-  // Called after answering last question
-  Future<void> _generatePlan() async {
-    if (_generatingPlan) return;
-    setState(() => _generatingPlan = true);
-    try {
-      final answers = _answers.entries
-          .map((e) => AssessmentAnswer(questionId: e.key, optionId: e.value))
-          .toList();
-      await ref.read(learningPlanProvider.notifier).generateFromAssessment(answers);
-    } catch (_) {}
-    if (mounted) {
-      setState(() => _generatingPlan = false);
-      _next(); // go to widget page
-    }
-  }
-
-  void _onOptionSelected(String questionId, String optionId) {
-    HapticFeedback.lightImpact();
+  void _onOptionSelected(String questionId, String optionId, {required bool isLast}) {
+    isLast
+        ? HapticFeedback.mediumImpact()
+        : HapticFeedback.selectionClick();
     setState(() => _answers[questionId] = optionId);
-
-    final questionIndex = _currentPage - 1; // page 1 = question 0
-    final isLastQuestion = questionIndex == _kQuestionCount - 1;
 
     Future.delayed(const Duration(milliseconds: 380), () {
       if (!mounted) return;
-      if (isLastQuestion) {
-        _generatePlan();
+      if (isLast) {
+        // Compute recommendation, go to roadmap selection
+        final answers = _answers.entries
+            .map((e) => AssessmentAnswer(questionId: e.key, optionId: e.value))
+            .toList();
+        final recommended = matchTemplate(answers);
+        setState(() {
+          _recommendedTemplateId = recommended;
+          _selectedTemplateId = recommended;
+        });
+        _next();
       } else {
         _next();
       }
     });
   }
 
-  Future<void> _onLoginDone() async {
-    await _markOnboardingDone();
-    if (!mounted) return;
-    context.go('/home');
+  Future<void> _confirmRoadmap() async {
+    HapticFeedback.heavyImpact();
+    setState(() => _generatingPlan = true);
+    try {
+      final answers = _answers.entries
+          .map((e) => AssessmentAnswer(questionId: e.key, optionId: e.value))
+          .toList();
+      await ref
+          .read(learningPlanProvider.notifier)
+          .generateForTemplate(_selectedTemplateId, answers);
+    } catch (_) {}
+    if (mounted) {
+      setState(() => _generatingPlan = false);
+      _next();
+    }
   }
 
   Future<void> _requestNotifications() async {
+    HapticFeedback.mediumImpact();
     try {
       final plugin = FlutterLocalNotificationsPlugin();
       if (Platform.isIOS) {
@@ -119,6 +124,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       }
     } catch (_) {}
     if (mounted) _next();
+  }
+
+  Future<void> _onLoginDone() async {
+    await _markOnboardingDone();
+    if (!mounted) return;
+    context.go('/home');
   }
 
   bool get _showProgressBar =>
@@ -142,9 +153,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
                   children: [
-                    if (_currentPage > _kIntroPage + 1 && _currentPage < _kWidgetPage)
+                    if (_currentPage > _kIntroPage + 1 &&
+                        _currentPage <= _kRoadmapPage)
                       GestureDetector(
-                        onTap: () => _goTo(_currentPage - 1),
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          _goTo(_currentPage - 1);
+                        },
                         child: const Icon(Icons.arrow_back_rounded, size: 22),
                       )
                     else
@@ -156,8 +171,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         child: LinearProgressIndicator(
                           value: _progressValue,
                           minHeight: 6,
-                          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                          valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                          backgroundColor:
+                              AppColors.primary.withValues(alpha: 0.12),
+                          valueColor:
+                              const AlwaysStoppedAnimation(AppColors.primary),
                         ),
                       ),
                     ),
@@ -174,30 +191,56 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 children: [
                   // 0 — Intro
                   _IntroPage(
-                    onGetStarted: _next,
+                    onGetStarted: () {
+                      HapticFeedback.heavyImpact();
+                      _next();
+                    },
                     onAlreadyHaveAccount: _goToLogin,
                   ),
 
-                  // 1-6 — Assessment questions
+                  // 1-6 — Questions
                   for (int i = 0; i < _kQuestionCount; i++)
                     _QuestionPage(
                       question: assessmentQuestions[i],
                       selectedOptionId: _answers[assessmentQuestions[i].id],
-                      isGenerating: _generatingPlan && i == _kQuestionCount - 1,
-                      onSelect: (optionId) =>
-                          _onOptionSelected(assessmentQuestions[i].id, optionId),
+                      isLast: i == _kQuestionCount - 1,
+                      onSelect: (optionId) => _onOptionSelected(
+                        assessmentQuestions[i].id,
+                        optionId,
+                        isLast: i == _kQuestionCount - 1,
+                      ),
                     ),
 
-                  // 7 — Widget
-                  _WidgetPage(onContinue: _next),
-
-                  // 8 — Notifications
-                  _NotifPage(
-                    onAllow: _requestNotifications,
-                    onSkip: _next,
+                  // 7 — Roadmap selection
+                  _RoadmapSelectionPage(
+                    recommendedId: _recommendedTemplateId,
+                    selectedId: _selectedTemplateId,
+                    isGenerating: _generatingPlan,
+                    onSelect: (id) {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedTemplateId = id);
+                    },
+                    onConfirm: _confirmRoadmap,
                   ),
 
-                  // 9 — Login
+                  // 8 — Widget
+                  _WidgetPage(
+                    onContinue: () {
+                      HapticFeedback.lightImpact();
+                      _next();
+                    },
+                  ),
+
+                  // 9 — Notifications
+                  _NotifPage(
+                    onAllow: _requestNotifications,
+                    onSkip: () {
+                      HapticFeedback.lightImpact();
+                      _next();
+                    },
+                  ),
+
+                  // 10 — Login
                   _LoginPage(
                     onDone: _onLoginDone,
                     onAlreadyHaveAccount: _goToLogin,
@@ -212,7 +255,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 }
 
-// ─── Intro Page ──────────────────────────────────────────────────────────────
+// ─── Intro Page ───────────────────────────────────────────────────────────────
 
 class _IntroPage extends StatelessWidget {
   final VoidCallback onGetStarted;
@@ -230,8 +273,6 @@ class _IntroPage extends StatelessWidget {
       child: Column(
         children: [
           const Spacer(flex: 2),
-
-          // Mascot
           Container(
             width: 120,
             height: 120,
@@ -240,9 +281,9 @@ class _IntroPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(36),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
+                  color: AppColors.primary.withValues(alpha: 0.35),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
@@ -251,35 +292,22 @@ class _IntroPage extends StatelessWidget {
               .animate()
               .fadeIn(duration: 500.ms)
               .scale(begin: const Offset(0.7, 0.7), curve: Curves.easeOutBack),
-
           const SizedBox(height: 32),
-
-          Text(
-            'Speechy AI',
-            style: AppTypography.displayLarge(),
-            textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 200.ms),
-
+          Text('Speechy AI', style: AppTypography.displayLarge(), textAlign: TextAlign.center)
+              .animate().fadeIn(delay: 200.ms),
           const SizedBox(height: 10),
-
           Text(
             'Your personal AI speaking coach',
             style: AppTypography.bodyLarge(color: context.textSecondary),
             textAlign: TextAlign.center,
           ).animate().fadeIn(delay: 300.ms),
-
           const Spacer(flex: 2),
-
-          // Get Started
           DuoButton.primary(
             text: 'Get Started',
             width: double.infinity,
             onTap: onGetStarted,
           ).animate().fadeIn(delay: 450.ms).slideY(begin: 0.2),
-
           const SizedBox(height: 14),
-
-          // Already have account
           Tappable(
             onTap: onAlreadyHaveAccount,
             child: Container(
@@ -296,7 +324,6 @@ class _IntroPage extends StatelessWidget {
               ),
             ),
           ).animate().fadeIn(delay: 500.ms),
-
           const SizedBox(height: 32),
         ],
       ),
@@ -309,13 +336,13 @@ class _IntroPage extends StatelessWidget {
 class _QuestionPage extends StatelessWidget {
   final AssessmentQuestion question;
   final String? selectedOptionId;
-  final bool isGenerating;
+  final bool isLast;
   final ValueChanged<String> onSelect;
 
   const _QuestionPage({
     required this.question,
     required this.selectedOptionId,
-    required this.isGenerating,
+    required this.isLast,
     required this.onSelect,
   });
 
@@ -327,24 +354,141 @@ class _QuestionPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-
           // Mascot + speech bubble
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
-              ),
+              _MascotIcon(),
               const SizedBox(width: 12),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: context.surface,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                    border: Border.all(color: context.divider),
+                  ),
+                  child: Text(question.text, style: AppTypography.titleMedium()),
+                ),
+              ),
+            ],
+          ).animate().fadeIn(duration: 350.ms),
+          const SizedBox(height: 28),
+          ...question.options.asMap().entries.map((entry) {
+            final i = entry.key;
+            final option = entry.value;
+            final isSelected = option.id == selectedOptionId;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: GestureDetector(
+                onTap: () => onSelect(option.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.08)
+                        : AppColors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.primary
+                          : const Color(0xFFE5E5E5),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(option.emoji,
+                          style: const TextStyle(fontSize: 24)),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          option.label,
+                          style: AppTypography.titleMedium(
+                            color: isSelected
+                                ? AppColors.primary
+                                : context.textPrimary,
+                          ),
+                        ),
+                      ),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary
+                              : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : const Color(0xFFE5E5E5),
+                            width: 2,
+                          ),
+                        ),
+                        child: isSelected
+                            ? const Icon(Icons.check_rounded,
+                                size: 16, color: Colors.white)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ).animate().fadeIn(
+                delay: Duration(milliseconds: 60 + i * 60)).slideY(begin: 0.1);
+          }),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Roadmap Selection Page ───────────────────────────────────────────────────
+
+class _RoadmapSelectionPage extends StatelessWidget {
+  final String recommendedId;
+  final String selectedId;
+  final bool isGenerating;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onConfirm;
+
+  const _RoadmapSelectionPage({
+    required this.recommendedId,
+    required this.selectedId,
+    required this.isGenerating,
+    required this.onSelect,
+    required this.onConfirm,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+        // Mascot + speech bubble
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _MascotIcon(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: context.surface,
                     borderRadius: const BorderRadius.only(
@@ -355,84 +499,139 @@ class _QuestionPage extends StatelessWidget {
                     border: Border.all(color: context.divider),
                   ),
                   child: Text(
-                    question.text,
+                    'I picked the best roadmap for you — but you can change it!',
                     style: AppTypography.titleMedium(),
                   ),
                 ),
               ),
             ],
           ).animate().fadeIn(duration: 350.ms),
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: allRoadmapMetas.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (context, i) {
+              final meta = allRoadmapMetas[i];
+              final isRecommended = meta.id == recommendedId;
+              final isSelected = meta.id == selectedId;
 
-          const SizedBox(height: 28),
-
-          // Options
-          ...question.options.asMap().entries.map((entry) {
-            final i = entry.key;
-            final option = entry.value;
-            final isSelected = option.id == selectedOptionId;
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: GestureDetector(
-                onTap: isGenerating ? null : () => onSelect(option.id),
+              return GestureDetector(
+                onTap: () => onSelect(meta.id),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOutCubic,
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColors.primary.withValues(alpha: 0.08)
+                        ? meta.color.withValues(alpha: 0.08)
                         : AppColors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? AppColors.primary : const Color(0xFFE5E5E5),
-                      width: 2,
+                      color: isSelected ? meta.color : const Color(0xFFE5E5E5),
+                      width: isSelected ? 2.5 : 2,
                     ),
                   ),
                   child: Row(
                     children: [
-                      Text(option.emoji, style: const TextStyle(fontSize: 24)),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          option.label,
-                          style: AppTypography.titleMedium(
-                            color: isSelected ? AppColors.primary : context.textPrimary,
-                          ),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: meta.color.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(meta.emoji,
+                              style: const TextStyle(fontSize: 22)),
                         ),
                       ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(meta.title,
+                                    style: AppTypography.titleMedium(
+                                        color: isSelected
+                                            ? meta.color
+                                            : context.textPrimary)),
+                                if (isRecommended) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: meta.color.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Recommended',
+                                      style: AppTypography.labelSmall(
+                                              color: meta.color)
+                                          .copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 10),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              meta.description,
+                              style: AppTypography.bodySmall(
+                                  color: context.textSecondary),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        width: 24,
-                        height: 24,
+                        width: 22,
+                        height: 22,
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : Colors.transparent,
+                          color: isSelected ? meta.color : Colors.transparent,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isSelected ? AppColors.primary : const Color(0xFFE5E5E5),
+                            color: isSelected
+                                ? meta.color
+                                : const Color(0xFFE5E5E5),
                             width: 2,
                           ),
                         ),
                         child: isSelected
-                            ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                            ? const Icon(Icons.check_rounded,
+                                size: 14, color: Colors.white)
                             : null,
                       ),
                     ],
                   ),
                 ),
-              ),
-            ).animate().fadeIn(delay: Duration(milliseconds: 80 + i * 60)).slideY(begin: 0.1);
-          }),
-
-          if (isGenerating) ...[
-            const SizedBox(height: 20),
-            const Center(child: CircularProgressIndicator()),
-          ],
-
-          const SizedBox(height: 32),
-        ],
-      ),
+              ).animate().fadeIn(delay: Duration(milliseconds: 60 + i * 50));
+            },
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 12, 24, MediaQuery.of(context).padding.bottom + 16),
+          child: isGenerating
+              ? const Center(child: CircularProgressIndicator())
+              : DuoButton.primary(
+                  text: 'Start My Journey',
+                  icon: Icons.rocket_launch_rounded,
+                  width: double.infinity,
+                  onTap: onConfirm,
+                ).animate().fadeIn(delay: 300.ms),
+        ),
+      ],
     );
   }
 }
@@ -441,7 +640,6 @@ class _QuestionPage extends StatelessWidget {
 
 class _WidgetPage extends StatelessWidget {
   final VoidCallback onContinue;
-
   const _WidgetPage({required this.onContinue});
 
   @override
@@ -451,24 +649,15 @@ class _WidgetPage extends StatelessWidget {
       child: Column(
         children: [
           const Spacer(),
-
-          // Mascot + speech bubble
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
-              ),
+              _MascotIcon(),
               const SizedBox(width: 12),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: context.surface,
                     borderRadius: const BorderRadius.only(
@@ -486,10 +675,8 @@ class _WidgetPage extends StatelessWidget {
               ),
             ],
           ).animate().fadeIn(duration: 400.ms),
-
-          const SizedBox(height: 32),
-
-          // Widget preview card
+          const SizedBox(height: 28),
+          // Widget preview
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -509,17 +696,12 @@ class _WidgetPage extends StatelessWidget {
               children: [
                 const Icon(Icons.mic_rounded, color: Colors.white, size: 28),
                 const SizedBox(height: 10),
-                Text(
-                  'Speechy AI',
-                  style: AppTypography.titleMedium(color: Colors.white),
-                ),
+                Text('Speechy AI',
+                    style: AppTypography.titleMedium(color: Colors.white)),
                 const SizedBox(height: 4),
-                Text(
-                  'Tap to practice today',
-                  style: AppTypography.bodySmall(
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
-                ),
+                Text('Tap to practice today',
+                    style: AppTypography.bodySmall(
+                        color: Colors.white.withValues(alpha: 0.7))),
                 const SizedBox(height: 14),
                 Row(
                   children: [
@@ -529,7 +711,8 @@ class _WidgetPage extends StatelessWidget {
                     Text('0 day streak',
                         style: AppTypography.labelSmall(color: Colors.white)),
                     const SizedBox(width: 16),
-                    const Icon(Icons.bolt_rounded, color: Colors.white, size: 16),
+                    const Icon(Icons.bolt_rounded,
+                        color: Colors.white, size: 16),
                     const SizedBox(width: 4),
                     Text('0 XP',
                         style: AppTypography.labelSmall(color: Colors.white)),
@@ -541,22 +724,18 @@ class _WidgetPage extends StatelessWidget {
                 begin: const Offset(0.9, 0.9),
                 curve: Curves.easeOutBack,
               ),
-
           const SizedBox(height: 12),
           Text(
-            'Add the widget from your home screen by long-pressing an empty area.',
+            'Add from your home screen — long press an empty area.',
             style: AppTypography.bodySmall(color: context.textSecondary),
             textAlign: TextAlign.center,
           ).animate().fadeIn(delay: 350.ms),
-
           const Spacer(),
-
           DuoButton.primary(
             text: 'Continue',
             width: double.infinity,
             onTap: onContinue,
           ).animate().fadeIn(delay: 400.ms),
-
           const SizedBox(height: 32),
         ],
       ),
@@ -569,7 +748,6 @@ class _WidgetPage extends StatelessWidget {
 class _NotifPage extends StatelessWidget {
   final VoidCallback onAllow;
   final VoidCallback onSkip;
-
   const _NotifPage({required this.onAllow, required this.onSkip});
 
   @override
@@ -579,24 +757,15 @@ class _NotifPage extends StatelessWidget {
       child: Column(
         children: [
           const Spacer(),
-
-          // Mascot + speech bubble
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
-              ),
+              _MascotIcon(),
               const SizedBox(width: 12),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: context.surface,
                     borderRadius: const BorderRadius.only(
@@ -607,16 +776,14 @@ class _NotifPage extends StatelessWidget {
                     border: Border.all(color: context.divider),
                   ),
                   child: Text(
-                    "Can I remind you to practice every day?",
+                    'Can I remind you to practice every day?',
                     style: AppTypography.titleMedium(),
                   ),
                 ),
               ),
             ],
           ).animate().fadeIn(duration: 400.ms),
-
-          const SizedBox(height: 32),
-
+          const SizedBox(height: 28),
           // Notification preview
           Container(
             width: double.infinity,
@@ -635,7 +802,8 @@ class _NotifPage extends StatelessWidget {
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.mic_rounded, color: Colors.white, size: 22),
+                  child:
+                      const Icon(Icons.mic_rounded, color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -645,8 +813,9 @@ class _NotifPage extends StatelessWidget {
                       Text('Speechy AI', style: AppTypography.labelMedium()),
                       const SizedBox(height: 2),
                       Text(
-                        'Ready to practice? Step 1 of Interview Prep is waiting.',
-                        style: AppTypography.bodySmall(color: context.textSecondary),
+                        'Ready to practice? Step 1 is waiting for you.',
+                        style: AppTypography.bodySmall(
+                            color: context.textSecondary),
                       ),
                     ],
                   ),
@@ -654,32 +823,25 @@ class _NotifPage extends StatelessWidget {
               ],
             ),
           ).animate().fadeIn(delay: 200.ms),
-
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             'Daily reminders + streak alerts. No spam.',
             style: AppTypography.bodySmall(color: context.textSecondary),
             textAlign: TextAlign.center,
           ).animate().fadeIn(delay: 300.ms),
-
           const Spacer(),
-
           DuoButton.primary(
             text: 'Allow Notifications',
             width: double.infinity,
             onTap: onAllow,
           ).animate().fadeIn(delay: 350.ms),
-
           const SizedBox(height: 14),
-
           TextButton(
             onPressed: onSkip,
-            child: Text(
-              'Not now',
-              style: AppTypography.bodyMedium(color: context.textSecondary),
-            ),
+            child: Text('Not now',
+                style:
+                    AppTypography.bodyMedium(color: context.textSecondary)),
           ).animate().fadeIn(delay: 400.ms),
-
           const SizedBox(height: 32),
         ],
       ),
@@ -692,11 +854,7 @@ class _NotifPage extends StatelessWidget {
 class _LoginPage extends ConsumerStatefulWidget {
   final Future<void> Function() onDone;
   final VoidCallback onAlreadyHaveAccount;
-
-  const _LoginPage({
-    required this.onDone,
-    required this.onAlreadyHaveAccount,
-  });
+  const _LoginPage({required this.onDone, required this.onAlreadyHaveAccount});
 
   @override
   ConsumerState<_LoginPage> createState() => _LoginPageState();
@@ -716,15 +874,17 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
     super.dispose();
   }
 
-  Future<void> _afterLogin() => widget.onDone();
-
   Future<void> _signInWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
+    HapticFeedback.mediumImpact();
     final success = await ref.read(authNotifierProvider.notifier).signInWithEmail(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
-    if (success && mounted) _afterLogin();
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
+    if (success && mounted) {
+      HapticFeedback.heavyImpact();
+      widget.onDone();
+    }
   }
 
   @override
@@ -743,24 +903,15 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
       child: Column(
         children: [
           const SizedBox(height: 32),
-
-          // Mascot + speech bubble
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
-              ),
+              _MascotIcon(),
               const SizedBox(width: 12),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: context.surface,
                     borderRadius: const BorderRadius.only(
@@ -778,21 +929,21 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
               ),
             ],
           ).animate().fadeIn(duration: 350.ms),
-
           const SizedBox(height: 32),
-
-          // Google
           _SocialButton(
             label: 'Continue with Google',
             isLoading: authState.isLoading,
             onTap: () async {
-              final success =
-                  await ref.read(authNotifierProvider.notifier).signInWithGoogle();
-              if (success && mounted) _afterLogin();
+              HapticFeedback.mediumImpact();
+              final success = await ref
+                  .read(authNotifierProvider.notifier)
+                  .signInWithGoogle();
+              if (success && mounted) {
+                HapticFeedback.heavyImpact();
+                widget.onDone();
+              }
             },
           ).animate().fadeIn(delay: 100.ms),
-
-          // Apple (iOS release only)
           if (Platform.isIOS && kReleaseMode) ...[
             const SizedBox(height: 12),
             _SocialButton(
@@ -800,23 +951,27 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
               icon: Icons.apple_rounded,
               isLoading: authState.isLoading,
               onTap: () async {
-                final success =
-                    await ref.read(authNotifierProvider.notifier).signInWithApple();
-                if (success && mounted) _afterLogin();
+                HapticFeedback.mediumImpact();
+                final success = await ref
+                    .read(authNotifierProvider.notifier)
+                    .signInWithApple();
+                if (success && mounted) {
+                  HapticFeedback.heavyImpact();
+                  widget.onDone();
+                }
               },
             ).animate().fadeIn(delay: 150.ms),
           ],
-
           const SizedBox(height: 20),
-
-          // Email toggle
           if (!_showEmailForm)
             Tappable(
-              onTap: () => setState(() => _showEmailForm = true),
-              child: Text(
-                'Sign in with email',
-                style: AppTypography.labelMedium(color: context.textSecondary),
-              ),
+              onTap: () {
+                HapticFeedback.lightImpact();
+                setState(() => _showEmailForm = true);
+              },
+              child: Text('Sign in with email',
+                  style: AppTypography.labelMedium(
+                      color: context.textSecondary)),
             ).animate().fadeIn(delay: 200.ms)
           else
             Form(
@@ -828,7 +983,8 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: 'Email',
-                      prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                      prefixIcon:
+                          const Icon(Icons.email_outlined, size: 20),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
@@ -853,7 +1009,8 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
                               : Icons.visibility_outlined,
                           size: 20,
                         ),
-                        onPressed: () => setState(() => _obscure = !_obscure),
+                        onPressed: () =>
+                            setState(() => _obscure = !_obscure),
                       ),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14)),
@@ -870,7 +1027,6 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
                 ],
               ),
             ),
-
           const SizedBox(height: 32),
           Text(
             'By continuing, you agree to our Terms & Privacy Policy.',
@@ -880,6 +1036,23 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+}
+
+// ─── Shared Mascot Icon ───────────────────────────────────────────────────────
+
+class _MascotIcon extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
     );
   }
 }
@@ -923,14 +1096,11 @@ class _SocialButton extends StatelessWidget {
                 decoration: const BoxDecoration(
                     shape: BoxShape.circle, color: Colors.white),
                 child: const Center(
-                  child: Text(
-                    'G',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF4285F4),
-                    ),
-                  ),
+                  child: Text('G',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF4285F4))),
                 ),
               ),
             const SizedBox(width: 12),

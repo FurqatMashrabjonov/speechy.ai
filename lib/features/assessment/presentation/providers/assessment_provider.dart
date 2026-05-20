@@ -88,6 +88,19 @@ class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
     return 'hard';
   }
 
+  Future<void> generateForTemplate(
+      String templateId, List<AssessmentAnswer> answers) async {
+    final result = AssessmentResult(
+      answers: answers,
+      templateId: templateId,
+      completedAt: DateTime.now(),
+    );
+    await _repo.saveAssessmentResult(result);
+    final plan = generatePlan(result);
+    await _repo.saveLearningPlan(plan);
+    state = plan;
+  }
+
   Future<void> switchRoadmap(String templateId) async {
     final plan = generatePlanFromTemplateId(templateId);
     await _repo.saveLearningPlan(plan);
