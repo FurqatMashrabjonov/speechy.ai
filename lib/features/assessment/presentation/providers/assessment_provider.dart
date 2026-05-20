@@ -34,24 +34,33 @@ class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
   }
 
   Future<void> _loadAndSync() async {
-    // Load local first — always fast
     final local = _repo.getLearningPlan();
     state = local;
+    await refreshSync();
+  }
 
-    // Sync with Firestore
+  /// Call after login — handles both restore (new device/reinstall)
+  /// and first-time push (assessment completed before login).
+  Future<void> refreshSync() async {
     try {
+      final local = _repo.getLearningPlan();
       final remote = await _remote.load().timeout(const Duration(seconds: 5));
       final merged = PlanRemoteRepository.merge(local, remote);
-      if (merged != null && merged != local) {
+
+      if (merged == null) return;
+
+      if (local == null || merged.completedCount > (local.completedCount)) {
+        // Remote has more progress — restore it locally
         await _repo.saveLearningPlan(merged);
         state = merged;
         debugPrint('LearningPlanNotifier: restored plan from Firestore');
-      } else if (local != null && remote == null) {
-        // Push local plan to cloud (first sync after install)
-        _remote.save(local).catchError((_) {});
+      } else {
+        // Local is up to date — push to cloud
+        _remote.save(merged).catchError((_) {});
+        state = merged;
       }
     } catch (_) {
-      // Offline — use local silently
+      // Offline — silently skip
     }
   }
 
