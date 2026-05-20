@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:speech_coach/shared/providers/user_provider.dart';
 import '../../data/assessment_data.dart';
 import '../../data/assessment_repository.dart';
+import '../../data/plan_remote_repository.dart';
 import '../../domain/assessment_entity.dart';
 import '../../domain/learning_plan_entity.dart';
 
@@ -19,18 +21,38 @@ final hasAssessmentProvider = Provider<bool>((ref) {
 final learningPlanProvider =
     StateNotifierProvider<LearningPlanNotifier, LearningPlan?>((ref) {
   final repo = ref.read(assessmentRepositoryProvider);
-  return LearningPlanNotifier(repo);
+  final remote = ref.read(planRemoteRepositoryProvider);
+  return LearningPlanNotifier(repo, remote);
 });
 
 class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
   final AssessmentRepository _repo;
+  final PlanRemoteRepository _remote;
 
-  LearningPlanNotifier(this._repo) : super(null) {
-    _load();
+  LearningPlanNotifier(this._repo, this._remote) : super(null) {
+    _loadAndSync();
   }
 
-  void _load() {
-    state = _repo.getLearningPlan();
+  Future<void> _loadAndSync() async {
+    // Load local first — always fast
+    final local = _repo.getLearningPlan();
+    state = local;
+
+    // Sync with Firestore
+    try {
+      final remote = await _remote.load().timeout(const Duration(seconds: 5));
+      final merged = PlanRemoteRepository.merge(local, remote);
+      if (merged != null && merged != local) {
+        await _repo.saveLearningPlan(merged);
+        state = merged;
+        debugPrint('LearningPlanNotifier: restored plan from Firestore');
+      } else if (local != null && remote == null) {
+        // Push local plan to cloud (first sync after install)
+        _remote.save(local).catchError((_) {});
+      }
+    } catch (_) {
+      // Offline — use local silently
+    }
   }
 
   Future<void> generateFromAssessment(List<AssessmentAnswer> answers) async {
@@ -40,12 +62,11 @@ class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
       templateId: templateId,
       completedAt: DateTime.now(),
     );
-
     await _repo.saveAssessmentResult(result);
-
     final plan = generatePlan(result);
     await _repo.saveLearningPlan(plan);
     state = plan;
+    _remote.save(plan).catchError((_) {});
   }
 
   Future<ChainResult> markCompleted(String scenarioId, double score) async {
@@ -60,6 +81,7 @@ class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
     }
     await _repo.markStepCompleted(scenarioId, score);
     state = _repo.getLearningPlan();
+    if (state != null) _remote.save(state!).catchError((_) {});
     return passed ? ChainResult.passed : ChainResult.needsRetry;
   }
 
@@ -80,6 +102,7 @@ class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
     );
     await _repo.saveLearningPlan(upgraded);
     state = upgraded;
+    _remote.save(upgraded).catchError((_) {});
   }
 
   String _upgradeDifficulty(String d) {
@@ -99,6 +122,7 @@ class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
     final plan = generatePlan(result);
     await _repo.saveLearningPlan(plan);
     state = plan;
+    _remote.save(plan).catchError((_) {});
   }
 
   Future<void> switchRoadmap(String templateId) async {
@@ -110,6 +134,7 @@ class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
       completedAt: DateTime.now(),
     ));
     state = plan;
+    _remote.save(plan).catchError((_) {});
   }
 
   PlanStep? get nextStep => state?.nextStep;
