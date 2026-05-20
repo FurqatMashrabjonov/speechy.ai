@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -131,8 +132,10 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                     question: question,
                     selectedOptionId: _answers[question.id],
                     onSelect: (optionId) {
+                      isLastPage
+                          ? HapticFeedback.mediumImpact()
+                          : HapticFeedback.selectionClick();
                       setState(() => _answers[question.id] = optionId);
-                      // Auto-advance after short delay (except last page)
                       if (!isLastPage) {
                         Future.delayed(const Duration(milliseconds: 400), () {
                           if (mounted) _nextPage();
