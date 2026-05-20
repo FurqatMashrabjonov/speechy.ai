@@ -20,11 +20,11 @@ class RoadmapWidgetProvider : HomeWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.roadmap_widget)
 
             val roadmapTitle = widgetData.getString("roadmapTitle", null)
-            val currentStep = widgetData.getLong("roadmapCurrentStep", 0).toInt()
-            val totalSteps = widgetData.getLong("roadmapTotalSteps", 15).toInt()
-            val streak = widgetData.getLong("streak", 0)
-            val totalXp = widgetData.getLong("totalXp", 0)
-            val level = widgetData.getLong("level", 1)
+            val currentStep = widgetData.getInt("roadmapCurrentStep", 0)
+            val totalSteps = widgetData.getInt("roadmapTotalSteps", 15)
+            val streak = widgetData.getInt("streak", 0)
+            val totalXp = widgetData.getInt("totalXp", 0)
+            val level = widgetData.getInt("level", 1)
 
             if (roadmapTitle != null) {
                 val progress = if (totalSteps > 0) (currentStep * 100 / totalSteps) else 0
