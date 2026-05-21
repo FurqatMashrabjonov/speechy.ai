@@ -83,7 +83,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiController = ConfettiController(duration: const Duration(milliseconds: 800));
 
     _pulseController = AnimationController(
       vsync: this,
@@ -239,11 +239,11 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive,
             numberOfParticles: 18,
-            gravity: 0.35,
-            maxBlastForce: 22,
-            minBlastForce: 8,
-            emissionFrequency: 0.7,
-            particleDrag: 0.05,
+            gravity: 0.5,
+            maxBlastForce: 40,
+            minBlastForce: 20,
+            emissionFrequency: 0.9,
+            particleDrag: 0.08,
             colors: const [
               AppColors.primary,
               AppColors.success,
