@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
+import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/characters/domain/character_entity.dart';
 import 'package:speech_coach/features/conversation/domain/conversation_entity.dart';
 import 'package:speech_coach/shared/widgets/duo_button.dart';
@@ -16,6 +17,7 @@ import 'package:speech_coach/features/profile/presentation/providers/settings_pr
 import 'package:speech_coach/features/feedback/presentation/providers/feedback_provider.dart';
 import 'package:speech_coach/features/history/presentation/providers/session_history_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:speech_coach/shared/services/sound_service.dart';
 
 class ConversationScreen extends ConsumerStatefulWidget {
   final String category;
@@ -87,6 +89,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   void _onReady() {
     setState(() => _showBriefing = false);
+    SoundService.instance.sessionStart();
     ref
         .read(conversationProvider(widget.category).notifier)
         .startConversation();
@@ -121,12 +124,12 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         _scrollToBottom();
       }
 
-      if (next.status == ConversationStatus.ended &&
+      // Timer auto-end path: navigate immediately when analyzing begins
+      if (next.status == ConversationStatus.analyzing &&
           next.scenarioId != null &&
-          !_hasNavigatedToScoreCard &&
-          next.messages.isNotEmpty) {
+          !_hasNavigatedToScoreCard) {
         _hasNavigatedToScoreCard = true;
-        _navigateToScoreCard(next);
+        _endAndNavigate(next);
       }
     });
 
@@ -354,11 +357,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   // ── Meet-Style Conversation Screen ────────────────────────────────────
 
-  static const _darkBg = Color(0xFF1A1715);
-
   Widget _buildMeetScreen(BuildContext context, ConversationState state) {
     return Scaffold(
-      backgroundColor: _darkBg,
+      backgroundColor: context.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -399,12 +400,12 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.mic_rounded,
-                    color: Colors.white54,
+                    color: AppColors.primary,
                     size: 16,
                   ),
                 ),
@@ -414,7 +415,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             Expanded(
               child: Text(
                 widget.scenarioTitle ?? widget.category,
-                style: AppTypography.labelMedium(color: Colors.white70),
+                style: AppTypography.labelMedium(color: context.textSecondary),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -472,7 +473,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 Text(
                   state.error ?? 'Something went wrong',
                   textAlign: TextAlign.center,
-                  style: AppTypography.bodyMedium(color: Colors.white70),
+                  style: AppTypography.bodyMedium(color: context.textSecondary),
                 ),
                 const SizedBox(height: 24),
                 DuoButton.primary(
@@ -488,8 +489,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                   const SizedBox(height: 12),
                   TextButton.icon(
                     onPressed: () => launchUrl(Uri.parse('app-settings:')),
-                    icon: const Icon(Icons.settings_rounded, color: Colors.white54, size: 18),
-                    label: Text('Open Settings', style: AppTypography.labelMedium(color: Colors.white54)),
+                    icon: Icon(Icons.settings_rounded, color: context.textTertiary, size: 18),
+                    label: Text('Open Settings', style: AppTypography.labelMedium(color: context.textSecondary)),
                   ),
                 ],
               ] else ...[
@@ -508,14 +509,27 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 // Character name
                 Text(
                   widget.characterName ?? 'AI Coach',
-                  style: AppTypography.titleLarge(color: Colors.white),
+                  style: AppTypography.titleLarge(color: context.textPrimary),
                 ),
                 const SizedBox(height: 4),
 
-                // Status label
-                Text(
-                  statusLabel,
-                  style: AppTypography.bodySmall(color: Colors.white54),
+                // Status label with recording indicator
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (state.status == ConversationStatus.userSpeaking) ...[
+                      _PulsingRecordDot(),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      statusLabel,
+                      style: AppTypography.bodySmall(
+                        color: state.status == ConversationStatus.userSpeaking
+                            ? AppColors.error
+                            : context.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],
@@ -559,48 +573,84 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               height: 44,
               decoration: BoxDecoration(
                 color: _showCaptions
-                    ? Colors.white.withValues(alpha: 0.15)
-                    : Colors.white.withValues(alpha: 0.08),
+                    ? AppColors.primary.withValues(alpha: 0.12)
+                    : context.surface,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 _showCaptions
                     ? Icons.closed_caption_rounded
                     : Icons.closed_caption_off_rounded,
-                color: _showCaptions ? Colors.white : Colors.white54,
+                color: _showCaptions ? AppColors.primary : context.textTertiary,
                 size: 22,
               ),
             ),
           ),
           const SizedBox(width: 20),
 
-          // Large mic button
+          // Large mic button with amplitude rings
           GestureDetector(
             onTap: () => ref
                 .read(conversationProvider(widget.category).notifier)
                 .toggleMic(),
-            child: Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: state.isMicMuted ? null : AppColors.primaryGradient,
-                color: state.isMicMuted ? const Color(0xFF4A4A4A) : null,
-                shape: BoxShape.circle,
-                boxShadow: state.isMicMuted
-                    ? []
-                    : [
-                        BoxShadow(
-                          color: AppColors.primaryDark,
-                          blurRadius: 0,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-              ),
-              child: Icon(
-                state.isMicMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
-                color: Colors.white,
-                size: 28,
-              ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Outer ring — expands most with amplitude
+                if (!state.isMicMuted)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 80),
+                    curve: Curves.easeOut,
+                    width: 64 + (state.micAmplitude * 44),
+                    height: 64 + (state.micAmplitude * 44),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: state.micAmplitude * 0.35),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                // Middle ring
+                if (!state.isMicMuted)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 60),
+                    curve: Curves.easeOut,
+                    width: 64 + (state.micAmplitude * 24),
+                    height: 64 + (state.micAmplitude * 24),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: state.micAmplitude * 0.5),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                // Mic button
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    gradient: state.isMicMuted ? null : AppColors.primaryGradient,
+                    color: state.isMicMuted ? const Color(0xFF4A4A4A) : null,
+                    shape: BoxShape.circle,
+                    boxShadow: state.isMicMuted
+                        ? []
+                        : [
+                            BoxShadow(
+                              color: AppColors.primaryDark,
+                              blurRadius: 0,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                  ),
+                  child: Icon(
+                    state.isMicMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 20),
@@ -670,9 +720,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               Navigator.pop(ctx);
               final s = ref.read(conversationProvider(widget.category));
               if (s.scenarioId != null) {
-                ref
-                    .read(conversationProvider(widget.category).notifier)
-                    .requestFeedbackAndEnd();
+                if (!_hasNavigatedToScoreCard) {
+                  _hasNavigatedToScoreCard = true;
+                  ref
+                      .read(conversationProvider(widget.category).notifier)
+                      .endConversation();
+                  _endAndNavigate(s);
+                }
               } else {
                 ref
                     .read(conversationProvider(widget.category).notifier)
@@ -690,57 +744,31 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     );
   }
 
-  Future<void> _navigateToScoreCard(ConversationState state) async {
-    // Reset feedback provider to clean state before starting new analysis
+  void _endAndNavigate(ConversationState state) {
     ref.read(feedbackProvider.notifier).reset();
+    ref.read(feedbackProvider.notifier).analyzeConversation(
+      transcript: state.fullTranscript,
+      category: widget.category,
+      scenarioTitle: state.scenarioTitle ?? widget.category,
+      scenarioPrompt: state.scenarioPrompt ?? '',
+      scenarioId: state.scenarioId ?? '',
+      durationSeconds: state.elapsed.inSeconds,
+    );
 
-    if (state.sessionFeedback != null) {
-      ref.read(feedbackProvider.notifier).setFeedback(state.sessionFeedback!);
+    // Save session in background — don't block navigation
+    _savePendingInBackground(state);
 
-      // If we already have feedback, we don't need a pending session.
-      // We navigate immediately with sessionId: null, and ScoreCardScreen will
-      // save the completed session perfectly using saveSessionProvider.
-      if (mounted) {
-        context.pushReplacement(
-          '/score-card',
-          extra: {
-            'sessionId': null,
-            'scenarioId': state.scenarioId ?? '',
-            'scenarioTitle': state.scenarioTitle ?? widget.category,
-            'category': widget.category,
-            'transcript': state.fullTranscript,
-          },
-        );
-      }
-    } else {
-      // REST API Fallback path
-      // Start feedback analysis IMMEDIATELY
-      ref
-          .read(feedbackProvider.notifier)
-          .analyzeConversation(
-            transcript: state.fullTranscript,
-            category: widget.category,
-            scenarioTitle: state.scenarioTitle ?? widget.category,
-            scenarioPrompt: state.scenarioPrompt ?? '',
-            scenarioId: state.scenarioId ?? '',
-            durationSeconds: state.elapsed.inSeconds,
-          );
-
-      // Create a pending session FIRST so ScoreCardScreen can update it when feedback is ready
-      final sessionId = await _savePendingInBackground(state);
-
-      if (mounted) {
-        context.pushReplacement(
-          '/score-card',
-          extra: {
-            'sessionId': sessionId,
-            'scenarioId': state.scenarioId ?? '',
-            'scenarioTitle': state.scenarioTitle ?? widget.category,
-            'category': widget.category,
-            'transcript': state.fullTranscript,
-          },
-        );
-      }
+    if (mounted) {
+      context.pushReplacement(
+        '/score-card',
+        extra: {
+          'sessionId': null,
+          'scenarioId': state.scenarioId ?? '',
+          'scenarioTitle': state.scenarioTitle ?? widget.category,
+          'category': widget.category,
+          'transcript': state.fullTranscript,
+        },
+      );
     }
   }
 
@@ -795,8 +823,8 @@ class _TimerPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: isLow
-            ? AppColors.error.withValues(alpha: 0.2)
-            : Colors.white.withValues(alpha: 0.12),
+            ? AppColors.error.withValues(alpha: 0.12)
+            : AppColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -805,13 +833,13 @@ class _TimerPill extends StatelessWidget {
           Icon(
             Icons.timer_outlined,
             size: 14,
-            color: isLow ? AppColors.error : Colors.white70,
+            color: isLow ? AppColors.error : context.textSecondary,
           ),
           const SizedBox(width: 4),
           Text(
             '$minutes:$seconds',
             style: AppTypography.labelMedium(
-              color: isLow ? AppColors.error : Colors.white,
+              color: isLow ? AppColors.error : context.textPrimary,
             ),
           ),
         ],
@@ -979,6 +1007,24 @@ class _WaveRingPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _WaveRingPainter oldDelegate) =>
       oldDelegate.progress != progress;
+}
+
+// ── Pulsing Record Dot ────────────────────────────────────────────────────
+
+class _PulsingRecordDot extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: const BoxDecoration(
+        color: AppColors.error,
+        shape: BoxShape.circle,
+      ),
+    )
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fade(begin: 1.0, end: 0.15, duration: 600.ms, curve: Curves.easeInOut);
+  }
 }
 
 // ── Caption Overlay ───────────────────────────────────────────────────────

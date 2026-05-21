@@ -1,11 +1,12 @@
 import 'dart:math';
 
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 
-class CelebrationOverlay extends StatelessWidget {
+class CelebrationOverlay extends StatefulWidget {
   final String message;
   final VoidCallback? onDismiss;
   final int? streakDays;
@@ -20,15 +21,54 @@ class CelebrationOverlay extends StatelessWidget {
   });
 
   @override
+  State<CelebrationOverlay> createState() => _CelebrationOverlayState();
+}
+
+class _CelebrationOverlayState extends State<CelebrationOverlay> {
+  late final ConfettiController _confetti;
+
+  @override
+  void initState() {
+    super.initState();
+    _confetti = ConfettiController(duration: const Duration(seconds: 3));
+    _confetti.play();
+  }
+
+  @override
+  void dispose() {
+    _confetti.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onDismiss,
+      onTap: widget.onDismiss,
       child: Material(
         color: Colors.black.withValues(alpha: 0.5),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Container(
+        child: Stack(
+          children: [
+            // Confetti from top-center
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confetti,
+                blastDirectionality: BlastDirectionality.explosive,
+                numberOfParticles: 30,
+                gravity: 0.3,
+                colors: const [
+                  AppColors.primary,
+                  AppColors.success,
+                  AppColors.gold,
+                  Color(0xFF7C5CBF),
+                  Color(0xFF4FC3F7),
+                ],
+              ),
+            ),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
@@ -95,7 +135,7 @@ class CelebrationOverlay extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              message.contains('Goal')
+                              widget.message.contains('Goal')
                                   ? 'DAILY GOAL'
                                   : 'ACHIEVEMENT',
                               style: AppTypography.labelSmall(
@@ -115,9 +155,9 @@ class CelebrationOverlay extends StatelessWidget {
 
                       // Title
                       Text(
-                        message.contains('Goal')
+                        widget.message.contains('Goal')
                             ? 'Goal Achieved!'
-                            : message,
+                            : widget.message,
                         style: AppTypography.headlineMedium(),
                         textAlign: TextAlign.center,
                       )
@@ -125,7 +165,7 @@ class CelebrationOverlay extends StatelessWidget {
                           .fadeIn(delay: 300.ms, duration: 400.ms),
                       const SizedBox(height: 8),
                       Text(
-                        message.contains('Goal')
+                        widget.message.contains('Goal')
                             ? 'You completed your daily practice goal. Keep the momentum going!'
                             : 'Your speaking skills are really improving. Keep it up!',
                         style: AppTypography.bodySmall(
@@ -138,25 +178,25 @@ class CelebrationOverlay extends StatelessWidget {
                       const SizedBox(height: 20),
 
                       // Stat cards
-                      if (streakDays != null || score != null)
+                      if (widget.streakDays != null || widget.score != null)
                         Row(
                           children: [
-                            if (streakDays != null)
+                            if (widget.streakDays != null)
                               Expanded(
                                 child: _StatCard(
                                   icon: Icons.local_fire_department_rounded,
-                                  value: '$streakDays',
+                                  value: '${widget.streakDays}',
                                   label: 'Day Streak',
                                   color: AppColors.primary,
                                 ),
                               ),
-                            if (streakDays != null && score != null)
+                            if (widget.streakDays != null && widget.score != null)
                               const SizedBox(width: 12),
-                            if (score != null)
+                            if (widget.score != null)
                               Expanded(
                                 child: _StatCard(
                                   icon: Icons.star_rounded,
-                                  value: '$score',
+                                  value: '${widget.score}',
                                   label: 'Overall Score',
                                   color: AppColors.success,
                                 ),
@@ -165,12 +205,12 @@ class CelebrationOverlay extends StatelessWidget {
                         )
                             .animate()
                             .fadeIn(delay: 500.ms, duration: 400.ms),
-                      if (streakDays != null || score != null)
+                      if (widget.streakDays != null || widget.score != null)
                         const SizedBox(height: 20),
 
                       // CTA
                       GestureDetector(
-                        onTap: onDismiss,
+                        onTap: widget.onDismiss,
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -207,6 +247,8 @@ class CelebrationOverlay extends StatelessWidget {
               ),
             ),
           ),
+        ),
+          ],
         ),
       ),
     );

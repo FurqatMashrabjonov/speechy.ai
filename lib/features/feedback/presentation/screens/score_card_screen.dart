@@ -23,6 +23,7 @@ import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
 import 'package:speech_coach/features/notifications/data/notification_service.dart';
+import 'package:speech_coach/shared/services/sound_service.dart';
 
 class ScoreCardScreen extends ConsumerStatefulWidget {
   final String? sessionId;
@@ -120,16 +121,23 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(progressProvider.notifier).addSession(feedbackState.feedback!);
 
-        // Detect filler words + WPM from transcript
         if (widget.transcript.isNotEmpty) {
           final fillers = FillerDetector.detect(widget.transcript);
           final userWords = widget.transcript
               .split('\n')
               .where((l) => l.startsWith('User:'))
-              .map((l) => l.replaceFirst('User:', '').trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length)
+              .map(
+                (l) => l
+                    .replaceFirst('User:', '')
+                    .trim()
+                    .split(RegExp(r'\s+'))
+                    .where((w) => w.isNotEmpty)
+                    .length,
+              )
               .fold(0, (a, b) => a + b);
           final durationSecs = feedbackState.feedback!.durationSeconds;
-          final wpm = durationSecs > 0 ? (userWords / (durationSecs / 60)).round() : null;
+          final wpm =
+              durationSecs > 0 ? (userWords / (durationSecs / 60)).round() : null;
           if (mounted) setState(() { _fillerWords = fillers; _wpm = wpm; });
         }
 
@@ -146,6 +154,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
             .then((result) {
               if (mounted) setState(() => _chainResult = result);
               if (result == ChainResult.passed) {
+                SoundService.instance.stepPassed();
                 NotificationService.scheduleStepUnlocked(widget.scenarioTitle);
               }
               // Reschedule daily reminder with updated next-step info
@@ -155,7 +164,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                 final stepNumber = next != null ? (next.order + 1) : plan.steps.length;
                 NotificationService.scheduleDailyReminder(
                   currentStep: stepNumber,
-                  roadmapTitle: plan.title,
+                  trackTitle: plan.title,
                 );
               }
             });
@@ -200,8 +209,9 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
           _maybeRequestReview(feedbackState.feedback!);
         }
 
-        if (!_celebrationShown && feedbackState.feedback!.overallScore >= 80) {
+        if (!_celebrationShown) {
           _celebrationShown = true;
+          SoundService.instance.celebration();
           _showCelebration('Amazing Performance!');
         }
       });
@@ -625,7 +635,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                           ProgressBar(
                             value: feedback.clarity / 100,
                             label: 'Clarity',
-                            trailingText: '\${feedback.clarity}%',
+                            trailingText: '${feedback.clarity}%',
                             icon: Icons.waves_rounded,
                             delay: const Duration(milliseconds: 50),
                           ),
@@ -633,7 +643,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                           ProgressBar(
                             value: feedback.confidence / 100,
                             label: 'Confidence',
-                            trailingText: '\${feedback.confidence}%',
+                            trailingText: '${feedback.confidence}%',
                             icon: Icons.shield_rounded,
                             delay: const Duration(milliseconds: 150),
                           ),
@@ -641,7 +651,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                           ProgressBar(
                             value: feedback.engagement / 100,
                             label: 'Engagement',
-                            trailingText: '\${feedback.engagement}%',
+                            trailingText: '${feedback.engagement}%',
                             icon: Icons.people_rounded,
                             delay: const Duration(milliseconds: 250),
                           ),
@@ -649,7 +659,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                           ProgressBar(
                             value: feedback.relevance / 100,
                             label: 'Relevance',
-                            trailingText: '\${feedback.relevance}%',
+                            trailingText: '${feedback.relevance}%',
                             icon: Icons.track_changes_rounded,
                             delay: const Duration(milliseconds: 350),
                           ),
@@ -734,7 +744,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
             children: [
               DuoButton.primary(
                 text: _chainResult == ChainResult.passed
-                    ? 'Continue Roadmap'
+                    ? 'Continue Track'
                     : _chainResult == ChainResult.needsRetry
                         ? 'Try Again'
                         : 'Continue Learning',
@@ -1290,7 +1300,7 @@ class _ChainResultBanner extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       passed
-                          ? 'Next step is ready on your roadmap.'
+                          ? 'Next step is ready on your track.'
                           : 'Score a bit higher to advance.',
                       style: AppTypography.bodySmall(
                           color: context.textSecondary),

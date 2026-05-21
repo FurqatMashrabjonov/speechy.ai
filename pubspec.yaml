@@ -63,6 +63,9 @@ dependencies:
   # In-App Review
   in_app_review: ^2.0.10
 
+  # Confetti
+  confetti: ^0.8.0
+
   # Notifications
   flutter_local_notifications: ^18.0.1
   timezone: ^0.10.0
@@ -91,3 +94,4 @@ flutter:
     - assets/images/tracks/genz/
     - assets/icons/
     - assets/animations/
+    - assets/audio/
