@@ -30,7 +30,7 @@ class _CelebrationOverlayState extends State<CelebrationOverlay> {
   @override
   void initState() {
     super.initState();
-    _confetti = ConfettiController(duration: const Duration(seconds: 3));
+    _confetti = ConfettiController(duration: const Duration(seconds: 2));
     _confetti.play();
   }
 
@@ -54,8 +54,11 @@ class _CelebrationOverlayState extends State<CelebrationOverlay> {
               child: ConfettiWidget(
                 confettiController: _confetti,
                 blastDirectionality: BlastDirectionality.explosive,
-                numberOfParticles: 30,
-                gravity: 0.3,
+                numberOfParticles: 8,
+                gravity: 0.4,
+                maxBlastForce: 15,
+                minBlastForce: 5,
+                emissionFrequency: 0.03,
                 colors: const [
                   AppColors.primary,
                   AppColors.success,
