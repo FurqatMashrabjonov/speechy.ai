@@ -193,5 +193,61 @@ class AppImages {
     'genz_13': 'assets/images/tracks/genz/scenario_genz_13.png',
     'genz_14': 'assets/images/tracks/genz/scenario_genz_14.png',
     'genz_15': 'assets/images/tracks/genz/scenario_genz_15.png',
+
+    // ── Legacy ID aliases (old cross-category plans saved in Firestore) ──
+    // Presentations → Stage
+    'pres_1': 'assets/images/tracks/stage/scenario_stage_1.png',
+    'pres_2': 'assets/images/tracks/stage/scenario_stage_7.png',
+    'pres_3': 'assets/images/tracks/stage/scenario_stage_9.png',
+    'pres_4': 'assets/images/tracks/stage/scenario_stage_5.png',
+    'pres_5': 'assets/images/tracks/stage/scenario_stage_13.png',
+    // Public Speaking → Stage
+    'pub_1':  'assets/images/tracks/stage/scenario_stage_4.png',
+    'pub_2':  'assets/images/tracks/stage/scenario_stage_12.png',
+    'pub_3':  'assets/images/tracks/stage/scenario_stage_8.png',
+    'pub_4':  'assets/images/tracks/stage/scenario_stage_14.png',
+    'pub_5':  'assets/images/tracks/stage/scenario_stage_10.png',
+    // Debates → Stage
+    'deb_1':  'assets/images/tracks/stage/scenario_stage_8.png',
+    'deb_2':  'assets/images/tracks/stage/scenario_stage_8.png',
+    'deb_3':  'assets/images/tracks/stage/scenario_stage_15.png',
+    'deb_4':  'assets/images/tracks/stage/scenario_stage_15.png',
+    'deb_5':  'assets/images/tracks/stage/scenario_stage_13.png',
+    // Storytelling → Stage
+    'story_1': 'assets/images/tracks/stage/scenario_stage_2.png',
+    'story_2': 'assets/images/tracks/stage/scenario_stage_6.png',
+    'story_3': 'assets/images/tracks/stage/scenario_stage_11.png',
+    'story_4': 'assets/images/tracks/stage/scenario_stage_2.png',
+    'story_5': 'assets/images/tracks/stage/scenario_stage_2.png',
+    // Conversations → Social
+    'conv_1': 'assets/images/tracks/social/scenario_social_10.png',
+    'conv_2': 'assets/images/tracks/social/scenario_social_8.png',
+    'conv_3': 'assets/images/tracks/social/scenario_social_3.png',
+    'conv_4': 'assets/images/tracks/social/scenario_social_9.png',
+    'conv_5': 'assets/images/tracks/social/scenario_social_15.png',
+    // Dating → Social
+    'date_1': 'assets/images/tracks/social/scenario_social_7.png',
+    'date_2': 'assets/images/tracks/social/scenario_social_8.png',
+    'date_3': 'assets/images/tracks/social/scenario_social_12.png',
+    'date_4': 'assets/images/tracks/social/scenario_social_9.png',
+    'date_5': 'assets/images/tracks/social/scenario_social_6.png',
+    // Social Situations → Social
+    'soc_1': 'assets/images/tracks/social/scenario_social_2.png',
+    'soc_2': 'assets/images/tracks/social/scenario_social_10.png',
+    'soc_3': 'assets/images/tracks/social/scenario_social_2.png',
+    'soc_4': 'assets/images/tracks/social/scenario_social_1.png',
+    'soc_5': 'assets/images/tracks/social/scenario_social_1.png',
+    // Phone Anxiety → Anxiety
+    'phone_1': 'assets/images/tracks/anxiety/scenario_anxiety_1.png',
+    'phone_2': 'assets/images/tracks/anxiety/scenario_anxiety_2.png',
+    'phone_3': 'assets/images/tracks/anxiety/scenario_anxiety_5.png',
+    'phone_4': 'assets/images/tracks/anxiety/scenario_anxiety_1.png',
+    'phone_5': 'assets/images/tracks/anxiety/scenario_anxiety_3.png',
+    // Conflict → Tough
+    'conf_1': 'assets/images/tracks/tough/scenario_tough_10.png',
+    'conf_2': 'assets/images/tracks/tough/scenario_tough_2.png',
+    'conf_3': 'assets/images/tracks/tough/scenario_tough_8.png',
+    'conf_4': 'assets/images/tracks/tough/scenario_tough_3.png',
+    'conf_5': 'assets/images/tracks/tough/scenario_tough_4.png',
   };
 }

@@ -353,13 +353,13 @@ class _StepTile extends StatelessWidget {
               children: [
                 _ScenarioAvatar(
                   imagePath: scenario?.imagePath,
+                  fallbackIcon: scenario?.icon,
                   stepNumber: step.order + 1,
-                  size: 40,
+                  size: 56,
                   isCompleted: isCompleted,
                   isPassed: passed,
                   isCurrent: isCurrent,
                   isLocked: locked,
-                  trackColor: trackColor,
                 ),
                 if (!isLast)
                   Expanded(
@@ -387,14 +387,14 @@ class _StepTile extends StatelessWidget {
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: isCurrent
-                      ? trackColor.withValues(alpha: 0.07)
+                      ? AppColors.primary.withValues(alpha: 0.07)
                       : context.isDark
                           ? AppColors.surfaceDark
                           : AppColors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isCurrent
-                        ? trackColor.withValues(alpha: 0.35)
+                        ? AppColors.primary.withValues(alpha: 0.35)
                         : const Color(0xFFEEEEEE),
                     width: isCurrent ? 1.5 : 1,
                   ),
@@ -404,6 +404,19 @@ class _StepTile extends StatelessWidget {
                   children: [
                     Row(
                       children: [
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${step.order + 1}',
+                            style: AppTypography.labelSmall(color: AppColors.primary)
+                                .copyWith(fontWeight: FontWeight.w800, fontSize: 11),
+                          ),
+                        ),
                         Expanded(
                           child: Text(
                             scenario?.title ?? step.scenarioId,
@@ -474,7 +487,7 @@ class _StepTile extends StatelessWidget {
                           const Spacer(),
                           Text(
                             'Up next',
-                            style: AppTypography.labelSmall(color: trackColor)
+                            style: AppTypography.labelSmall(color: AppColors.primary)
                                 .copyWith(fontWeight: FontWeight.w700, fontSize: 10),
                           ),
                         ],
@@ -500,23 +513,23 @@ class _StepTile extends StatelessWidget {
 
 class _ScenarioAvatar extends StatelessWidget {
   final String? imagePath;
+  final IconData? fallbackIcon;
   final int stepNumber;
   final double size;
   final bool isCompleted;
   final bool isPassed;
   final bool isCurrent;
   final bool isLocked;
-  final Color trackColor;
 
   const _ScenarioAvatar({
     required this.imagePath,
+    required this.fallbackIcon,
     required this.stepNumber,
     required this.size,
     required this.isCompleted,
     required this.isPassed,
     required this.isCurrent,
     required this.isLocked,
-    required this.trackColor,
   });
 
   @override
@@ -533,7 +546,7 @@ class _ScenarioAvatar extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(
               color: isCurrent
-                  ? trackColor
+                  ? AppColors.primary
                   : isCompleted
                       ? (isPassed ? AppColors.success : AppColors.warning)
                       : const Color(0xFFE0E0E0),
@@ -542,7 +555,7 @@ class _ScenarioAvatar extends StatelessWidget {
             boxShadow: isCurrent
                 ? [
                     BoxShadow(
-                      color: trackColor.withValues(alpha: 0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     )
@@ -550,9 +563,13 @@ class _ScenarioAvatar extends StatelessWidget {
                 : null,
           ),
           child: ClipOval(
-            child: Stack(
+            child: SizedBox(
+              width: size,
+              height: size,
+              child: Stack(
+              fit: StackFit.expand,
               children: [
-                // Image or fallback
+                // Image or colored fallback
                 imagePath != null
                     ? ColorFiltered(
                         colorFilter: isLocked
@@ -572,16 +589,17 @@ class _ScenarioAvatar extends StatelessWidget {
                         ),
                       )
                     : Container(
-                        color: trackColor.withValues(alpha: 0.12),
+                        color: AppColors.primary.withValues(alpha: isLocked ? 0.07 : 0.12),
                         child: Center(
-                          child: Text(
-                            '$stepNumber',
-                            style: AppTypography.labelSmall(color: trackColor)
-                                .copyWith(fontWeight: FontWeight.w800),
+                          child: Icon(
+                            fallbackIcon ?? Icons.mic_rounded,
+                            size: size * 0.42,
+                            color: AppColors.primary.withValues(alpha: isLocked ? 0.35 : 0.75),
                           ),
                         ),
                       ),
               ],
+              ),
             ),
           ),
         ),
@@ -692,11 +710,10 @@ class _BottomCta extends StatelessWidget {
         );
       }
       final stepNum = (nextStep?.order ?? 0) + 1;
-      final stepTitle = nextScenario?.title ?? 'Next Step';
       return _PrimaryButton(
-        label: 'Continue — Step $stepNum: $stepTitle',
+        label: 'Continue  ·  Step $stepNum',
         icon: Icons.play_arrow_rounded,
-        color: meta.color,
+        color: AppColors.primary,
         onTap: onContinue,
       );
     }
@@ -705,7 +722,7 @@ class _BottomCta extends StatelessWidget {
       return _PrimaryButton(
         label: 'Switch to This Track',
         icon: Icons.swap_horiz_rounded,
-        color: meta.color,
+        color: AppColors.primary,
         onTap: onSwitch,
       );
     }
@@ -749,7 +766,7 @@ class _PrimaryButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 24),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(16),
@@ -763,16 +780,14 @@ class _PrimaryButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                style: AppTypography.bodyMedium(color: Colors.white)
-                    .copyWith(fontWeight: FontWeight.w700),
-                overflow: TextOverflow.ellipsis,
-              ),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: AppTypography.bodyMedium(color: Colors.white)
+                  .copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         ),

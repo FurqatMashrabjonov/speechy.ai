@@ -14,6 +14,7 @@ import 'package:speech_coach/features/progress/domain/progress_entity.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dart';
 import 'package:speech_coach/features/scenarios/data/scenario_repository.dart';
+import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -24,11 +25,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
   String get _greeting {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good Morning';
@@ -41,10 +37,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final progress = ref.watch(progressProvider);
     final authState = ref.watch(authStateProvider);
     final usage = ref.watch(usageServiceProvider);
+    final plan = ref.watch(learningPlanProvider);
     final userName = authState.whenData((user) => user?.displayName).value;
     final firstName = (userName != null && userName.isNotEmpty)
         ? userName.split(' ').first
         : 'Speaker';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final todayCount = progress.sessionHistory.where((s) {
+      final d = DateTime(s.date.year, s.date.month, s.date.day);
+      return d == today;
+    }).length;
 
     return Scaffold(
       body: SafeArea(
@@ -55,38 +59,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               const SizedBox(height: 16),
 
-              // ── Header ────────────────────────────────────────────────────
               _Header(
                 greeting: _greeting,
                 firstName: firstName,
                 progress: progress,
               ).animate().fadeIn(duration: 400.ms),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // ── Free sessions remaining banner ────────────────────────────
-              if (!usage.isPro && usage.totalFreeSessionsUsed < UsageService.freeTotalSessions)
+              // Daily goal strip — only when plan exists
+              if (plan != null)
+                _DailyGoalStrip(
+                  target: plan.sessionsPerDayTarget,
+                  done: todayCount,
+                ).animate().fadeIn(delay: 80.ms, duration: 400.ms),
+              if (plan != null) const SizedBox(height: 14),
+
+              // Free sessions banner
+              if (!usage.isPro &&
+                  usage.totalFreeSessionsUsed < UsageService.freeTotalSessions)
                 _FreeSessionsBanner(remaining: usage.remainingSessions)
                     .animate()
                     .fadeIn(delay: 100.ms, duration: 400.ms),
-              if (!usage.isPro && usage.totalFreeSessionsUsed < UsageService.freeTotalSessions)
-                const SizedBox(height: 16),
+              if (!usage.isPro &&
+                  usage.totalFreeSessionsUsed < UsageService.freeTotalSessions)
+                const SizedBox(height: 14),
 
-              // ── HERO: Roadmap chain ───────────────────────────────────────
+              // Roadmap — vertical Duolingo path
               _RoadmapHero()
                   .animate()
                   .fadeIn(delay: 150.ms, duration: 400.ms)
                   .slideY(begin: 0.04),
-              const SizedBox(height: 20),
-
-              // ── Freestyle button ──────────────────────────────────────────
-              DuoButton.secondary(
-                text: 'Freestyle Practice',
-                icon: Icons.mic_rounded,
-                width: double.infinity,
-                onTap: () => context.push(
-                  '/conversation/${Uri.encodeComponent('Freestyle')}',
-                ),
-              ).animate().fadeIn(delay: 250.ms, duration: 400.ms),
               const SizedBox(height: 32),
             ],
           ),
@@ -96,7 +98,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// ── Header ──────────────────────────────────────────────────────────────────
+// ── Header ───────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   final String greeting;
@@ -113,7 +115,6 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Avatar
         Container(
           width: 42,
           height: 42,
@@ -125,8 +126,6 @@ class _Header extends StatelessWidget {
               color: AppColors.primary, size: 22),
         ),
         const SizedBox(width: 12),
-
-        // Name + greeting
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,44 +139,34 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-
-        // Streak pill
         _HeaderPill(
           icon: Icons.local_fire_department_rounded,
           value: '${progress.streak}',
           color: AppColors.error,
         ),
         const SizedBox(width: 8),
-
-        // XP pill
         _HeaderPill(
-          icon: Icons.bolt_rounded,
-          value: '${progress.totalXp}',
-          color: AppColors.gold,
+          icon: Icons.bar_chart_rounded,
+          value: progress.avgScore > 0 ? '${progress.avgScore}' : '--',
+          label: 'avg',
+          color: AppColors.accent,
         ),
         const SizedBox(width: 8),
-
-        // Settings
-        Tappable(
-          onTap: (context as Element).findAncestorStateOfType<_HomeScreenState>() != null
-              ? () => Navigator.of(context).pushNamed('/settings')
-              : null,
-          child: Builder(builder: (ctx) {
-            return Tappable(
-              onTap: () => ctx.push('/settings'),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: context.surface,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.settings_outlined,
-                    color: context.textSecondary, size: 18),
+        Builder(builder: (ctx) {
+          return Tappable(
+            onTap: () => ctx.push('/settings'),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: context.surface,
+                shape: BoxShape.circle,
               ),
-            );
-          }),
-        ),
+              child: Icon(Icons.settings_outlined,
+                  color: context.textSecondary, size: 18),
+            ),
+          );
+        }),
       ],
     );
   }
@@ -187,9 +176,10 @@ class _HeaderPill extends StatelessWidget {
   final IconData icon;
   final String value;
   final Color color;
+  final String? label;
 
   const _HeaderPill(
-      {required this.icon, required this.value, required this.color});
+      {required this.icon, required this.value, required this.color, this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -210,13 +200,86 @@ class _HeaderPill extends StatelessWidget {
             style: AppTypography.labelSmall(color: color)
                 .copyWith(fontWeight: FontWeight.w800),
           ),
+          if (label != null) ...[
+            const SizedBox(width: 2),
+            Text(
+              label!,
+              style: AppTypography.labelSmall(color: color.withValues(alpha: 0.7))
+                  .copyWith(fontSize: 9, fontWeight: FontWeight.w600),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-// ── Free sessions banner ──────────────────────────────────────────────────
+// ── Daily goal strip ─────────────────────────────────────────────────────────
+
+class _DailyGoalStrip extends StatelessWidget {
+  final int target;
+  final int done;
+
+  const _DailyGoalStrip({required this.target, required this.done});
+
+  @override
+  Widget build(BuildContext context) {
+    final isComplete = done >= target;
+    final color = isComplete ? AppColors.success : AppColors.primary;
+    final dots = target.clamp(1, 5);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isComplete
+                ? Icons.check_circle_rounded
+                : Icons.flag_rounded,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isComplete
+                  ? 'Daily goal complete!'
+                  : "Today's goal: $target session${target > 1 ? 's' : ''}",
+              style: AppTypography.labelSmall(color: color)
+                  .copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Row(
+            children: List.generate(dots, (i) {
+              final filled = i < done;
+              return Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: filled ? color : color.withValues(alpha: 0.2),
+                    border: Border.all(
+                        color: color.withValues(alpha: 0.4), width: 1),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Free sessions banner ──────────────────────────────────────────────────────
 
 class _FreeSessionsBanner extends StatelessWidget {
   final int remaining;
@@ -241,8 +304,8 @@ class _FreeSessionsBanner extends StatelessWidget {
           Expanded(
             child: Text(
               remaining == 1
-                  ? 'Last free session! Unlock your roadmap to keep going.'
-                  : '$remaining free sessions remaining. Unlock to continue after.',
+                  ? 'Last free session! Unlock to keep going.'
+                  : '$remaining free sessions remaining.',
               style: AppTypography.labelSmall(color: color)
                   .copyWith(fontWeight: FontWeight.w600),
             ),
@@ -251,7 +314,8 @@ class _FreeSessionsBanner extends StatelessWidget {
           Tappable(
             onTap: () => context.push('/paywall'),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(8),
@@ -267,7 +331,7 @@ class _FreeSessionsBanner extends StatelessWidget {
   }
 }
 
-// ── Roadmap Hero ─────────────────────────────────────────────────────────────
+// ── Roadmap Hero ──────────────────────────────────────────────────────────────
 
 class _RoadmapHero extends ConsumerStatefulWidget {
   const _RoadmapHero();
@@ -279,7 +343,6 @@ class _RoadmapHero extends ConsumerStatefulWidget {
 class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulse;
-  final _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -288,29 +351,11 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
-
-    // Auto-scroll to current step after build
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
-  }
-
-  void _scrollToCurrent() {
-    final plan = ref.read(learningPlanProvider);
-    if (plan == null) return;
-    final idx = plan.steps.indexWhere((s) => !s.isCompleted);
-    if (idx > 0 && _scrollController.hasClients) {
-      final nodeWidth = 56.0 + 8.0; // node + separator
-      _scrollController.animateTo(
-        (idx * nodeWidth).clamp(0.0, _scrollController.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
-      );
-    }
   }
 
   @override
   void dispose() {
     _pulse.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -323,12 +368,19 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
       return _NoRoadmapCard();
     }
 
+    final currentIdx = plan.steps.indexWhere((s) => !s.isCompleted);
+    final allComplete = currentIdx == -1;
+    final effectiveIdx = allComplete ? plan.steps.length : currentIdx;
+
+    // Show window: 2 completed before current + current + 4 upcoming = 7 max
+    final startIdx = (effectiveIdx - 2).clamp(0, plan.steps.length);
+    final endIdx = (startIdx + 7).clamp(0, plan.steps.length);
+    final visibleSteps = plan.steps.sublist(startIdx, endIdx);
+
     final nextStep = plan.nextStep;
     final repo = ScenarioRepository();
     final nextScenario =
         nextStep != null ? repo.getById(nextStep.scenarioId) : null;
-    final completedIdx = plan.steps.indexWhere((s) => !s.isCompleted);
-    final currentIdx = completedIdx == -1 ? plan.steps.length : completedIdx;
 
     return Container(
       width: double.infinity,
@@ -347,7 +399,7 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Top bar ──────────────────────────────────────────────────────
+          // ── Card header ──────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 16, 14, 0),
             child: Row(
@@ -369,7 +421,8 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
+                                color:
+                                    AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -384,54 +437,12 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Step ${plan.completedCount + 1} of ${plan.totalSteps}',
+                        '${plan.completedCount} of ${plan.totalSteps} steps done',
                         style: AppTypography.labelSmall(
                             color: context.textSecondary),
                       ),
                     ],
                   ),
-                ),
-                Row(
-                  children: [
-                    Tappable(
-                      onTap: () => context.push('/plan-summary'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text('See Plan',
-                            style: AppTypography.labelSmall(
-                                    color: AppColors.primary)
-                                .copyWith(fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Tappable(
-                      onTap: () => context.push('/roadmap-catalog'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0F0F0),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.grid_view_rounded,
-                                size: 13, color: Color(0xFF888888)),
-                            const SizedBox(width: 4),
-                            Text('All Roadmaps',
-                                style: AppTypography.labelSmall(
-                                    color: const Color(0xFF888888))),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -457,8 +468,8 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.error.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
@@ -471,54 +482,70 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
                         size: 14, color: AppColors.error),
                     const SizedBox(width: 6),
                     Text(
-                      '${plan.daysUntilEvent} days to your event — intensive mode',
-                      style: AppTypography.labelSmall(color: AppColors.error)
-                          .copyWith(fontWeight: FontWeight.w700),
+                      '${plan.daysUntilEvent} days to event — intensive mode',
+                      style:
+                          AppTypography.labelSmall(color: AppColors.error)
+                              .copyWith(fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
               ),
             ),
 
-          // ── Chain map ─────────────────────────────────────────────────────
+          // ── Vertical Duolingo path ────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.only(top: 16, bottom: 4),
-            child: SizedBox(
-              height: 90,
-              child: ListView.separated(
-                controller: _scrollController,
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                itemCount: plan.steps.length,
-                separatorBuilder: (_, i) => _ChainConnector(
-                  filled: i < currentIdx - 1,
-                ),
-                itemBuilder: (context, i) {
-                  final step = plan.steps[i];
-                  final isNext = i == currentIdx;
-                  final isLocked = i > currentIdx;
-                  return _ChainNode(
-                    step: step,
-                    index: i,
-                    isNext: isNext,
-                    isLocked: isLocked,
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 4),
+            child: Column(
+              children: [
+                for (int i = 0; i < visibleSteps.length; i++) ...[
+                  _VerticalStepRow(
+                    step: visibleSteps[i],
+                    globalIndex: startIdx + i,
+                    isCurrent: (startIdx + i) == effectiveIdx,
+                    isLocked: (startIdx + i) > effectiveIdx,
                     pulseController: _pulse,
-                    onTap: isNext
+                    onTap: (startIdx + i) == effectiveIdx
                         ? () => context.push(
-                              '/scenario/${Uri.encodeComponent(step.scenarioId)}',
+                              '/scenario/${Uri.encodeComponent(visibleSteps[i].scenarioId)}',
                             )
                         : null,
-                  );
-                },
-              ),
+                  ),
+                  if (i < visibleSteps.length - 1)
+                    _VerticalConnector(
+                      filled: (startIdx + i) < effectiveIdx,
+                    ),
+                ],
+                // "See all X steps" link if plan has more
+                if (plan.totalSteps > 7)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Tappable(
+                      onTap: () => context.push('/tracks/${plan.templateId}'),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'See all ${plan.totalSteps} steps',
+                            style: AppTypography.labelSmall(
+                                    color: AppColors.primary)
+                                .copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.keyboard_arrow_down_rounded,
+                              size: 16, color: AppColors.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
 
-          // ── Week heatmap ───────────────────────────────────────────────────
+          // ── Week heatmap ──────────────────────────────────────────────────
           _WeekHeatmap(sessions: progress.sessionHistory),
 
-          // ── Next step CTA ──────────────────────────────────────────────────
-          if (plan.isComplete)
+          // ── CTA ───────────────────────────────────────────────────────────
+          if (allComplete)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Container(
@@ -539,7 +566,7 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Roadmap Complete! 🎉',
+                          Text('Track Complete!',
                               style: AppTypography.titleMedium(
                                   color: AppColors.success)),
                           Text('Ready for Level ${plan.chainLevel + 1}?',
@@ -572,6 +599,266 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
   }
 }
 
+// ── Vertical step row ─────────────────────────────────────────────────────────
+
+class _VerticalStepRow extends StatelessWidget {
+  final PlanStep step;
+  final int globalIndex;
+  final bool isCurrent;
+  final bool isLocked;
+  final AnimationController pulseController;
+  final VoidCallback? onTap;
+
+  const _VerticalStepRow({
+    required this.step,
+    required this.globalIndex,
+    required this.isCurrent,
+    required this.isLocked,
+    required this.pulseController,
+    this.onTap,
+  });
+
+  Color get _difficultyColor {
+    switch (step.difficulty.toLowerCase()) {
+      case 'easy':
+        return AppColors.success;
+      case 'hard':
+        return AppColors.error;
+      default:
+        return AppColors.warning;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = ScenarioRepository();
+    final scenario = repo.getById(step.scenarioId);
+    final title = scenario?.title ?? step.scenarioId;
+
+    final circleSize = isCurrent ? 56.0 : 44.0;
+    final imagePath = AppImages.scenarioImageMap[step.scenarioId];
+    final badgeSize = circleSize * 0.36;
+
+    Widget circle = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Pulse ring for current
+        if (isCurrent)
+          AnimatedBuilder(
+            animation: pulseController,
+            builder: (_, __) {
+              final scale = 1.0 + pulseController.value * 0.12;
+              return Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: circleSize,
+                  height: circleSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary
+                        .withValues(alpha: 0.08 + pulseController.value * 0.08),
+                  ),
+                ),
+              );
+            },
+          ),
+        // Main circle
+        Container(
+          width: circleSize,
+          height: circleSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: step.isCompleted
+                  ? AppColors.success
+                  : isCurrent
+                      ? AppColors.primary
+                      : const Color(0xFFD1D5DB),
+              width: isCurrent ? 2.5 : 1.5,
+            ),
+          ),
+          child: ClipOval(
+            child: SizedBox(
+              width: circleSize,
+              height: circleSize,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  imagePath != null
+                      ? ColorFiltered(
+                          colorFilter: isLocked
+                              ? const ColorFilter.matrix(<double>[
+                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                  0.2126, 0.7152, 0.0722, 0, 0,
+                                  0,      0,      0,      1, 0,
+                                ])
+                              : const ColorFilter.mode(
+                                  Colors.transparent, BlendMode.dst),
+                          child: Image.asset(imagePath,
+                              width: circleSize,
+                              height: circleSize,
+                              fit: BoxFit.cover),
+                        )
+                      : Container(
+                          color: AppColors.primary.withValues(alpha: isLocked ? 0.07 : 0.12),
+                          child: Center(
+                            child: Icon(
+                              scenario?.icon ?? Icons.mic_rounded,
+                              size: circleSize * 0.42,
+                              color: AppColors.primary.withValues(alpha: isLocked ? 0.35 : 0.75),
+                            ),
+                          ),
+                        ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Lock corner badge
+        if (isLocked)
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Container(
+              width: badgeSize,
+              height: badgeSize,
+              decoration: BoxDecoration(
+                color: const Color(0xFF9E9E9E),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Icon(Icons.lock_rounded,
+                  size: badgeSize * 0.55, color: Colors.white),
+            ),
+          ),
+        // Completed badge
+        if (step.isCompleted)
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Container(
+              width: badgeSize,
+              height: badgeSize,
+              decoration: BoxDecoration(
+                color: AppColors.success,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: Icon(Icons.check_rounded,
+                  size: badgeSize * 0.6, color: Colors.white),
+            ),
+          ),
+      ],
+    );
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        children: [
+          // Fixed-width column for circle (centered)
+          SizedBox(
+            width: 64,
+            child: Center(child: circle),
+          ),
+          const SizedBox(width: 12),
+          // Step info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: isLocked
+                            ? const Color(0xFFD1D5DB)
+                            : _difficultyColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      step.difficulty.toUpperCase(),
+                      style: AppTypography.labelSmall(
+                        color: isLocked
+                            ? const Color(0xFFBBBBBB)
+                            : _difficultyColor,
+                      ).copyWith(fontSize: 10, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  title,
+                  style: AppTypography.bodyMedium().copyWith(
+                    fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                    color: isLocked
+                        ? const Color(0xFFBBBBBB)
+                        : isCurrent
+                            ? AppColors.primary
+                            : context.textPrimary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (step.isCompleted && step.score != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      '${step.score!.round()}% score',
+                      style: AppTypography.labelSmall(
+                              color: AppColors.success)
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Vertical connector ────────────────────────────────────────────────────────
+
+class _VerticalConnector extends StatelessWidget {
+  final bool filled;
+
+  const _VerticalConnector({required this.filled});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 24,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 64,
+            child: Center(
+              child: Container(
+                width: 2,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: filled
+                      ? AppColors.success
+                      : const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── No roadmap card ───────────────────────────────────────────────────────────
+
 class _NoRoadmapCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -587,10 +874,10 @@ class _NoRoadmapCard extends StatelessWidget {
         children: [
           const Icon(Icons.map_outlined, size: 40, color: AppColors.primary),
           const SizedBox(height: 12),
-          Text('No roadmap yet', style: AppTypography.titleMedium()),
+          Text('No track yet', style: AppTypography.titleMedium()),
           const SizedBox(height: 6),
           Text(
-            'Take the quick assessment to get your personalized learning plan.',
+            'Take the quick assessment to get your personalized track.',
             style: AppTypography.bodySmall(color: context.textSecondary),
             textAlign: TextAlign.center,
           ),
@@ -607,251 +894,7 @@ class _NoRoadmapCard extends StatelessWidget {
   }
 }
 
-// ── Chain node ────────────────────────────────────────────────────────────────
-
-class _ChainNode extends StatelessWidget {
-  final PlanStep step;
-  final int index;
-  final bool isNext;
-  final bool isLocked;
-  final AnimationController pulseController;
-  final VoidCallback? onTap;
-
-  const _ChainNode({
-    required this.step,
-    required this.index,
-    required this.isNext,
-    required this.isLocked,
-    required this.pulseController,
-    this.onTap,
-  });
-
-  Color get _difficultyColor {
-    switch (step.difficulty) {
-      case 'easy':
-        return AppColors.success;
-      case 'hard':
-        return AppColors.error;
-      default:
-        return AppColors.warning;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: SizedBox(
-        width: 56,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Pulsing ring for current step
-            if (isNext)
-              AnimatedBuilder(
-                animation: pulseController,
-                builder: (_, child) {
-                  final scale = 1.0 + pulseController.value * 0.12;
-                  final opacity = 0.15 + pulseController.value * 0.1;
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Transform.scale(
-                        scale: scale,
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color:
-                                AppColors.primary.withValues(alpha: opacity),
-                          ),
-                        ),
-                      ),
-                      child!,
-                    ],
-                  );
-                },
-                child: _NodeCircle(
-                  step: step,
-                  isNext: isNext,
-                  isLocked: isLocked,
-                ),
-              )
-            else
-              _NodeCircle(
-                step: step,
-                isNext: isNext,
-                isLocked: isLocked,
-              ),
-
-            const SizedBox(height: 5),
-
-            // Difficulty dot or score
-            if (step.isCompleted && step.score != null)
-              Text(
-                '${step.score!.round()}%',
-                style: AppTypography.labelSmall(color: AppColors.success)
-                    .copyWith(fontSize: 10, fontWeight: FontWeight.w700),
-              )
-            else if (!isLocked)
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: _difficultyColor,
-                  shape: BoxShape.circle,
-                ),
-              )
-            else
-              const SizedBox(height: 6),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NodeCircle extends StatelessWidget {
-  final PlanStep step;
-  final bool isNext;
-  final bool isLocked;
-
-  const _NodeCircle({
-    required this.step,
-    required this.isNext,
-    required this.isLocked,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    Color bgColor;
-    Color borderColor;
-    Widget icon;
-
-    if (step.isCompleted) {
-      bgColor = AppColors.success.withValues(alpha: 0.12);
-      borderColor = AppColors.success;
-      icon = const Icon(Icons.check_rounded, color: AppColors.success, size: 20);
-    } else if (isNext) {
-      bgColor = AppColors.primary.withValues(alpha: 0.12);
-      borderColor = AppColors.primary;
-      icon = const Icon(Icons.play_arrow_rounded,
-          color: AppColors.primary, size: 22);
-    } else if (isLocked) {
-      bgColor = const Color(0xFFF3F4F6);
-      borderColor = const Color(0xFFD1D5DB);
-      icon = const Icon(Icons.lock_rounded,
-          color: Color(0xFFBBBBBB), size: 16);
-    } else {
-      bgColor = const Color(0xFFF3F4F6);
-      borderColor = const Color(0xFFD1D5DB);
-      icon = const Icon(Icons.lock_rounded,
-          color: Color(0xFFBBBBBB), size: 16);
-    }
-
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: borderColor,
-          width: isNext ? 2.5 : 1.5,
-        ),
-      ),
-      child: Center(child: icon),
-    );
-  }
-}
-
-// ── Chain connector ───────────────────────────────────────────────────────────
-
-class _ChainConnector extends StatelessWidget {
-  final bool filled;
-
-  const _ChainConnector({required this.filled});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 8,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 22),
-          Container(
-            height: 2,
-            decoration: BoxDecoration(
-              color: filled ? AppColors.success : const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-
-class HomeSkeleton extends StatelessWidget {
-  const HomeSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const SkeletonCircle(size: 42),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  SkeletonLine(width: 80, height: 10),
-                  SizedBox(height: 6),
-                  SkeletonLine(width: 100, height: 20),
-                ],
-              ),
-              const Spacer(),
-              const SkeletonLine(width: 60, height: 28),
-              const SizedBox(width: 8),
-              const SkeletonLine(width: 60, height: 28),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Skeleton(height: 240, borderRadius: BorderRadius.circular(20)),
-          const SizedBox(height: 20),
-          Skeleton(height: 72, borderRadius: BorderRadius.circular(16)),
-          const SizedBox(height: 20),
-          const SkeletonLine(width: 120, height: 20),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                  child: Skeleton(
-                      height: 100,
-                      borderRadius: BorderRadius.circular(16))),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: Skeleton(
-                      height: 100,
-                      borderRadius: BorderRadius.circular(16))),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Week Heatmap ──────────────────────────────────────────────────────────────
+// ── Week heatmap ──────────────────────────────────────────────────────────────
 
 class _WeekHeatmap extends StatelessWidget {
   final List<SessionRecord> sessions;
@@ -862,12 +905,13 @@ class _WeekHeatmap extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final monday = now.subtract(Duration(days: now.weekday - 1));
-    final today = now.weekday - 1; // 0 = Mon, 6 = Sun
+    final today = now.weekday - 1;
 
     final practicedDays = <int>{};
     for (final s in sessions) {
       final diff = DateTime(s.date.year, s.date.month, s.date.day)
-          .difference(DateTime(monday.year, monday.month, monday.day))
+          .difference(
+              DateTime(monday.year, monday.month, monday.day))
           .inDays;
       if (diff >= 0 && diff < 7) practicedDays.add(diff);
     }
@@ -926,6 +970,47 @@ class _WeekHeatmap extends StatelessWidget {
               );
             }),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+class HomeSkeleton extends StatelessWidget {
+  const HomeSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const SkeletonCircle(size: 42),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  SkeletonLine(width: 80, height: 10),
+                  SizedBox(height: 6),
+                  SkeletonLine(width: 100, height: 20),
+                ],
+              ),
+              const Spacer(),
+              const SkeletonLine(width: 60, height: 28),
+              const SizedBox(width: 8),
+              const SkeletonLine(width: 60, height: 28),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Skeleton(height: 44, borderRadius: BorderRadius.circular(12)),
+          const SizedBox(height: 14),
+          Skeleton(height: 420, borderRadius: BorderRadius.circular(20)),
         ],
       ),
     );
