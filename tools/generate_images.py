@@ -6,6 +6,14 @@ Usage:
   python tools/generate_images.py --api-key <KEY> --only categories
   python tools/generate_images.py --api-key <KEY> --only characters
   python tools/generate_images.py --api-key <KEY> --only mascots
+  python tools/generate_images.py --api-key <KEY> --only scenarios
+  python tools/generate_images.py --api-key <KEY> --only career
+  python tools/generate_images.py --api-key <KEY> --only social
+  python tools/generate_images.py --api-key <KEY> --only stage
+  python tools/generate_images.py --api-key <KEY> --only anxiety
+  python tools/generate_images.py --api-key <KEY> --only tough
+  python tools/generate_images.py --api-key <KEY> --only genz
+  python tools/generate_images.py --api-key <KEY> --only banners
   python tools/generate_images.py --compress-only
 """
 
@@ -23,7 +31,8 @@ STYLE_PREFIX = (
     "Flat vector illustration, minimal clean design, soft rounded shapes, "
     "Duolingo-style cartoon aesthetic, vibrant but not oversaturated colors, "
     "clean white background, centered composition, no text, no borders, "
-    "suitable as a mobile app icon at small sizes. "
+    "subject occupies central 65% of canvas with generous white padding on all sides, "
+    "safe to display in a rounded rectangle or circle crop without clipping any elements. "
 )
 
 # ---------------------------------------------------------------------------
@@ -253,66 +262,145 @@ MASCOTS = [
 ]
 
 SCENARIOS = [
-    # --- Interviews ---
-    ("assets/images/scenarios/scenario_int_1.png", "A person confidently introducing themselves at a desk across from an interviewer, professional office, name tag visible"),
-    ("assets/images/scenarios/scenario_int_2.png", "Two coworkers having a tense conversation at work, one calmly explaining with hand gestures, conflict resolution"),
-    ("assets/images/scenarios/scenario_int_3.png", "A person at a whiteboard drawing system architecture diagrams, technical interview setting"),
-    ("assets/images/scenarios/scenario_int_4.png", "A person at a desk confidently discussing numbers with their boss, dollar signs and chart, salary negotiation"),
-    ("assets/images/scenarios/scenario_int_5.png", "A person standing tall with a spotlight on them, star and sparkles, confident hiring pitch moment"),
-    # --- Presentations ---
-    ("assets/images/scenarios/scenario_pres_1.png", "A person in an elevator giving a quick pitch to a business person, clock showing 30 seconds, elevator pitch"),
-    ("assets/images/scenarios/scenario_pres_2.png", "A person presenting bar charts and pie charts on a screen to a boardroom, quarterly business review"),
-    ("assets/images/scenarios/scenario_pres_3.png", "A person demonstrating a product on a laptop to an excited audience, product demo"),
-    ("assets/images/scenarios/scenario_pres_4.png", "A person speaking at the front of a team meeting room, colleagues sitting around, all-hands update"),
-    ("assets/images/scenarios/scenario_pres_5.png", "A person presenting to investors with a pitch deck slide showing a growth arrow, investor meeting"),
-    # --- Public Speaking ---
-    ("assets/images/scenarios/scenario_pub_1.png", "A person raising a glass giving a wedding toast, champagne glasses, flowers, celebration"),
-    ("assets/images/scenarios/scenario_pub_2.png", "A person at a podium holding a trophy, giving an acceptance speech, spotlight"),
-    ("assets/images/scenarios/scenario_pub_3.png", "A person on stage giving a motivational talk, fire emoji vibe, inspired audience"),
-    ("assets/images/scenarios/scenario_pub_4.png", "A person on a round red stage like TED, giving a passionate talk with hand gestures"),
-    ("assets/images/scenarios/scenario_pub_5.png", "A person in academic gown at a podium, graduation caps in air, commencement speech"),
-    # --- Debates ---
-    ("assets/images/scenarios/scenario_deb_1.png", "A robot and a teacher at debate podiums facing each other, AI vs education theme"),
-    ("assets/images/scenarios/scenario_deb_2.png", "Split scene: one person at home office, another in a corporate office, versus sign between"),
-    ("assets/images/scenarios/scenario_deb_3.png", "A large phone screen with social media icons, thumbs up and thumbs down, debate about harm"),
-    ("assets/images/scenarios/scenario_deb_4.png", "Money bills raining down on diverse people, scales of justice, universal basic income concept"),
-    ("assets/images/scenarios/scenario_deb_5.png", "A rocket launching into space with dollar bills, space exploration versus budget debate"),
-    # --- Conversations ---
-    ("assets/images/scenarios/scenario_conv_1.png", "Two people at a networking event with name badges, shaking hands, drinks in hand"),
-    ("assets/images/scenarios/scenario_conv_2.png", "A nervous person approaching someone at a park bench, heart floating, asking someone out"),
-    ("assets/images/scenarios/scenario_conv_3.png", "A person with a sorry expression offering flowers to a friend, apologizing scene"),
-    ("assets/images/scenarios/scenario_conv_4.png", "A couple sitting on a couch with older parents, family meeting, warm living room"),
-    ("assets/images/scenarios/scenario_conv_5.png", "A person at a desk giving feedback to a colleague, speech bubble with constructive icons"),
-    # --- Storytelling ---
-    ("assets/images/scenarios/scenario_story_1.png", "A person reminiscing with a thought bubble showing childhood playground, nostalgic warm vibe"),
-    ("assets/images/scenarios/scenario_story_2.png", "A person on a mountain peak with arms raised, trophy glow, proudest achievement moment"),
-    ("assets/images/scenarios/scenario_story_3.png", "A person laughing telling a story to friends around a campfire, comedy vibe, laugh emojis"),
-    ("assets/images/scenarios/scenario_story_4.png", "A person with a lightbulb above their head, broken road behind them, lesson learned the hard way"),
-    ("assets/images/scenarios/scenario_story_5.png", "A person with a backpack and suitcase at an airport, travel stamps, adventure vibe"),
-    # --- Phone Anxiety ---
-    ("assets/images/scenarios/scenario_phone_1.png", "A person on the phone with a takeout food menu, pizza and burger icons floating, ordering food"),
-    ("assets/images/scenarios/scenario_phone_2.png", "A person nervously calling on phone with a hospital cross icon, doctor appointment call"),
-    ("assets/images/scenarios/scenario_phone_3.png", "A person in bed with a phone and thermometer, calling in sick, tissue box nearby"),
-    ("assets/images/scenarios/scenario_phone_4.png", "A person on the phone with a restaurant table icon, making a reservation, calendar"),
-    ("assets/images/scenarios/scenario_phone_5.png", "A person on the phone holding a package with return arrow, returning an item"),
-    # --- Dating & Social ---
-    ("assets/images/scenarios/scenario_date_1.png", "Two people at a cozy cafe on a first date, coffee cups, warm candle light, butterflies"),
-    ("assets/images/scenarios/scenario_date_2.png", "A person nervously approaching someone with a rose behind their back, asking them out"),
-    ("assets/images/scenarios/scenario_date_3.png", "Two people at a small table with a timer, speed dating round, quick conversation"),
-    ("assets/images/scenarios/scenario_date_4.png", "A group of friends at a casual hangout, two people being introduced by a mutual friend"),
-    ("assets/images/scenarios/scenario_date_5.png", "Two old friends meeting and hugging warmly, nostalgia bubbles, reconnecting"),
-    # --- Conflict & Boundaries ---
-    ("assets/images/scenarios/scenario_conf_1.png", "A person at a boss's desk pointing at a salary chart going up, confident ask for raise"),
-    ("assets/images/scenarios/scenario_conf_2.png", "A person holding up a gentle stop hand to a friend, boundary line drawn, kind but firm"),
-    ("assets/images/scenarios/scenario_conf_3.png", "Two roommates in a living room, one calmly pointing at a messy area, confrontation"),
-    ("assets/images/scenarios/scenario_conf_4.png", "A person at a desk with stacked papers, holding up a hand saying no, work-life balance"),
-    ("assets/images/scenarios/scenario_conf_5.png", "A person listening calmly to feedback with a shield of confidence, handling criticism"),
-    # --- Social Situations ---
-    ("assets/images/scenarios/scenario_soc_1.png", "People at a house party chatting in small groups, balloons, casual fun vibe, small talk"),
-    ("assets/images/scenarios/scenario_soc_2.png", "A person at a professional event extending a handshake with a confident smile, networking"),
-    ("assets/images/scenarios/scenario_soc_3.png", "A person at a dinner table passing food and chatting with other guests, dinner party"),
-    ("assets/images/scenarios/scenario_soc_4.png", "Two neighbors chatting over a fence in a friendly neighborhood, waving, casual"),
-    ("assets/images/scenarios/scenario_soc_5.png", "Two strangers sitting in a waiting room, one starting a friendly conversation, magazines"),
+    # --- Career Confidence (Interview Prep) ---
+    ("assets/images/tracks/career/scenario_int_1.png", "A person confidently introducing themselves at a desk across from an interviewer, professional office, name tag visible"),
+    ("assets/images/tracks/career/scenario_int_2.png", "A person at an interview table with bright eyes and genuine enthusiasm, pointing at a company logo on screen, explaining why they want the job"),
+    ("assets/images/tracks/career/scenario_int_3.png", "A person with a timeline document, walking interviewer through career milestones, confident storytelling with a resume in hand"),
+    ("assets/images/tracks/career/scenario_int_4.png", "A person reflecting honestly at an interview, thought bubble showing a past mistake with an upward arrow showing growth from it"),
+    ("assets/images/tracks/career/scenario_int_5.png", "Two coworkers having a tense conversation at work, one calmly explaining with hand gestures, conflict resolution vibe"),
+    ("assets/images/tracks/career/scenario_int_6.png", "A person at an interview admitting a failure with a growth plant icon, honest self-aware expression, turning negative to positive"),
+    ("assets/images/tracks/career/scenario_int_7.png", "A person proudly describing a career achievement, golden trophy icon and upward graph floating beside them in an interview setting"),
+    ("assets/images/tracks/career/scenario_int_8.png", "A person standing tall with a spotlight on them, star and sparkles, confident hiring pitch moment, why hire me energy"),
+    ("assets/images/tracks/career/scenario_int_9.png", "A person in an interview thoughtfully naming a weakness with a growth plant icon, turning negative to positive, self-aware"),
+    ("assets/images/tracks/career/scenario_int_10.png", "A person in an interview gesturing to a vision board with a 5-year roadmap, future goals visualized as stepping stones"),
+    ("assets/images/tracks/career/scenario_int_11.png", "A person describing leading a team in an interview, small team silhouettes around them, leader icon, collaborative vibe"),
+    ("assets/images/tracks/career/scenario_int_12.png", "A person in a rapid-fire interview, multiple question bubbles flying at them, quick confident answers, energetic paced scene"),
+    ("assets/images/tracks/career/scenario_int_13.png", "A person at a desk confidently discussing numbers with their boss, salary chart going up, negotiation scene"),
+    # --- Social Butterfly ---
+    ("assets/images/tracks/social/scenario_social_1.png", "Two strangers sitting at a coffee shop, one starting a friendly chat, warm relaxed vibe, small talk beginning"),
+    ("assets/images/tracks/social/scenario_social_2.png", "A person walking into a party, confidently introducing themselves to a group of people, balloons and warm lights"),
+    ("assets/images/tracks/social/scenario_social_3.png", "A person giving a genuine warm compliment to someone, hearts floating, both smiling, feel-good vibe"),
+    ("assets/images/tracks/social/scenario_social_4.png", "A person stepping into a group conversation at a social gathering, open body language, welcoming group"),
+    ("assets/images/tracks/social/scenario_social_5.png", "Two acquaintances making weekend plans together, calendar icon, casual friendly energy, coffee cup"),
+    ("assets/images/tracks/social/scenario_social_6.png", "Two old friends reuniting with a warm hug, nostalgia bubbles floating, big smiles, reconnecting after years"),
+    ("assets/images/tracks/social/scenario_social_7.png", "Two people at a cozy cafe on a first date, coffee cups, warm candle light, butterflies floating, nervous excitement"),
+    ("assets/images/tracks/social/scenario_social_8.png", "A person nervously approaching someone with a rose behind their back, heart floating, asking them out on a date"),
+    ("assets/images/tracks/social/scenario_social_9.png", "A person being introduced to their partner's friend group at a casual hangout, warm welcoming scene, nervous smiles"),
+    ("assets/images/tracks/social/scenario_social_10.png", "A person at a professional social event, exchanging cards, confident handshake, name badges, cocktail hour"),
+    ("assets/images/tracks/social/scenario_social_11.png", "Two people in a silent awkward pause, one confidently breaking it with a smile and a new topic, conversation rescue"),
+    ("assets/images/tracks/social/scenario_social_12.png", "Two people at a small table with a timer, speed dating round, quick witty exchange, fun energy"),
+    ("assets/images/tracks/social/scenario_social_13.png", "A person calmly standing up to a rude comment at a social event, polite but firm expression, onlookers watching"),
+    ("assets/images/tracks/social/scenario_social_14.png", "An adult at a new hobby class or community group, nervously introducing themselves, friendly welcoming crowd"),
+    ("assets/images/tracks/social/scenario_social_15.png", "Two people navigating a social media misunderstanding face to face, phone showing chat, calm mature tone"),
+    # --- Stage Ready (Public Speaking) ---
+    ("assets/images/tracks/stage/scenario_stage_1.png", "A person giving a short confident self-introduction speech, small audience, beginner speaker, warm applause"),
+    ("assets/images/tracks/stage/scenario_stage_2.png", "A person raising a glass giving a wedding toast, champagne glasses, flowers, celebration, heartfelt emotion"),
+    ("assets/images/tracks/stage/scenario_stage_3.png", "A student at a classroom podium giving a presentation, slides behind them, confident posture, attentive class"),
+    ("assets/images/tracks/stage/scenario_stage_4.png", "A person in an elevator giving a quick pitch to a business person, clock showing 30 seconds, elevator pitch energy"),
+    ("assets/images/tracks/stage/scenario_stage_5.png", "A person speaking at the front of a team meeting room, colleagues sitting around, confident update presenter"),
+    ("assets/images/tracks/stage/scenario_stage_6.png", "A person around a campfire telling an engaging story to a small group, magical floating storybook pages, warm glow"),
+    ("assets/images/tracks/stage/scenario_stage_7.png", "A person at a conference panel taking audience questions, microphone, calm composed expert expression"),
+    ("assets/images/tracks/stage/scenario_stage_8.png", "A person on stage giving a motivational talk, fire vibe, inspired audience raising fists, energetic speaker"),
+    ("assets/images/tracks/stage/scenario_stage_9.png", "A person presenting to investors with a pitch deck slide showing a growth arrow, confident startup pitch scene"),
+    ("assets/images/tracks/stage/scenario_stage_10.png", "Two people at podiums in a formal debate, speech bubbles clashing, competitive intellectual energy"),
+    ("assets/images/tracks/stage/scenario_stage_11.png", "A person at a large conference keynote podium, big audience silhouette, spotlight, commanding stage presence"),
+    ("assets/images/tracks/stage/scenario_stage_12.png", "A person at a podium holding a trophy giving an acceptance speech, spotlight, emotional grateful expression"),
+    ("assets/images/tracks/stage/scenario_stage_13.png", "A person sitting at a podcast table with microphone, headphones, live guest appearance, confident articulate expression"),
+    ("assets/images/tracks/stage/scenario_stage_14.png", "A person on a round red TED-style stage, giving a passionate talk with powerful hand gestures, large audience"),
+    ("assets/images/tracks/stage/scenario_stage_15.png", "A person given an unexpected prompt doing an impromptu speech, lightbulb appearing, quick thinking on feet, crowd watching"),
+    # --- Anxiety Buster ---
+    ("assets/images/tracks/anxiety/scenario_anxiety_1.png", "A person on the phone with a takeout food menu, pizza icon, deep breath expression, successfully ordering food"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_2.png", "A person nervously calling a doctor's office, phone to ear, hospital cross icon, appointment calendar, courage vibe"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_3.png", "A person at a store counter returning an item, receipt in hand, calm polite expression, staff helping kindly"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_4.png", "A person on a street corner asking a stranger for directions, nervous but brave, stranger pointing helpfully"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_5.png", "A person on phone with customer service rep icon, hold music waves, patient determined expression, complaint resolved"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_6.png", "A person on their first day at a new job, meeting colleagues, nervous smile, office door with welcome sign"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_7.png", "A person sitting in a group discussion circle, raising their hand to share an opinion, supportive group around them"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_8.png", "A person surprised by an unexpected question, pause bubble, deep breath icon, then confident thoughtful answer"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_9.png", "A person firmly but kindly saying no to a pushy person, gentle stop hand gesture, boundary line, calm energy"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_10.png", "A person on a bus or subway making small talk with a nearby passenger, relaxed friendly vibe, transit background"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_11.png", "A person performing under spotlight pressure, shaking hands transforming to steady confident ones, courage burst"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_12.png", "A person calmly talking to a police officer or authority figure, respectful composed expression, no fear vibe"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_13.png", "A person put on the spot in a meeting to answer, blank moment then confident response, supportive colleagues"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_14.png", "A person having a scary but important conversation, deep breath, courage icon, turning fear into action"),
+    ("assets/images/tracks/anxiety/scenario_anxiety_15.png", "A person staying calm during a crisis or emergency, giving clear instructions, others relying on them, composed leader"),
+    # --- Tough Conversations ---
+    ("assets/images/tracks/tough/scenario_tough_1.png",
+     "A person on a phone or chat sending a message to reschedule dinner plans with a friend, calendar icon and clock, low-stakes request"),
+    ("assets/images/tracks/tough/scenario_tough_2.png",
+     "A person holding up a gentle hand to a smiling friend, drawn boundary line between them, kind but firm expression"),
+    ("assets/images/tracks/tough/scenario_tough_3.png",
+     "A person at a desk calmly handing back a stack of extra papers to a colleague, polite no gesture, office setting"),
+    ("assets/images/tracks/tough/scenario_tough_4.png",
+     "Two friends sitting on a bench, one with a hurt expression sharing feelings, the other listening attentively, empathy vibe"),
+    ("assets/images/tracks/tough/scenario_tough_5.png",
+     "Two colleagues at a table, one pointing at a work document giving constructive feedback, speech bubble with improvement arrow"),
+    ("assets/images/tracks/tough/scenario_tough_6.png",
+     "A person standing confidently across a desk from a manager, pushing back calmly with hand gesture, scales of fairness icon"),
+    ("assets/images/tracks/tough/scenario_tough_7.png",
+     "A person on a video call delivering bad news to a disappointed client on screen, empathetic expression, apology vibe"),
+    ("assets/images/tracks/tough/scenario_tough_8.png",
+     "Two roommates in a living room, one calmly pointing at a repeated messy area, confronting habitual behavior, clock showing again"),
+    ("assets/images/tracks/tough/scenario_tough_9.png",
+     "A person standing firm with a gentle smile against a guilt-tripping family member, shield of confidence, boundary line glowing"),
+    ("assets/images/tracks/tough/scenario_tough_10.png",
+     "A person across a desk from a manager with a salary chart arrow going up, confident ask for a raise, first time nervous energy"),
+    ("assets/images/tracks/tough/scenario_tough_11.png",
+     "A person telling parents about a big life decision at a family table, parents with surprised expressions, person standing firm with warmth"),
+    ("assets/images/tracks/tough/scenario_tough_12.png",
+     "Two friends sitting across from each other, one gently ending the friendship with kind clear words, tissue box, bittersweet emotion"),
+    ("assets/images/tracks/tough/scenario_tough_13.png",
+     "A person at a meeting table disputing a performance review document with a manager, respectful disagreement, red flag on paper"),
+    ("assets/images/tracks/tough/scenario_tough_14.png",
+     "A person at a hiring desk holding their number firm against a recruiter pushing back, salary figure in speech bubble, confident stance"),
+    ("assets/images/tracks/tough/scenario_tough_15.png",
+     "A junior person calmly confronting a VP in a large office about credit-stealing, power imbalance visible, small person standing tall"),
+    # --- Gen Z at Work ---
+    ("assets/images/tracks/genz/scenario_genz_1.png",
+     "A young person in an office nervously making a work phone call, phone to ear, deep breath, desk with computer, office environment"),
+    ("assets/images/tracks/genz/scenario_genz_2.png",
+     "A person on a laptop video call standup introducing themselves, camera on, other faces in grid, raising hand to speak"),
+    ("assets/images/tracks/genz/scenario_genz_3.png",
+     "Two colleagues in a break room before a meeting, casual small talk over coffee cups, relaxed friendly vibe, pre-meeting chat"),
+    ("assets/images/tracks/genz/scenario_genz_4.png",
+     "A junior employee asking a senior colleague for help at a shared desk, question mark bubble, supportive response, no shame vibe"),
+    ("assets/images/tracks/genz/scenario_genz_5.png",
+     "A young person giving a confident status update in a team meeting, pointing at a progress bar, colleagues listening attentively"),
+    ("assets/images/tracks/genz/scenario_genz_6.png",
+     "A person receiving critical feedback from a manager across a desk, listening with open posture, feedback notes with improvement arrows"),
+    ("assets/images/tracks/genz/scenario_genz_7.png",
+     "A person raising their hand in a meeting to share a different opinion, speech bubble with opposing idea, colleagues around a table"),
+    ("assets/images/tracks/genz/scenario_genz_8.png",
+     "An employee knocking on a manager's open door to ask for feedback, notebook in hand, proactive curious expression"),
+    ("assets/images/tracks/genz/scenario_genz_9.png",
+     "A junior employee politely declining extra work from a senior colleague, calm no gesture, both showing understanding, workload visible"),
+    ("assets/images/tracks/genz/scenario_genz_10.png",
+     "Two peers at a desk, one giving constructive feedback to the other about their work, speech bubble with kind critique, collaborative vibe"),
+    ("assets/images/tracks/genz/scenario_genz_11.png",
+     "A person asking their manager for a deadline extension at a desk, calendar with revised date, honest conversation, manager considering"),
+    ("assets/images/tracks/genz/scenario_genz_12.png",
+     "A young employee calmly disagreeing with a manager in a one-on-one, respectful hand gesture, manager listening, office setting"),
+    ("assets/images/tracks/genz/scenario_genz_13.png",
+     "A young professional approaching strangers at a work conference or networking event, badge visible, confident smile, cocktail hour vibe"),
+    ("assets/images/tracks/genz/scenario_genz_14.png",
+     "A person negotiating their first job offer on the spot with a recruiter at a table, salary number in speech bubble, holding firm"),
+    ("assets/images/tracks/genz/scenario_genz_15.png",
+     "A young person leading a team meeting at a whiteboard, keeping discussion on track, colleagues engaged, facilitator role, confident stance"),
+]
+
+BANNERS = [
+    ("assets/images/tracks/career/banner.png",
+     "Wide landscape banner: a confident person shaking hands after a successful job interview, bright professional office background, career ladder icon, warm gold and blue tones, celebratory energy"),
+    ("assets/images/tracks/social/banner.png",
+     "Wide landscape banner: a diverse group of happy people mingling at a social gathering, warm party lights, laughter bubbles, vibrant pink and purple tones, friendly connection vibe"),
+    ("assets/images/tracks/stage/banner.png",
+     "Wide landscape banner: a confident speaker on a spotlit stage, microphone in hand, audience silhouettes in awe, dramatic teal and gold tones, inspiring public speaking energy"),
+    ("assets/images/tracks/anxiety/banner.png",
+     "Wide landscape banner: a person taking a deep breath with closed eyes, nervous energy transforming into calm confidence, soft gradient from stormy grey to sunny yellow, courage blooming"),
+    ("assets/images/tracks/tough/banner.png",
+     "Wide landscape banner: two people sitting across from each other having a mature honest conversation, calm expressions, soft green and warm tones, bridge icon between them, resolution vibe"),
+    ("assets/images/tracks/genz/banner.png",
+     "Wide landscape banner: a young professional at a modern open-plan office, laptop and coffee, confident casual pose, bright neon accents on clean white background, Gen Z work energy"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -388,6 +476,9 @@ def generate_image(client, prompt: str, reference_bytes=None):
             response = client.models.generate_content(
                 model="gemini-3.1-flash-image-preview",
                 contents=contents,
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE", "TEXT"]
+                ),
             )
 
             # Extract image from response parts
@@ -414,31 +505,44 @@ def generate_group(
 ) -> None:
     """Generate a group of images. If use_reference, the first image is used
     as a reference for subsequent ones (mascot consistency)."""
+    total = len(items)
+    skipped = sum(1 for rel_path, _ in items if (root / rel_path).exists())
+    to_generate = total - skipped
+
     print(f"\n{'='*60}")
-    print(f"Generating {group_name} ({len(items)} images)")
+    print(f"  TRACK: {group_name}")
+    print(f"  Total: {total}  |  Already done: {skipped}  |  To generate: {to_generate}")
     print(f"{'='*60}")
 
+    if to_generate == 0:
+        print("  All images already exist. Skipping.")
+        return
+
     reference_bytes = None
+    generated = 0
 
     for i, (rel_path, prompt) in enumerate(items):
         out_path = root / rel_path
         out_path.parent.mkdir(parents=True, exist_ok=True)
 
+        scenario_name = Path(rel_path).stem  # e.g. scenario_tough_3
+
         if out_path.exists():
-            print(f"\n[{i+1}/{len(items)}] SKIP (exists): {rel_path}")
-            # If this is the first mascot, load its bytes as reference
+            print(f"  [{i+1}/{total}] SKIP  {scenario_name}")
             if use_reference and i == 0:
                 reference_bytes = out_path.read_bytes()
             continue
 
-        print(f"\n[{i+1}/{len(items)}] Generating: {rel_path}")
-        print(f"  Prompt: {prompt[:80]}...")
+        generated += 1
+        print(f"\n  [{i+1}/{total}] Generating ({generated}/{to_generate}): {scenario_name}")
+        print(f"  Prompt: {prompt[:90]}...")
 
         ref = reference_bytes if use_reference else None
 
         img, raw_bytes = generate_image(client, prompt, reference_bytes=ref)
         img.save(str(out_path))
-        print(f"  Saved: {out_path} ({out_path.stat().st_size / 1024:.1f} KB)")
+        size_kb = out_path.stat().st_size / 1024
+        print(f"  DONE  {scenario_name}  ({size_kb:.0f} KB)  [{generated}/{to_generate} generated]")
 
         # Store first mascot bytes as reference
         if use_reference and i == 0:
@@ -446,6 +550,8 @@ def generate_group(
 
         # Rate limit — be polite to the API
         time.sleep(2)
+
+    print(f"\n  Track complete: {group_name}  ({generated} generated, {skipped} skipped)")
 
 
 # ---------------------------------------------------------------------------
@@ -456,7 +562,7 @@ def main() -> None:
     parser.add_argument("--api-key", help="Gemini API key (or set GEMINI_API_KEY env var)")
     parser.add_argument(
         "--only",
-        choices=["categories", "characters", "mascots", "scenarios"],
+        choices=["categories", "characters", "mascots", "career", "social", "stage", "anxiety", "tough", "genz", "banners", "scenarios"],
         help="Generate only one group",
     )
     parser.add_argument(
@@ -483,18 +589,28 @@ def main() -> None:
 
     client = genai.Client(api_key=api_key)
 
+    def track(prefix):
+        return [s for s in SCENARIOS if f"/{prefix}/" in s[0]]
+
     groups = {
         "categories": (CATEGORIES, "Categories", False),
         "characters": (CHARACTERS, "Characters", False),
         "mascots": (MASCOTS, "Mascots (with reference)", True),
-        "scenarios": (SCENARIOS, "Scenarios", False),
+        "scenarios": (SCENARIOS, "All Scenarios", False),
+        "career":  (track("career"),  "Career Confidence", False),
+        "social":  (track("social"),  "Social Butterfly",  False),
+        "stage":   (track("stage"),   "Stage Ready",       False),
+        "anxiety": (track("anxiety"), "Anxiety Buster",    False),
+        "tough":   (track("tough"),   "Tough Conversations", False),
+        "genz":    (track("genz"),    "Gen Z at Work",     False),
+        "banners": (BANNERS, "Track Banners", False),
     }
 
     if args.only:
         items, name, use_ref = groups[args.only]
         generate_group(client, items, root, name, use_reference=use_ref)
     else:
-        for key in ["categories", "characters", "mascots", "scenarios"]:
+        for key in ["categories", "characters", "mascots", "scenarios", "banners"]:
             items, name, use_ref = groups[key]
             generate_group(client, items, root, name, use_reference=use_ref)
 

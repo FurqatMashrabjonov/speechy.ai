@@ -79,79 +79,119 @@ class AppImages {
     'Social Situations': categorySocial,
   };
 
-  // ── Scenarios ────────────────────────────────────────────────────────
-  // Interviews
-  static const scenarioInt1 = 'assets/images/scenarios/scenario_int_1.png';
-  static const scenarioInt2 = 'assets/images/scenarios/scenario_int_2.png';
-  static const scenarioInt3 = 'assets/images/scenarios/scenario_int_3.png';
-  static const scenarioInt4 = 'assets/images/scenarios/scenario_int_4.png';
-  static const scenarioInt5 = 'assets/images/scenarios/scenario_int_5.png';
-  // Presentations
-  static const scenarioPres1 = 'assets/images/scenarios/scenario_pres_1.png';
-  static const scenarioPres2 = 'assets/images/scenarios/scenario_pres_2.png';
-  static const scenarioPres3 = 'assets/images/scenarios/scenario_pres_3.png';
-  static const scenarioPres4 = 'assets/images/scenarios/scenario_pres_4.png';
-  static const scenarioPres5 = 'assets/images/scenarios/scenario_pres_5.png';
-  // Public Speaking
-  static const scenarioPub1 = 'assets/images/scenarios/scenario_pub_1.png';
-  static const scenarioPub2 = 'assets/images/scenarios/scenario_pub_2.png';
-  static const scenarioPub3 = 'assets/images/scenarios/scenario_pub_3.png';
-  static const scenarioPub4 = 'assets/images/scenarios/scenario_pub_4.png';
-  static const scenarioPub5 = 'assets/images/scenarios/scenario_pub_5.png';
-  // Debates
-  static const scenarioDeb1 = 'assets/images/scenarios/scenario_deb_1.png';
-  static const scenarioDeb2 = 'assets/images/scenarios/scenario_deb_2.png';
-  static const scenarioDeb3 = 'assets/images/scenarios/scenario_deb_3.png';
-  static const scenarioDeb4 = 'assets/images/scenarios/scenario_deb_4.png';
-  static const scenarioDeb5 = 'assets/images/scenarios/scenario_deb_5.png';
-  // Conversations
-  static const scenarioConv1 = 'assets/images/scenarios/scenario_conv_1.png';
-  static const scenarioConv2 = 'assets/images/scenarios/scenario_conv_2.png';
-  static const scenarioConv3 = 'assets/images/scenarios/scenario_conv_3.png';
-  static const scenarioConv4 = 'assets/images/scenarios/scenario_conv_4.png';
-  static const scenarioConv5 = 'assets/images/scenarios/scenario_conv_5.png';
-  // Storytelling
-  static const scenarioStory1 = 'assets/images/scenarios/scenario_story_1.png';
-  static const scenarioStory2 = 'assets/images/scenarios/scenario_story_2.png';
-  static const scenarioStory3 = 'assets/images/scenarios/scenario_story_3.png';
-  static const scenarioStory4 = 'assets/images/scenarios/scenario_story_4.png';
-  static const scenarioStory5 = 'assets/images/scenarios/scenario_story_5.png';
-  // Phone Anxiety
-  static const scenarioPhone1 = 'assets/images/scenarios/scenario_phone_1.png';
-  static const scenarioPhone2 = 'assets/images/scenarios/scenario_phone_2.png';
-  static const scenarioPhone3 = 'assets/images/scenarios/scenario_phone_3.png';
-  static const scenarioPhone4 = 'assets/images/scenarios/scenario_phone_4.png';
-  static const scenarioPhone5 = 'assets/images/scenarios/scenario_phone_5.png';
-  // Dating & Social
-  static const scenarioDate1 = 'assets/images/scenarios/scenario_date_1.png';
-  static const scenarioDate2 = 'assets/images/scenarios/scenario_date_2.png';
-  static const scenarioDate3 = 'assets/images/scenarios/scenario_date_3.png';
-  static const scenarioDate4 = 'assets/images/scenarios/scenario_date_4.png';
-  static const scenarioDate5 = 'assets/images/scenarios/scenario_date_5.png';
-  // Conflict & Boundaries
-  static const scenarioConf1 = 'assets/images/scenarios/scenario_conf_1.png';
-  static const scenarioConf2 = 'assets/images/scenarios/scenario_conf_2.png';
-  static const scenarioConf3 = 'assets/images/scenarios/scenario_conf_3.png';
-  static const scenarioConf4 = 'assets/images/scenarios/scenario_conf_4.png';
-  static const scenarioConf5 = 'assets/images/scenarios/scenario_conf_5.png';
-  // Social Situations
-  static const scenarioSoc1 = 'assets/images/scenarios/scenario_soc_1.png';
-  static const scenarioSoc2 = 'assets/images/scenarios/scenario_soc_2.png';
-  static const scenarioSoc3 = 'assets/images/scenarios/scenario_soc_3.png';
-  static const scenarioSoc4 = 'assets/images/scenarios/scenario_soc_4.png';
-  static const scenarioSoc5 = 'assets/images/scenarios/scenario_soc_5.png';
+  // ── Track Banners ─────────────────────────────────────────────────────
+  static const bannerCareer   = 'assets/images/tracks/career/banner.png';
+  static const bannerSocial   = 'assets/images/tracks/social/banner.png';
+  static const bannerStage    = 'assets/images/tracks/stage/banner.png';
+  static const bannerAnxiety  = 'assets/images/tracks/anxiety/banner.png';
+  static const bannerTough    = 'assets/images/tracks/tough/banner.png';
+  static const bannerGenz     = 'assets/images/tracks/genz/banner.png';
 
+  static const trackBannerMap = {
+    'career_confidence': bannerCareer,
+    'social_butterfly':  bannerSocial,
+    'stage_ready':       bannerStage,
+    'anxiety_buster':    bannerAnxiety,
+    'tough_conversations': bannerTough,
+    'gen_z_work':        bannerGenz,
+  };
+
+  // ── Track Scenarios ────────────────────────────────────────────────────
   /// Map scenario ID → image path for easy lookup.
   static const scenarioImageMap = {
-    'int_1': scenarioInt1, 'int_2': scenarioInt2, 'int_3': scenarioInt3, 'int_4': scenarioInt4, 'int_5': scenarioInt5,
-    'pres_1': scenarioPres1, 'pres_2': scenarioPres2, 'pres_3': scenarioPres3, 'pres_4': scenarioPres4, 'pres_5': scenarioPres5,
-    'pub_1': scenarioPub1, 'pub_2': scenarioPub2, 'pub_3': scenarioPub3, 'pub_4': scenarioPub4, 'pub_5': scenarioPub5,
-    'deb_1': scenarioDeb1, 'deb_2': scenarioDeb2, 'deb_3': scenarioDeb3, 'deb_4': scenarioDeb4, 'deb_5': scenarioDeb5,
-    'conv_1': scenarioConv1, 'conv_2': scenarioConv2, 'conv_3': scenarioConv3, 'conv_4': scenarioConv4, 'conv_5': scenarioConv5,
-    'story_1': scenarioStory1, 'story_2': scenarioStory2, 'story_3': scenarioStory3, 'story_4': scenarioStory4, 'story_5': scenarioStory5,
-    'phone_1': scenarioPhone1, 'phone_2': scenarioPhone2, 'phone_3': scenarioPhone3, 'phone_4': scenarioPhone4, 'phone_5': scenarioPhone5,
-    'date_1': scenarioDate1, 'date_2': scenarioDate2, 'date_3': scenarioDate3, 'date_4': scenarioDate4, 'date_5': scenarioDate5,
-    'conf_1': scenarioConf1, 'conf_2': scenarioConf2, 'conf_3': scenarioConf3, 'conf_4': scenarioConf4, 'conf_5': scenarioConf5,
-    'soc_1': scenarioSoc1, 'soc_2': scenarioSoc2, 'soc_3': scenarioSoc3, 'soc_4': scenarioSoc4, 'soc_5': scenarioSoc5,
+    // Career Confidence (Interview Prep)
+    'int_1':  'assets/images/tracks/career/scenario_int_1.png',
+    'int_2':  'assets/images/tracks/career/scenario_int_2.png',
+    'int_3':  'assets/images/tracks/career/scenario_int_3.png',
+    'int_4':  'assets/images/tracks/career/scenario_int_4.png',
+    'int_5':  'assets/images/tracks/career/scenario_int_5.png',
+    'int_6':  'assets/images/tracks/career/scenario_int_6.png',
+    'int_7':  'assets/images/tracks/career/scenario_int_7.png',
+    'int_8':  'assets/images/tracks/career/scenario_int_8.png',
+    'int_9':  'assets/images/tracks/career/scenario_int_9.png',
+    'int_10': 'assets/images/tracks/career/scenario_int_10.png',
+    'int_11': 'assets/images/tracks/career/scenario_int_11.png',
+    'int_12': 'assets/images/tracks/career/scenario_int_12.png',
+    'int_13': 'assets/images/tracks/career/scenario_int_13.png',
+    // Social Butterfly
+    'social_1':  'assets/images/tracks/social/scenario_social_1.png',
+    'social_2':  'assets/images/tracks/social/scenario_social_2.png',
+    'social_3':  'assets/images/tracks/social/scenario_social_3.png',
+    'social_4':  'assets/images/tracks/social/scenario_social_4.png',
+    'social_5':  'assets/images/tracks/social/scenario_social_5.png',
+    'social_6':  'assets/images/tracks/social/scenario_social_6.png',
+    'social_7':  'assets/images/tracks/social/scenario_social_7.png',
+    'social_8':  'assets/images/tracks/social/scenario_social_8.png',
+    'social_9':  'assets/images/tracks/social/scenario_social_9.png',
+    'social_10': 'assets/images/tracks/social/scenario_social_10.png',
+    'social_11': 'assets/images/tracks/social/scenario_social_11.png',
+    'social_12': 'assets/images/tracks/social/scenario_social_12.png',
+    'social_13': 'assets/images/tracks/social/scenario_social_13.png',
+    'social_14': 'assets/images/tracks/social/scenario_social_14.png',
+    'social_15': 'assets/images/tracks/social/scenario_social_15.png',
+    // Stage Ready (Public Speaking)
+    'stage_1':  'assets/images/tracks/stage/scenario_stage_1.png',
+    'stage_2':  'assets/images/tracks/stage/scenario_stage_2.png',
+    'stage_3':  'assets/images/tracks/stage/scenario_stage_3.png',
+    'stage_4':  'assets/images/tracks/stage/scenario_stage_4.png',
+    'stage_5':  'assets/images/tracks/stage/scenario_stage_5.png',
+    'stage_6':  'assets/images/tracks/stage/scenario_stage_6.png',
+    'stage_7':  'assets/images/tracks/stage/scenario_stage_7.png',
+    'stage_8':  'assets/images/tracks/stage/scenario_stage_8.png',
+    'stage_9':  'assets/images/tracks/stage/scenario_stage_9.png',
+    'stage_10': 'assets/images/tracks/stage/scenario_stage_10.png',
+    'stage_11': 'assets/images/tracks/stage/scenario_stage_11.png',
+    'stage_12': 'assets/images/tracks/stage/scenario_stage_12.png',
+    'stage_13': 'assets/images/tracks/stage/scenario_stage_13.png',
+    'stage_14': 'assets/images/tracks/stage/scenario_stage_14.png',
+    'stage_15': 'assets/images/tracks/stage/scenario_stage_15.png',
+    // Anxiety Buster
+    'anxiety_1':  'assets/images/tracks/anxiety/scenario_anxiety_1.png',
+    'anxiety_2':  'assets/images/tracks/anxiety/scenario_anxiety_2.png',
+    'anxiety_3':  'assets/images/tracks/anxiety/scenario_anxiety_3.png',
+    'anxiety_4':  'assets/images/tracks/anxiety/scenario_anxiety_4.png',
+    'anxiety_5':  'assets/images/tracks/anxiety/scenario_anxiety_5.png',
+    'anxiety_6':  'assets/images/tracks/anxiety/scenario_anxiety_6.png',
+    'anxiety_7':  'assets/images/tracks/anxiety/scenario_anxiety_7.png',
+    'anxiety_8':  'assets/images/tracks/anxiety/scenario_anxiety_8.png',
+    'anxiety_9':  'assets/images/tracks/anxiety/scenario_anxiety_9.png',
+    'anxiety_10': 'assets/images/tracks/anxiety/scenario_anxiety_10.png',
+    'anxiety_11': 'assets/images/tracks/anxiety/scenario_anxiety_11.png',
+    'anxiety_12': 'assets/images/tracks/anxiety/scenario_anxiety_12.png',
+    'anxiety_13': 'assets/images/tracks/anxiety/scenario_anxiety_13.png',
+    'anxiety_14': 'assets/images/tracks/anxiety/scenario_anxiety_14.png',
+    'anxiety_15': 'assets/images/tracks/anxiety/scenario_anxiety_15.png',
+    // Tough Conversations
+    'tough_1':  'assets/images/tracks/tough/scenario_tough_1.png',
+    'tough_2':  'assets/images/tracks/tough/scenario_tough_2.png',
+    'tough_3':  'assets/images/tracks/tough/scenario_tough_3.png',
+    'tough_4':  'assets/images/tracks/tough/scenario_tough_4.png',
+    'tough_5':  'assets/images/tracks/tough/scenario_tough_5.png',
+    'tough_6':  'assets/images/tracks/tough/scenario_tough_6.png',
+    'tough_7':  'assets/images/tracks/tough/scenario_tough_7.png',
+    'tough_8':  'assets/images/tracks/tough/scenario_tough_8.png',
+    'tough_9':  'assets/images/tracks/tough/scenario_tough_9.png',
+    'tough_10': 'assets/images/tracks/tough/scenario_tough_10.png',
+    'tough_11': 'assets/images/tracks/tough/scenario_tough_11.png',
+    'tough_12': 'assets/images/tracks/tough/scenario_tough_12.png',
+    'tough_13': 'assets/images/tracks/tough/scenario_tough_13.png',
+    'tough_14': 'assets/images/tracks/tough/scenario_tough_14.png',
+    'tough_15': 'assets/images/tracks/tough/scenario_tough_15.png',
+    // Gen Z at Work
+    'genz_1':  'assets/images/tracks/genz/scenario_genz_1.png',
+    'genz_2':  'assets/images/tracks/genz/scenario_genz_2.png',
+    'genz_3':  'assets/images/tracks/genz/scenario_genz_3.png',
+    'genz_4':  'assets/images/tracks/genz/scenario_genz_4.png',
+    'genz_5':  'assets/images/tracks/genz/scenario_genz_5.png',
+    'genz_6':  'assets/images/tracks/genz/scenario_genz_6.png',
+    'genz_7':  'assets/images/tracks/genz/scenario_genz_7.png',
+    'genz_8':  'assets/images/tracks/genz/scenario_genz_8.png',
+    'genz_9':  'assets/images/tracks/genz/scenario_genz_9.png',
+    'genz_10': 'assets/images/tracks/genz/scenario_genz_10.png',
+    'genz_11': 'assets/images/tracks/genz/scenario_genz_11.png',
+    'genz_12': 'assets/images/tracks/genz/scenario_genz_12.png',
+    'genz_13': 'assets/images/tracks/genz/scenario_genz_13.png',
+    'genz_14': 'assets/images/tracks/genz/scenario_genz_14.png',
+    'genz_15': 'assets/images/tracks/genz/scenario_genz_15.png',
   };
 }

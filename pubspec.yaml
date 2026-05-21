@@ -36,11 +36,12 @@ dependencies:
   flutter_svg: ^2.0.17
 
   # AI
-  firebase_ai: ^3.8.0
+  firebase_ai: ^3.11.0
 
   # Audio
   record: ^6.2.0
   flutter_soloud: ^3.1.6
+  audio_session: ^0.1.21
   path_provider: ^2.1.5
 
   # Charts
@@ -68,6 +69,7 @@ dependencies:
 
   # Home Screen Widgets
   home_widget: ^0.7.0
+  audioplayers: ^6.6.0
 
 dev_dependencies:
   flutter_test:
@@ -79,9 +81,13 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/images/mascot/
     - assets/images/characters/
     - assets/images/categories/
-    - assets/images/scenarios/
+    - assets/images/tracks/career/
+    - assets/images/tracks/social/
+    - assets/images/tracks/stage/
+    - assets/images/tracks/anxiety/
+    - assets/images/tracks/tough/
+    - assets/images/tracks/genz/
     - assets/icons/
     - assets/animations/

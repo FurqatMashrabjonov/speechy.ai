@@ -63,11 +63,20 @@ const allRoadmapMetas = [
     difficultyLabel: 'Gentle Pace',
   ),
   RoadmapMeta(
-    id: 'well_rounded',
-    title: 'Well-Rounded Speaker',
-    description: 'Balanced path across all speaking situations — social, professional, public.',
-    emoji: '\u{1F31F}',
-    color: Color(0xFFF59E0B),
+    id: 'tough_conversations',
+    title: 'Tough Conversations',
+    description: 'Practice the conversations you\'ve been avoiding — boundaries, raises, conflict, and hard truths.',
+    emoji: '\u{1F525}',
+    color: Color(0xFFEF4444),
+    stepCount: 15,
+    difficultyLabel: 'Easy → Hard',
+  ),
+  RoadmapMeta(
+    id: 'gen_z_work',
+    title: 'Gen Z at Work',
+    description: 'Level up your workplace communication — meetings, feedback, phone calls, and negotiation.',
+    emoji: '\u{1F4BC}',
+    color: Color(0xFF6366F1),
     stepCount: 15,
     difficultyLabel: 'Easy → Hard',
   ),
@@ -268,21 +277,21 @@ const _templates = [
     description:
         'Build real social skills step by step — from small talk to confident connections.',
     steps: [
-      _ChainStep(scenarioId: 'soc_5', difficulty: 'easy', minPassScore: 50),
-      _ChainStep(scenarioId: 'soc_4', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'soc_1', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'conv_1', difficulty: 'easy', minPassScore: 60),
-      _ChainStep(scenarioId: 'date_4', difficulty: 'easy', minPassScore: 60),
-      _ChainStep(scenarioId: 'date_5', difficulty: 'easy', minPassScore: 60),
-      _ChainStep(scenarioId: 'soc_3', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'date_1', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'soc_2', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'date_2', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'conv_2', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'date_3', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'conf_4', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'conv_3', difficulty: 'hard', minPassScore: 75),
-      _ChainStep(scenarioId: 'conv_5', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'social_1', difficulty: 'easy', minPassScore: 50),
+      _ChainStep(scenarioId: 'social_2', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'social_3', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'social_4', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'social_5', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'social_6', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'social_7', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'social_8', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'social_9', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'social_10', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'social_11', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'social_12', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'social_13', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'social_14', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'social_15', difficulty: 'hard', minPassScore: 75),
     ],
   ),
   _ChainTemplate(
@@ -291,21 +300,21 @@ const _templates = [
     description:
         'Go from nervous speaker to commanding any stage with confidence.',
     steps: [
-      _ChainStep(scenarioId: 'pres_1', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'story_1', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'story_2', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'pub_2', difficulty: 'easy', minPassScore: 60),
-      _ChainStep(scenarioId: 'pub_1', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'story_4', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'pres_3', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'deb_1', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'deb_2', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'pres_2', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'story_5', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'deb_3', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'pub_3', difficulty: 'hard', minPassScore: 75),
-      _ChainStep(scenarioId: 'pres_5', difficulty: 'hard', minPassScore: 75),
-      _ChainStep(scenarioId: 'pub_4', difficulty: 'hard', minPassScore: 80),
+      _ChainStep(scenarioId: 'stage_1', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'stage_2', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'stage_3', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'stage_4', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'stage_5', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'stage_6', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'stage_7', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'stage_8', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'stage_9', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'stage_10', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'stage_11', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'stage_12', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'stage_13', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'stage_14', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'stage_15', difficulty: 'hard', minPassScore: 80),
     ],
   ),
   _ChainTemplate(
@@ -314,44 +323,67 @@ const _templates = [
     description:
         'Gentle progressive practice — start low-pressure, build to real confidence.',
     steps: [
-      _ChainStep(scenarioId: 'phone_4', difficulty: 'easy', minPassScore: 50),
-      _ChainStep(scenarioId: 'phone_1', difficulty: 'easy', minPassScore: 50),
-      _ChainStep(scenarioId: 'soc_5', difficulty: 'easy', minPassScore: 50),
-      _ChainStep(scenarioId: 'phone_2', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'soc_4', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'phone_3', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'phone_5', difficulty: 'medium', minPassScore: 60),
-      _ChainStep(scenarioId: 'conv_1', difficulty: 'medium', minPassScore: 60),
-      _ChainStep(scenarioId: 'story_1', difficulty: 'medium', minPassScore: 60),
-      _ChainStep(scenarioId: 'conf_5', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'soc_3', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'conf_2', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'conf_3', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'conf_4', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'conf_1', difficulty: 'hard', minPassScore: 70),
+      _ChainStep(scenarioId: 'anxiety_1', difficulty: 'easy', minPassScore: 50),
+      _ChainStep(scenarioId: 'anxiety_2', difficulty: 'easy', minPassScore: 50),
+      _ChainStep(scenarioId: 'anxiety_3', difficulty: 'easy', minPassScore: 50),
+      _ChainStep(scenarioId: 'anxiety_4', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'anxiety_5', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'anxiety_6', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'anxiety_7', difficulty: 'medium', minPassScore: 60),
+      _ChainStep(scenarioId: 'anxiety_8', difficulty: 'medium', minPassScore: 60),
+      _ChainStep(scenarioId: 'anxiety_9', difficulty: 'medium', minPassScore: 60),
+      _ChainStep(scenarioId: 'anxiety_10', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'anxiety_11', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'anxiety_12', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'anxiety_13', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'anxiety_14', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'anxiety_15', difficulty: 'hard', minPassScore: 75),
     ],
   ),
   _ChainTemplate(
-    id: 'well_rounded',
-    title: 'Well-Rounded Speaker',
+    id: 'tough_conversations',
+    title: 'Tough Conversations',
     description:
-        'A balanced path across all speaking situations — social, professional, and public.',
+        'Practice the conversations you\'ve been avoiding — boundaries, raises, conflict, and hard truths.',
     steps: [
-      _ChainStep(scenarioId: 'soc_1', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'story_1', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'phone_1', difficulty: 'easy', minPassScore: 55),
-      _ChainStep(scenarioId: 'int_1', difficulty: 'easy', minPassScore: 60),
-      _ChainStep(scenarioId: 'pres_1', difficulty: 'easy', minPassScore: 60),
-      _ChainStep(scenarioId: 'conv_1', difficulty: 'easy', minPassScore: 60),
-      _ChainStep(scenarioId: 'date_1', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'conf_5', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'deb_1', difficulty: 'medium', minPassScore: 65),
-      _ChainStep(scenarioId: 'pub_1', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'conf_1', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'int_5', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'int_4', difficulty: 'hard', minPassScore: 75),
-      _ChainStep(scenarioId: 'pres_5', difficulty: 'hard', minPassScore: 75),
-      _ChainStep(scenarioId: 'pub_4', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'tough_1', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'tough_2', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'tough_3', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'tough_4', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'tough_5', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'tough_6', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'tough_7', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'tough_8', difficulty: 'medium', minPassScore: 68),
+      _ChainStep(scenarioId: 'tough_9', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'tough_10', difficulty: 'hard', minPassScore: 78),
+      _ChainStep(scenarioId: 'tough_11', difficulty: 'hard', minPassScore: 76),
+      _ChainStep(scenarioId: 'tough_12', difficulty: 'hard', minPassScore: 77),
+      _ChainStep(scenarioId: 'tough_13', difficulty: 'hard', minPassScore: 80),
+      _ChainStep(scenarioId: 'tough_14', difficulty: 'hard', minPassScore: 78),
+      _ChainStep(scenarioId: 'tough_15', difficulty: 'hard', minPassScore: 80),
+    ],
+  ),
+  _ChainTemplate(
+    id: 'gen_z_work',
+    title: 'Gen Z at Work',
+    description:
+        'Level up your workplace communication — meetings, feedback, phone calls, and negotiation.',
+    steps: [
+      _ChainStep(scenarioId: 'genz_1', difficulty: 'easy', minPassScore: 50),
+      _ChainStep(scenarioId: 'genz_2', difficulty: 'easy', minPassScore: 52),
+      _ChainStep(scenarioId: 'genz_3', difficulty: 'easy', minPassScore: 55),
+      _ChainStep(scenarioId: 'genz_4', difficulty: 'medium', minPassScore: 62),
+      _ChainStep(scenarioId: 'genz_5', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'genz_6', difficulty: 'medium', minPassScore: 67),
+      _ChainStep(scenarioId: 'genz_7', difficulty: 'medium', minPassScore: 68),
+      _ChainStep(scenarioId: 'genz_8', difficulty: 'medium', minPassScore: 64),
+      _ChainStep(scenarioId: 'genz_9', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'genz_10', difficulty: 'medium', minPassScore: 66),
+      _ChainStep(scenarioId: 'genz_11', difficulty: 'medium', minPassScore: 68),
+      _ChainStep(scenarioId: 'genz_12', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'genz_13', difficulty: 'medium', minPassScore: 65),
+      _ChainStep(scenarioId: 'genz_14', difficulty: 'hard', minPassScore: 75),
+      _ChainStep(scenarioId: 'genz_15', difficulty: 'hard', minPassScore: 78),
     ],
   ),
 ];
@@ -393,10 +425,19 @@ String matchTemplate(List<AssessmentAnswer> answers) {
   // Priority 1: Anxiety override
   if (answerMap['challenge'] == 'anxiety') return 'anxiety_buster';
 
-  // Priority 2: Goal-based
+  // Priority 2: Filler/structure challenge → boundaries + workplace fit
+  if (answerMap['challenge'] == 'confidence' &&
+      answerMap['context'] == 'work') {
+    return 'gen_z_work';
+  }
+
+  // Priority 3: Goal-based
   switch (answerMap['goal']) {
     case 'career':
-      return 'career_confidence';
+      // Level beginner → gen_z_work (easier entry), others → interview prep
+      return answerMap['level'] == 'beginner'
+          ? 'gen_z_work'
+          : 'career_confidence';
     case 'social':
     case 'dating':
       return 'social_butterfly';
@@ -404,7 +445,8 @@ String matchTemplate(List<AssessmentAnswer> answers) {
       return 'stage_ready';
   }
 
-  return 'well_rounded';
+  // Default → tough_conversations (replaced well_rounded)
+  return 'tough_conversations';
 }
 
 LearningPlan generatePlan(AssessmentResult result) {
