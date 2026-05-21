@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:math';
+
+import 'package:audio_session/audio_session.dart';
 
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
@@ -41,6 +44,8 @@ class ConversationState {
   final String? characterPersonality;
   // Mic mute state
   final bool isMicMuted;
+  // Real-time mic amplitude 0.0–1.0 for waveform UI
+  final double micAmplitude;
   // Feedback from live tool call
   final ConversationFeedback? sessionFeedback;
 
@@ -59,6 +64,7 @@ class ConversationState {
     this.characterVoice,
     this.characterPersonality,
     this.isMicMuted = false,
+    this.micAmplitude = 0.0,
     this.sessionFeedback,
   });
 
@@ -94,6 +100,7 @@ class ConversationState {
     String? characterVoice,
     String? characterPersonality,
     bool? isMicMuted,
+    double? micAmplitude,
     ConversationFeedback? sessionFeedback,
   }) {
     return ConversationState(
@@ -111,6 +118,7 @@ class ConversationState {
       characterVoice: characterVoice ?? this.characterVoice,
       characterPersonality: characterPersonality ?? this.characterPersonality,
       isMicMuted: isMicMuted ?? this.isMicMuted,
+      micAmplitude: micAmplitude ?? this.micAmplitude,
       sessionFeedback: sessionFeedback ?? this.sessionFeedback,
     );
   }
@@ -124,24 +132,31 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   final AudioRecorder _recorder = AudioRecorder();
 
   Timer? _timer;
+  Timer? _amplitudeTimer;
   bool _closed = false;
   StreamSubscription<List<int>>? _micSubscription;
 
   // SoLoud streaming audio playback — raw PCM fed directly, no WAV wrapping
   AudioSource? _audioStream;
   SoundHandle? _audioHandle;
+  bool _audioStreamBusy = false; // prevents concurrent _setupNewStream calls
 
   // Keep a copy of all audio for the message bubble
   final List<int> _turnAudioBuffer = [];
   // Buffer for user speech transcription (from inputTranscription)
   String _pendingUserTranscription = '';
 
-  // Echo prevention: track AI speaking state and audio bytes for timing
+  // Echo prevention: track AI speaking state
   bool _isAiSpeaking = false;
   bool _micIsActive = false;
-  int _turnAudioBytesSent = 0; // bytes fed to SoLoud this turn
   Timer? _micResumeTimer;
   bool _wrapUpWarningSent = false;
+
+  // Barge-in detection
+  static const double _bargeInThreshold = 0.35;
+  static const int _bargeInHoldFrames = 3;
+  int _bargeInFrameCount = 0;
+  bool _bargeInActive = false; // blocks in-flight AI audio after barge-in
 
   ConversationNotifier(this._service, this.category)
     : super(const ConversationState());
@@ -179,6 +194,37 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     );
   }
 
+  /// Configure Android audio session like a phone call:
+  /// - Takes audio focus → music/video pauses
+  /// - Routes through communication path with speakerphone on
+  ///   (voiceCommunication AEC reference tracks speaker output for echo cancellation)
+  Future<void> _activateAudioSession() async {
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration(
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.speech,
+          usage: AndroidAudioUsage.voiceCommunication,
+          flags: AndroidAudioFlags.audibilityEnforced,
+        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientExclusive,
+        androidWillPauseWhenDucked: true,
+      ));
+      await session.setActive(true);
+    } catch (e) {
+      debugPrint('AudioSession activate failed: $e');
+    }
+  }
+
+  Future<void> _deactivateAudioSession() async {
+    try {
+      final session = await AudioSession.instance;
+      await session.setActive(false);
+    } catch (e) {
+      debugPrint('AudioSession deactivate failed: $e');
+    }
+  }
+
   /// Initialize SoLoud engine and set up a buffer stream for audio playback.
   Future<void> _initAudioPlayer() async {
     if (!SoLoud.instance.isInitialized) {
@@ -190,16 +236,20 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   Future<void> _setupNewStream() async {
     if (!SoLoud.instance.isInitialized) return;
 
-    // Stop previous stream if active
-    await _stopAudioStream();
-
-    _audioStream = SoLoud.instance.setBufferStream(
-      maxBufferSizeBytes: 1024 * 1024 * 10, // 10MB max (not pre-allocated)
-      bufferingType: BufferingType.released,
-      bufferingTimeNeeds: 0,
-      onBuffering: (isBuffering, handle, time) {},
-    );
-    _audioHandle = null;
+    if (_audioStreamBusy) return;
+    _audioStreamBusy = true;
+    try {
+      await _stopAudioStream();
+      _audioStream = SoLoud.instance.setBufferStream(
+        maxBufferSizeBytes: 1024 * 1024 * 10,
+        bufferingType: BufferingType.released,
+        bufferingTimeNeeds: 0,
+        onBuffering: (isBuffering, handle, time) {},
+      );
+      _audioHandle = null;
+    } finally {
+      _audioStreamBusy = false;
+    }
   }
 
   Future<void> _startAudioPlayback() async {
@@ -207,15 +257,39 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     _audioHandle = await SoLoud.instance.play(_audioStream!);
   }
 
+  /// Feed 100ms of silent PCM into SoLoud before the first real audio arrives.
+  /// Warms up the audio path (OpenSLES/AAudio init, JNI bridge) so first
+  /// AI response plays immediately instead of stalling 300-500ms.
+  /// Call ONCE at session start only — not per-turn.
+  void _primeAudioPipeline() {
+    if (_audioStream == null) return;
+    // 100ms @ 24kHz mono 16-bit = 24000 * 0.1 * 2 = 4800 bytes of zeros
+    final silence = Uint8List(4800);
+    SoLoud.instance.addAudioDataStream(_audioStream!, silence);
+  }
+
+  /// Invalidates the current stream without touching the engine.
+  /// Safe to call mid-session — SoLoud frees the stream automatically when data ends.
   Future<void> _stopAudioStream() async {
-    if (_audioStream != null &&
-        _audioHandle != null &&
-        SoLoud.instance.getIsValidVoiceHandle(_audioHandle!)) {
-      SoLoud.instance.setDataIsEnded(_audioStream!);
-      await SoLoud.instance.stop(_audioHandle!);
+    if (_audioStream != null && SoLoud.instance.isInitialized) {
+      try {
+        SoLoud.instance.setDataIsEnded(_audioStream!);
+      } catch (_) {}
     }
     _audioStream = null;
     _audioHandle = null;
+  }
+
+  /// Full engine teardown at session end.
+  /// Avoids the FFI callback crash that stop(handle) causes when the Dart
+  /// NativeCallable closure is GC'd before the native callback fires.
+  Future<void> _teardownAudioEngine() async {
+    await _stopAudioStream();
+    if (SoLoud.instance.isInitialized) {
+      try {
+        SoLoud.instance.deinit();
+      } catch (_) {}
+    }
   }
 
   Future<void> startConversation() async {
@@ -236,8 +310,14 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         return;
       }
 
+      // Take audio focus — pauses music/video, activates call routing
+      await _activateAudioSession();
+
       // Initialize SoLoud audio player
       await _initAudioPlayer();
+
+      // Warm up audio pipeline — prevents 300-500ms stall on first AI audio
+      _primeAudioPipeline();
 
       await _service.connect(
         category,
@@ -279,10 +359,10 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
           encoder: AudioEncoder.pcm16bits,
           sampleRate: 16000,
           numChannels: 1,
-          echoCancel: true,
-          noiseSuppress: true,
+          echoCancel: true,     // software AEC — works correctly with speaker audio path
+          noiseSuppress: true,  // suppress background noise
           autoGain: true,
-          androidConfig: AndroidRecordConfig(
+          androidConfig: const AndroidRecordConfig(
             audioSource: AndroidAudioSource.voiceCommunication,
           ),
         ),
@@ -290,11 +370,37 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
 
       _micIsActive = true;
 
-      // Send each audio chunk individually via sendAudioRealtime
       _micSubscription = stream.listen((data) {
-        if (!_closed) {
-          _service.sendAudioRealtime(Uint8List.fromList(data));
+        if (_closed) return;
+        final bytes = Uint8List.fromList(data);
+        if (_isAiSpeaking) {
+          // Barge-in detection: check amplitude from raw PCM
+          final amp = _pcmAmplitude(bytes);
+          if (amp > _bargeInThreshold) {
+            _bargeInFrameCount++;
+            if (_bargeInFrameCount >= _bargeInHoldFrames) {
+              _onBargeIn(bytes);
+            }
+          } else {
+            _bargeInFrameCount = 0;
+          }
+          // Don't send to Gemini — AI has the floor
+        } else {
+          _bargeInFrameCount = 0;
+          _service.sendAudioRealtime(bytes);
         }
+      });
+
+      // Poll amplitude at 20Hz for waveform UI
+      _amplitudeTimer?.cancel();
+      _amplitudeTimer = Timer.periodic(const Duration(milliseconds: 50), (_) async {
+        if (!_micIsActive || _closed || !mounted) return;
+        try {
+          final amp = await _recorder.getAmplitude();
+          // dBFS: silence ≈ -60, speech ≈ -30 to -5. Map to 0.0–1.0.
+          final linear = ((amp.current + 60) / 55).clamp(0.0, 1.0);
+          if (mounted) state = state.copyWith(micAmplitude: linear);
+        } catch (_) {}
       });
     } catch (e) {
       debugPrint('Mic stream error: $e');
@@ -306,6 +412,9 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   Future<void> _stopMicStream() async {
     _micResumeTimer?.cancel();
     _micResumeTimer = null;
+    _amplitudeTimer?.cancel();
+    _amplitudeTimer = null;
+    if (mounted) state = state.copyWith(micAmplitude: 0.0);
 
     if (!_micIsActive) return;
     await _micSubscription?.cancel();
@@ -379,22 +488,16 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
 
     if (msg is LiveServerContent) {
       // Audio chunks from model turn — feed directly to SoLoud stream
-      if (msg.modelTurn != null) {
+      if (msg.modelTurn != null && !_bargeInActive) {
         if (!_isAiSpeaking) {
           _isAiSpeaking = true;
-          _turnAudioBytesSent = 0;
-          // Flush any pending user transcription before AI starts its turn
+          _bargeInFrameCount = 0;
           _flushUserTranscription();
-          // Hard-stop mic the moment AI starts talking
-          _stopMicStream();
           state = state.copyWith(status: ConversationStatus.aiSpeaking);
         }
         for (final part in msg.modelTurn!.parts) {
           if (part is InlineDataPart && part.mimeType.startsWith('audio')) {
-            // Save for the message bubble
             _turnAudioBuffer.addAll(part.bytes);
-            _turnAudioBytesSent += part.bytes.length;
-            // Feed directly to SoLoud — no WAV wrapping, no buffering
             if (_audioStream != null) {
               SoLoud.instance.addAudioDataStream(_audioStream!, part.bytes);
             }
@@ -425,6 +528,16 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       if (msg.turnComplete == true) {
         _onAiTurnComplete();
       }
+    } else if (msg is GoingAwayNotice) {
+      // Server will disconnect in ~60 seconds — end gracefully now
+      debugPrint('GoingAwayNotice received. timeLeft=${msg.timeLeft}. Ending session.');
+      if (state.scenarioId != null &&
+          state.status != ConversationStatus.ended &&
+          state.status != ConversationStatus.analyzing) {
+        requestFeedbackAndEnd();
+      } else if (state.status != ConversationStatus.ended) {
+        endConversation();
+      }
     } else if (msg is LiveServerToolCall) {
       if (msg.functionCalls != null) {
         for (final call in msg.functionCalls!) {
@@ -443,10 +556,10 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
                 'LiveServerToolCall: Parsed feedback successfully. Score: \${feedback.overallScore}',
               );
 
-              // We successfully parsed the feedback. Set the feedback and close the session.
+              // Store feedback; endConversation() will set status=ended + metrics
               state = state.copyWith(
                 sessionFeedback: feedback,
-                status: ConversationStatus.ended,
+                status: ConversationStatus.analyzing,
               );
 
               // Respond to the tool call so Gemini knows we received it
@@ -454,7 +567,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
                 FunctionResponse(call.name, {'status': 'success'}, id: call.id),
               ]);
 
-              // End the connection
+              // End the connection — sets status=ended with Deepgram metrics
               endConversation();
             } catch (e) {
               debugPrint('LiveServerToolCall Error parsing feedback: $e');
@@ -487,8 +600,10 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   }
 
   Future<void> _onAiTurnComplete() async {
-    // Signal end of data for this stream segment
-    if (_audioStream != null) {
+    // Signal end of data — only if handle is still valid (not already stopped by barge-in)
+    if (_audioStream != null &&
+        _audioHandle != null &&
+        SoLoud.instance.getIsValidVoiceHandle(_audioHandle!)) {
       SoLoud.instance.setDataIsEnded(_audioStream!);
     }
 
@@ -528,20 +643,61 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       await _startAudioPlayback();
     }
 
-    // Calculate how long the remaining audio will play through the speaker.
-    // SoLoud plays at 24kHz mono 16-bit = 48000 bytes/sec.
-    // turnComplete fires when Gemini finishes SENDING, but SoLoud may still
-    // be playing buffered audio. Wait for it to drain + safety margin.
-    final remainingMs = (_turnAudioBytesSent / 48000 * 1000).round();
-    // Use at least 400ms to account for speaker tail + device latency
-    final delayMs = remainingMs.clamp(400, 3000);
-    _turnAudioBytesSent = 0;
-
+    _bargeInActive = false;
     _micResumeTimer?.cancel();
-    _micResumeTimer = Timer(Duration(milliseconds: delayMs), () {
+    _micResumeTimer = Timer(const Duration(milliseconds: 150), () {
       _isAiSpeaking = false;
+      _bargeInFrameCount = 0;
+      // Mic stays running — no restart needed
       if (!_closed && !state.isMicMuted && mounted) {
-        _startMicStream();
+        if (!_micIsActive) _startMicStream(); // fallback if somehow stopped
+      }
+    });
+  }
+
+  /// RMS amplitude from raw PCM16 bytes, returns 0.0–1.0.
+  double _pcmAmplitude(Uint8List bytes) {
+    if (bytes.length < 2) return 0.0;
+    final samples = bytes.buffer.asInt16List(bytes.offsetInBytes, bytes.lengthInBytes ~/ 2);
+    if (samples.isEmpty) return 0.0;
+    double sum = 0;
+    for (final s in samples) {
+      final norm = s / 32768.0;
+      sum += norm * norm;
+    }
+    return sqrt(sum / samples.length).clamp(0.0, 1.0);
+  }
+
+  /// User spoke loudly enough to interrupt AI. Stop playback, hand floor back.
+  void _onBargeIn(Uint8List triggerChunk) {
+    if (!_isAiSpeaking || _closed) return;
+    debugPrint('Barge-in detected — interrupting AI');
+    _isAiSpeaking = false;
+    _bargeInActive = true;
+    _bargeInFrameCount = 0;
+    _micResumeTimer?.cancel();
+
+    // Signal data ended — SoLoud stops playing naturally.
+    // Avoid stop(handle) which uses FFI callbacks that crash if Dart closure is GC'd.
+    if (_audioStream != null && SoLoud.instance.isInitialized) {
+      try { SoLoud.instance.setDataIsEnded(_audioStream!); } catch (_) {}
+    }
+    _audioStream = null;
+    _audioHandle = null;
+
+    // Send the chunk that triggered barge-in — Gemini detects user speaking
+    // and cancels its current generation server-side.
+    _service.sendAudioRealtime(triggerChunk);
+
+    if (mounted) {
+      state = state.copyWith(status: ConversationStatus.userSpeaking);
+    }
+
+    // Safety: if turnComplete never arrives (e.g. network drop), unblock after 5s
+    Timer(const Duration(seconds: 5), () {
+      if (_bargeInActive && !_closed) {
+        debugPrint('Barge-in safety timeout — clearing _bargeInActive');
+        _bargeInActive = false;
       }
     });
   }
@@ -575,21 +731,24 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   }
 
   Future<void> endConversation() async {
+    if (_closed) return;
     _closed = true;
     _timer?.cancel();
     _micResumeTimer?.cancel();
 
-    // Flush any remaining user transcription before ending
     _flushUserTranscription();
-
     await _stopMicStream();
-    await _stopAudioStream();
+    await _teardownAudioEngine();
     await _service.close();
+    await _deactivateAudioSession(); // release audio focus → music resumes
 
     if (mounted) {
       state = state.copyWith(status: ConversationStatus.ended);
     }
   }
+
+  // Firebase Live API hard limit: 15 min audio-only sessions
+  static const Duration _sessionHardLimit = Duration(minutes: 14, seconds: 30);
 
   void _startTimer() {
     _timer?.cancel();
@@ -600,13 +759,28 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
           elapsed: state.elapsed + const Duration(seconds: 1),
         );
 
-        if (state.durationLimitMinutes != null &&
-            state.status != ConversationStatus.ended &&
-            state.status != ConversationStatus.analyzing) {
-          final limit = Duration(minutes: state.durationLimitMinutes!);
-          final remaining = limit - state.elapsed;
+        final elapsed = state.elapsed;
+        final status = state.status;
 
-          // Send a wrap-up warning 30 seconds before the end
+        if (status == ConversationStatus.ended ||
+            status == ConversationStatus.analyzing) return;
+
+        // Hard cap: 14m30s — end before Firebase 15-min server disconnect
+        if (elapsed >= _sessionHardLimit) {
+          debugPrint('Session hard limit reached — ending gracefully.');
+          if (state.scenarioId != null) {
+            requestFeedbackAndEnd();
+          } else {
+            endConversation();
+          }
+          return;
+        }
+
+        // Scenario timer: warn + auto-end at scenario duration
+        if (state.durationLimitMinutes != null) {
+          final limit = Duration(minutes: state.durationLimitMinutes!);
+          final remaining = limit - elapsed;
+
           if (remaining.inSeconds <= 30 && !_wrapUpWarningSent) {
             _wrapUpWarningSent = true;
             _service.sendText(
@@ -614,10 +788,8 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
             );
           }
 
-          // Auto-end when time limit is reached
           if (state.isTimeUp) {
             if (state.scenarioId != null) {
-              // Trigger feedback tool and exit gracefully instead of hard cutoff
               requestFeedbackAndEnd();
             } else {
               endConversation();
@@ -633,9 +805,10 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     _closed = true;
     _timer?.cancel();
     _micResumeTimer?.cancel();
+    _amplitudeTimer?.cancel();
     _micSubscription?.cancel();
     _recorder.dispose();
-    _stopAudioStream();
+    _teardownAudioEngine(); // fire-and-forget: deinit is fast, no callbacks
     _service.close();
     super.dispose();
   }
