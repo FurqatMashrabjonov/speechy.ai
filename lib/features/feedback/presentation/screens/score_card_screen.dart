@@ -15,7 +15,7 @@ import 'package:speech_coach/shared/widgets/tappable.dart';
 import 'package:speech_coach/features/feedback/presentation/providers/feedback_provider.dart';
 import 'package:speech_coach/features/history/presentation/providers/session_history_provider.dart';
 import 'package:speech_coach/features/progress/presentation/providers/progress_provider.dart';
-import 'package:speech_coach/shared/widgets/celebration_overlay.dart';
+import 'package:confetti/confetti.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dart';
 import 'package:speech_coach/features/filler_challenge/domain/filler_detector.dart';
@@ -55,6 +55,8 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
   Map<String, int> _fillerWords = {};
   int? _wpm;
 
+  late ConfettiController _confettiController;
+
   // Loading animation state
   late AnimationController _pulseController;
   late AnimationController _progressController;
@@ -81,6 +83,8 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -105,6 +109,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
 
   @override
   void dispose() {
+    _confettiController.dispose();
     _pulseController.dispose();
     _progressController.dispose();
     super.dispose();
@@ -212,19 +217,42 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
         if (!_celebrationShown) {
           _celebrationShown = true;
           SoundService.instance.celebration();
-          _showCelebration('Amazing Performance!');
+          _confettiController.play();
         }
       });
     }
 
-    return Scaffold(
-      body: SafeArea(
-        child: switch (feedbackState.status) {
-          FeedbackStatus.idle || FeedbackStatus.loading => _buildLoading(),
-          FeedbackStatus.loaded => _buildScoreCard(feedbackState.feedback!),
-          FeedbackStatus.error => _buildError(feedbackState.error),
-        },
-      ),
+    return Stack(
+      children: [
+        Scaffold(
+          body: SafeArea(
+            child: switch (feedbackState.status) {
+              FeedbackStatus.idle || FeedbackStatus.loading => _buildLoading(),
+              FeedbackStatus.loaded => _buildScoreCard(feedbackState.feedback!),
+              FeedbackStatus.error => _buildError(feedbackState.error),
+            },
+          ),
+        ),
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            numberOfParticles: 8,
+            gravity: 0.4,
+            maxBlastForce: 15,
+            minBlastForce: 5,
+            emissionFrequency: 0.03,
+            colors: const [
+              AppColors.primary,
+              AppColors.success,
+              AppColors.gold,
+              Color(0xFF7C5CBF),
+              Color(0xFF4FC3F7),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -761,14 +789,28 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                 },
               ),
               const SizedBox(height: 8),
-              Tappable(
-                onTap: () => context.go('/home'),
-                child: Text(
-                  'Go Home',
-                  style: AppTypography.labelMedium(
-                    color: context.textSecondary,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Tappable(
+                    onTap: () => context.go('/home'),
+                    child: Text(
+                      'Go Home',
+                      style: AppTypography.labelMedium(color: context.textSecondary),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 20),
+                  Tappable(
+                    onTap: () {
+                      SoundService.instance.celebration();
+                      _confettiController.play();
+                    },
+                    child: Text(
+                      'Test Confetti',
+                      style: AppTypography.labelMedium(color: AppColors.primary),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -789,26 +831,6 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
     if (score >= 80) return AppColors.success;
     if (score >= 50) return AppColors.warning;
     return AppColors.error;
-  }
-
-  void _showCelebration(String message) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      showGeneralDialog(
-        context: context,
-        barrierDismissible: true,
-        barrierLabel: 'Celebration',
-        barrierColor: Colors.transparent,
-        pageBuilder: (_, __, ___) => CelebrationOverlay(
-          message: message,
-          onDismiss: () => Navigator.of(context, rootNavigator: true).pop(),
-        ),
-      );
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          Navigator.of(context, rootNavigator: true).maybePop();
-        }
-      });
-    });
   }
 
   Future<void> _maybeRequestReview(ConversationFeedback feedback) async {
