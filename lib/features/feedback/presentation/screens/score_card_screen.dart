@@ -56,6 +56,8 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
   int? _wpm;
 
   late ConfettiController _confettiController;
+  final _scoreRingKey = GlobalKey();
+  Offset? _confettiOrigin;
 
   // Loading animation state
   late AnimationController _pulseController;
@@ -217,7 +219,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
         if (!_celebrationShown && _confettiController.state != ConfettiControllerState.playing) {
           _celebrationShown = true;
           SoundService.instance.celebration();
-          _confettiController.play();
+          _burstConfettiFromScoreRing();
         }
       });
     }
@@ -233,27 +235,29 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
             },
           ),
         ),
-        Align(
-          alignment: Alignment.topCenter,
-          child: ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirectionality: BlastDirectionality.explosive,
-            numberOfParticles: 18,
-            gravity: 0.5,
-            maxBlastForce: 40,
-            minBlastForce: 20,
-            emissionFrequency: 0.9,
-            particleDrag: 0.08,
-            colors: const [
-              AppColors.primary,
-              AppColors.success,
-              AppColors.gold,
-              Color(0xFF7C5CBF),
-              Color(0xFF4FC3F7),
-              Color(0xFFFF6B6B),
-            ],
+        if (_confettiOrigin != null)
+          Positioned(
+            left: _confettiOrigin!.dx,
+            top: _confettiOrigin!.dy,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              numberOfParticles: 18,
+              gravity: 0.5,
+              maxBlastForce: 40,
+              minBlastForce: 20,
+              emissionFrequency: 0.9,
+              particleDrag: 0.08,
+              colors: const [
+                AppColors.primary,
+                AppColors.success,
+                AppColors.gold,
+                Color(0xFF7C5CBF),
+                Color(0xFF4FC3F7),
+                Color(0xFFFF6B6B),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -617,6 +621,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                     // Score Ring
                     Builder(
                           builder: (context) => ScoreRing(
+                            key: _scoreRingKey,
                             score: feedback.overallScore,
                             size: 160,
                             strokeWidth: 6,
@@ -805,7 +810,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                   Tappable(
                     onTap: () {
                       SoundService.instance.celebration();
-                      _confettiController.play();
+                      _burstConfettiFromScoreRing();
                     },
                     child: Text(
                       'Test Confetti',
@@ -833,6 +838,15 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
     if (score >= 80) return AppColors.success;
     if (score >= 50) return AppColors.warning;
     return AppColors.error;
+  }
+
+  void _burstConfettiFromScoreRing() {
+    final box = _scoreRingKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box != null) {
+      final center = box.localToGlobal(box.size.center(Offset.zero));
+      setState(() => _confettiOrigin = center);
+    }
+    _confettiController.play();
   }
 
   Future<void> _maybeRequestReview(ConversationFeedback feedback) async {
