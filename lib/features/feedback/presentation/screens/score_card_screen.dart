@@ -214,7 +214,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
           _maybeRequestReview(feedbackState.feedback!);
         }
 
-        if (!_celebrationShown) {
+        if (!_celebrationShown && _confettiController.state != ConfettiControllerState.playing) {
           _celebrationShown = true;
           SoundService.instance.celebration();
           _confettiController.play();
@@ -238,17 +238,19 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
           child: ConfettiWidget(
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive,
-            numberOfParticles: 8,
-            gravity: 0.4,
-            maxBlastForce: 15,
-            minBlastForce: 5,
-            emissionFrequency: 0.03,
+            numberOfParticles: 18,
+            gravity: 0.35,
+            maxBlastForce: 22,
+            minBlastForce: 8,
+            emissionFrequency: 0.7,
+            particleDrag: 0.05,
             colors: const [
               AppColors.primary,
               AppColors.success,
               AppColors.gold,
               Color(0xFF7C5CBF),
               Color(0xFF4FC3F7),
+              Color(0xFFFF6B6B),
             ],
           ),
         ),
