@@ -1071,7 +1071,7 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   bool _obscure = true;
-  bool _isRegisterMode = true; // default register for new users from onboarding
+  bool _isRegisterMode = false;
 
   @override
   void dispose() {
@@ -1260,8 +1260,8 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
 
             const SizedBox(height: 18),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.center,
               children: [
                 Text(
                   _isRegisterMode ? 'Already have an account? ' : "Don't have an account? ",

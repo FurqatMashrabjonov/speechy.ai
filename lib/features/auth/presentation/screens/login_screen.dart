@@ -244,8 +244,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 20),
 
                 // Toggle login / register
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
                   children: [
                     Text(
                       _isRegisterMode ? 'Already have an account? ' : "Don't have an account? ",
