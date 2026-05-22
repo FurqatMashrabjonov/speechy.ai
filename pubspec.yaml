@@ -49,7 +49,6 @@ dependencies:
 
   # Sharing
   share_plus: ^10.1.4
-  screenshot: ^3.0.0
 
   # Storage
   shared_preferences: ^2.5.3

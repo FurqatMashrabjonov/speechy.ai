@@ -57,6 +57,12 @@ class UserProgress {
     );
   }
 
+  int get avgScore {
+    if (sessionHistory.isEmpty) return 0;
+    final sum = sessionHistory.fold(0, (acc, s) => acc + s.overallScore);
+    return (sum / sessionHistory.length).round();
+  }
+
   int get xpForNextLevel => _xpThresholds[level] ?? 99999;
   int get xpForCurrentLevel => level > 1 ? (_xpThresholds[level - 1] ?? 0) : 0;
   double get levelProgress {

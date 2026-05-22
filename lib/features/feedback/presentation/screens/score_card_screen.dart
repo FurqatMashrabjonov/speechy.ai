@@ -447,15 +447,10 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(
-              AppImages.mascotError,
-              width: 120,
-              height: 120,
-              errorBuilder: (_, __, ___) => Icon(
-                Icons.error_outline_rounded,
-                size: 48,
-                color: AppColors.error.withValues(alpha: 0.6),
-              ),
+            Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: AppColors.error.withValues(alpha: 0.6),
             ),
             const SizedBox(height: 16),
             Text(

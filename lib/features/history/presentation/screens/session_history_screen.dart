@@ -3,7 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
-import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/history/presentation/providers/session_history_provider.dart';
@@ -85,16 +84,10 @@ class _SessionHistoryScreenState extends ConsumerState<SessionHistoryScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(
-              AppImages.mascotEmpty,
-              width: 96,
-              height: 96,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Icon(
-                Icons.history_rounded,
-                size: 64,
-                color: AppColors.primary.withValues(alpha: 0.3),
-              ),
+            Icon(
+              Icons.history_rounded,
+              size: 64,
+              color: AppColors.primary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 16),
             Text(

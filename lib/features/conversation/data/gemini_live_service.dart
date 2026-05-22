@@ -193,7 +193,7 @@ CRITICAL RULES — follow these at all times:
     if (_session == null) return;
     try {
       final mediaStream = audioStream.map(
-        (data) => InlineDataPart('audio/pcm', Uint8List.fromList(data)),
+        (data) => InlineDataPart('audio/pcm;rate=16000', Uint8List.fromList(data)),
       );
       // ignore: deprecated_member_use
       await _session!.sendMediaStream(mediaStream);
@@ -219,7 +219,7 @@ CRITICAL RULES — follow these at all times:
   /// Send a single audio chunk in real-time (replaces deprecated sendMediaStream).
   Future<void> sendAudioRealtime(Uint8List pcmData) async {
     if (_session == null) return;
-    await _session!.sendAudioRealtime(InlineDataPart('audio/pcm', pcmData));
+    await _session!.sendAudioRealtime(InlineDataPart('audio/pcm;rate=16000', pcmData));
   }
 
   Future<void> close() async {

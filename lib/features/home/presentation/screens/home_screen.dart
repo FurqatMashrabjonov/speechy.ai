@@ -34,21 +34,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final todayCount = ref.watch(progressProvider.select((p) {
+      final today = DateTime.now();
+      final d = DateTime(today.year, today.month, today.day);
+      return p.sessionHistory.where((s) {
+        final sd = DateTime(s.date.year, s.date.month, s.date.day);
+        return sd == d;
+      }).length;
+    }));
     final progress = ref.watch(progressProvider);
-    final authState = ref.watch(authStateProvider);
+    final firstName = ref.watch(authStateProvider.select((s) {
+      final name = s.whenData((u) => u?.displayName).value;
+      if (name == null || name.isEmpty) return 'Speaker';
+      return name.split(' ').first;
+    }));
     final usage = ref.watch(usageServiceProvider);
     final plan = ref.watch(learningPlanProvider);
-    final userName = authState.whenData((user) => user?.displayName).value;
-    final firstName = (userName != null && userName.isNotEmpty)
-        ? userName.split(' ').first
-        : 'Speaker';
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final todayCount = progress.sessionHistory.where((s) {
-      final d = DateTime(s.date.year, s.date.month, s.date.day);
-      return d == today;
-    }).length;
 
     return Scaffold(
       body: SafeArea(

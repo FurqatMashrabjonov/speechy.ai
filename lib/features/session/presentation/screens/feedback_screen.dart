@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,6 +64,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
     return PopScope(
       canPop: !analysis.isLoading,
       child: Scaffold(
+        backgroundColor: context.background,
         body: SafeArea(
           child: analysis.isLoading
               ? _buildLoading()
@@ -253,7 +257,13 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
             const SizedBox(height: 20),
           ],
 
-          // Transcript (expandable)
+          // Audio playback
+          _AudioPlayerCard(audioPath: widget.audioPath)
+              .animate()
+              .fadeIn(delay: 700.ms, duration: 400.ms),
+          const SizedBox(height: 20),
+
+          // Transcript (expandable, formatted)
           if (feedback.transcript.isNotEmpty) ...[
             Tappable(
               onTap: () {
@@ -274,20 +284,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
             ),
             if (_transcriptExpanded) ...[
               const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: context.surface,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  feedback.transcript,
-                  style: AppTypography.bodyMedium(
-                    color: context.textSecondary,
-                  ),
-                ),
-              ),
+              _TranscriptView(transcript: feedback.transcript),
             ],
             const SizedBox(height: 24),
           ],
@@ -354,6 +351,203 @@ class _OverallScoreWidget extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AudioPlayerCard extends StatefulWidget {
+  final String audioPath;
+
+  const _AudioPlayerCard({required this.audioPath});
+
+  @override
+  State<_AudioPlayerCard> createState() => _AudioPlayerCardState();
+}
+
+class _AudioPlayerCardState extends State<_AudioPlayerCard> {
+  final _player = AudioPlayer();
+  PlayerState _playerState = PlayerState.stopped;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _player.onPlayerStateChanged.listen((s) {
+      if (mounted) setState(() => _playerState = s);
+    });
+    _player.onPositionChanged.listen((p) {
+      if (mounted) setState(() => _position = p);
+    });
+    _player.onDurationChanged.listen((d) {
+      if (mounted) setState(() => _duration = d);
+    });
+    _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _position = Duration.zero);
+    });
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  String _fmt(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  Future<void> _togglePlay() async {
+    if (_playerState == PlayerState.playing) {
+      await _player.pause();
+    } else {
+      if (!File(widget.audioPath).existsSync()) return;
+      await _player.play(DeviceFileSource(widget.audioPath));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isPlaying = _playerState == PlayerState.playing;
+    final progress = _duration.inMilliseconds > 0
+        ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _togglePlay,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Recording',
+                  style: AppTypography.labelMedium(color: context.textPrimary),
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 4,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(_fmt(_position),
+                        style: AppTypography.labelSmall(
+                            color: context.textTertiary)),
+                    Text(_fmt(_duration),
+                        style: AppTypography.labelSmall(
+                            color: context.textTertiary)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TranscriptView extends StatelessWidget {
+  final String transcript;
+
+  const _TranscriptView({required this.transcript});
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = transcript
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: lines.map((line) {
+        final isUser = line.startsWith('User:');
+        final isAi = line.startsWith('AI:') || line.startsWith('Assistant:');
+        final text = isUser
+            ? line.replaceFirst('User:', '').trim()
+            : isAi
+                ? line.replaceFirst(RegExp(r'^(AI|Assistant):'), '').trim()
+                : line;
+        final label = isUser ? 'You' : isAi ? 'AI Coach' : null;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (label != null)
+                Container(
+                  width: 64,
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    label,
+                    style: AppTypography.labelSmall(
+                      color: isUser ? AppColors.primary : context.textTertiary,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isUser
+                        ? AppColors.primary.withValues(alpha: 0.07)
+                        : context.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isUser
+                          ? AppColors.primary.withValues(alpha: 0.15)
+                          : context.textTertiary.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  child: Text(
+                    text,
+                    style: AppTypography.bodySmall(color: context.textPrimary)
+                        .copyWith(height: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

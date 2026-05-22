@@ -56,4 +56,5 @@ class AppConstants {
   static const String usersCollection = 'users';
   static const String sessionsCollection = 'sessions';
   static const String feedbackCollection = 'feedback';
+
 }

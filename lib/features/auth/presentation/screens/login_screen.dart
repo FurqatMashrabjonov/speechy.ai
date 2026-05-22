@@ -6,7 +6,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
-import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/auth/presentation/providers/auth_provider.dart';
@@ -89,22 +88,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 32),
 
                 // Logo
-                Image.asset(
-                  AppImages.mascotWelcome,
-                  width: 100,
-                  height: 100,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.record_voice_over_rounded,
-                      color: AppColors.primary,
-                      size: 40,
-                    ),
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.record_voice_over_rounded,
+                    color: AppColors.primary,
+                    size: 40,
                   ),
                 ).animate().fadeIn(duration: 500.ms),
 

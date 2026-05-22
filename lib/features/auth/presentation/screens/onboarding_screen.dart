@@ -499,7 +499,7 @@ class _RoadmapSelectionPage extends StatelessWidget {
                     border: Border.all(color: context.divider),
                   ),
                   child: Text(
-                    'I picked the best roadmap for you — but you can change it!',
+                    'I picked the best track for you — but you can change it!',
                     style: AppTypography.titleMedium(),
                   ),
                 ),

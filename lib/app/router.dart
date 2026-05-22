@@ -23,6 +23,7 @@ import 'package:speech_coach/features/session/presentation/screens/session_setup
 import 'package:speech_coach/features/assessment/presentation/screens/assessment_screen.dart';
 import 'package:speech_coach/features/assessment/presentation/screens/plan_summary_screen.dart';
 import 'package:speech_coach/features/assessment/presentation/screens/roadmap_catalog_screen.dart';
+import 'package:speech_coach/features/assessment/presentation/screens/track_detail_screen.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/shared/widgets/bottom_nav_bar.dart';
 
@@ -126,6 +127,34 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/tracks',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: RoadmapCatalogScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/tracks/:id',
+            pageBuilder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return CustomTransitionPage(
+                child: TrackDetailScreen(trackId: id),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(1, 0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    )),
+                    child: child,
+                  );
+                },
+              );
+            },
+          ),
+          GoRoute(
             path: '/profile',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: ProfileScreen(),
@@ -225,25 +254,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           );
         },
-      ),
-      // Roadmap catalog
-      GoRoute(
-        path: '/roadmap-catalog',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const RoadmapCatalogScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
-              child: child,
-            );
-          },
-        ),
       ),
       // Paywall
       GoRoute(
@@ -438,8 +448,10 @@ class _ShellScreen extends StatelessWidget {
             case 0:
               context.go('/home');
             case 1:
-              context.go('/progress');
+              context.go('/tracks');
             case 2:
+              context.go('/progress');
+            case 3:
               context.go('/profile');
           }
         },
@@ -450,8 +462,9 @@ class _ShellScreen extends StatelessWidget {
   int _calculateIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/home')) return 0;
-    if (location.startsWith('/progress')) return 1;
-    if (location.startsWith('/profile')) return 2;
+    if (location.startsWith('/tracks')) return 1;
+    if (location.startsWith('/progress')) return 2;
+    if (location.startsWith('/profile')) return 3;
     return 0;
   }
 }

@@ -62,7 +62,7 @@ void main() async {
       final stepNumber = nextStep != null ? (nextStep.order + 1) : plan.steps.length;
       await NotificationService.scheduleDailyReminder(
         currentStep: stepNumber,
-        roadmapTitle: plan.title,
+        trackTitle: plan.title,
       );
     }
   } catch (_) {}

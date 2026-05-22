@@ -39,7 +39,7 @@ class NotificationService {
   // ── 1. Daily reminder — 9am every day ──────────────────────────────────────
   static Future<void> scheduleDailyReminder({
     required int currentStep,
-    required String roadmapTitle,
+    required String trackTitle,
   }) async {
     await _plugin.cancel(_idDaily);
     final scheduled = _nextTimeAt(9, 0);
@@ -48,7 +48,7 @@ class NotificationService {
     await _schedule(
       id: _idDaily,
       title: 'Ready to practice?',
-      body: '$stepText of $roadmapTitle is waiting. 10 min to level up.',
+      body: '$stepText of $trackTitle is waiting. 10 min to level up.',
       scheduledDate: scheduled,
       repeat: true,
     );
@@ -123,7 +123,7 @@ class NotificationService {
   }
 
   // ── 5. Re-engagement — when 3+ days inactive ──────────────────────────────
-  static Future<void> scheduleReEngagement(String roadmapTitle) async {
+  static Future<void> scheduleReEngagement(String trackTitle) async {
     await _plugin.cancel(_idReEngagement);
     final in3Days = tz.TZDateTime.now(tz.local).add(const Duration(days: 3));
     final at9am = tz.TZDateTime(
@@ -132,8 +132,8 @@ class NotificationService {
 
     await _schedule(
       id: _idReEngagement,
-      title: 'Your roadmap misses you',
-      body: 'Pick up where you left off in $roadmapTitle. It only takes 10 min.',
+      title: 'Your track misses you',
+      body: 'Pick up where you left off in $trackTitle. It only takes 10 min.',
       scheduledDate: at9am,
       repeat: false,
     );

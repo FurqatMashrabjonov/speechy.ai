@@ -3,7 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
-import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
@@ -72,23 +71,18 @@ class _CustomPaywallFallback extends StatelessWidget {
                   children: [
                     const SizedBox(height: 24),
 
-                    // Premium mascot
-                    Image.asset(
-                          AppImages.mascotPremium,
-                          width: 200,
-                          height: 200,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              gradient: AppColors.primaryGradient,
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: const Icon(
-                              Icons.workspace_premium_rounded,
-                              color: AppColors.white,
-                              size: 40,
-                            ),
+                    // Premium icon
+                    Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: const Icon(
+                            Icons.workspace_premium_rounded,
+                            color: AppColors.white,
+                            size: 40,
                           ),
                         )
                         .animate()
@@ -100,7 +94,7 @@ class _CustomPaywallFallback extends StatelessWidget {
                     const SizedBox(height: 20),
 
                     Text(
-                      'Unlock Your Roadmap',
+                      'Unlock Your Track',
                       style: AppTypography.displaySmall(),
                     ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
                     const SizedBox(height: 8),
@@ -179,7 +173,7 @@ class _CustomPaywallFallback extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _PricingCard(
-                            title: 'This Roadmap',
+                            title: 'This Track',
                             price: monthlyPkg?.storeProduct.priceString ?? '\$9.99',
                             period: 'one-time',
                             isPopular: false,
@@ -192,7 +186,7 @@ class _CustomPaywallFallback extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _PricingCard(
-                            title: 'All 5 Roadmaps',
+                            title: 'All 5 Tracks',
                             price: yearlyPkg?.storeProduct.priceString ?? '\$34.99',
                             period: 'one-time',
                             savings: 'Save 65%',

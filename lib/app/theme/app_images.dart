@@ -5,22 +5,6 @@
 class AppImages {
   AppImages._();
 
-  // ── Mascot ──────────────────────────────────────────────────────────
-  static const mascotWelcome = 'assets/images/mascot/mascot_welcome.png';
-  static const mascotAnalyze = 'assets/images/mascot/mascot_analyze.png';
-  static const mascotCelebrate = 'assets/images/mascot/mascot_celebrate.png';
-  static const mascotSpeak = 'assets/images/mascot/mascot_speak.png';
-  static const mascotPremium = 'assets/images/mascot/mascot_premium.png';
-  static const mascotEmpty = 'assets/images/mascot/mascot_empty.png';
-  static const mascotError = 'assets/images/mascot/mascot_error.png';
-
-  // ── Mascot States (Speechy) ─────────────────────────────────────────
-  static const mascotHappy = 'assets/images/mascot/mascot_happy.png';
-  static const mascotImpressed = 'assets/images/mascot/mascot_impressed.png';
-  static const mascotEncouraging = 'assets/images/mascot/mascot_encouraging.png';
-  static const mascotCoaching = 'assets/images/mascot/mascot_coaching.png';
-  static const mascotThinking = 'assets/images/mascot/mascot_thinking.png';
-
   // ── AI Characters ───────────────────────────────────────────────────
   static const characterAlex = 'assets/images/characters/character_alex.png';
   static const characterSam = 'assets/images/characters/character_sam.png';

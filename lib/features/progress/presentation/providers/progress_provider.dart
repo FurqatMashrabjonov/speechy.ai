@@ -207,9 +207,9 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
   }
 
   String _planTitle(UserProgress p) {
-    if (p.sessionHistory.isEmpty) return 'your roadmap';
+    if (p.sessionHistory.isEmpty) return 'your track';
     final cat = p.sessionHistory.last.category;
-    return cat.isNotEmpty ? cat : 'your roadmap';
+    return cat.isNotEmpty ? cat : 'your track';
   }
 
   /// Grants a streak freeze (e.g., for Pro users monthly)

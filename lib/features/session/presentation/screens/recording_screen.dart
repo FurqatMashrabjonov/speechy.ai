@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
@@ -127,16 +128,27 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  switch (recording.status) {
-                    RecordingStatus.idle => 'Ready',
-                    RecordingStatus.recording => 'Recording...',
-                    RecordingStatus.paused => 'Paused',
-                    RecordingStatus.stopped => 'Stopped',
-                  },
-                  style: AppTypography.bodyMedium(
-                    color: context.textSecondary,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (recording.status == RecordingStatus.recording) ...[
+                      _PulsingDot(),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      switch (recording.status) {
+                        RecordingStatus.idle => 'Ready',
+                        RecordingStatus.recording => 'Recording',
+                        RecordingStatus.paused => 'Paused',
+                        RecordingStatus.stopped => 'Stopped',
+                      },
+                      style: AppTypography.bodyMedium(
+                        color: recording.status == RecordingStatus.recording
+                            ? AppColors.error
+                            : context.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 32),
 
@@ -217,5 +229,21 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
         ],
       ),
     );
+  }
+}
+
+class _PulsingDot extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: const BoxDecoration(
+        color: AppColors.error,
+        shape: BoxShape.circle,
+      ),
+    )
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fade(begin: 1.0, end: 0.2, duration: 700.ms, curve: Curves.easeInOut);
   }
 }
