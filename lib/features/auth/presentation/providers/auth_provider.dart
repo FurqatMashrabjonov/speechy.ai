@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_coach/features/auth/data/auth_remote_datasource.dart';
 import 'package:speech_coach/features/auth/data/auth_repository_impl.dart';
 import 'package:speech_coach/features/auth/domain/auth_repository.dart';
 import 'package:speech_coach/features/auth/domain/user_entity.dart';
+import 'package:speech_coach/shared/providers/user_provider.dart';
 
 // Repository providers
 final authRemoteDatasourceProvider = Provider<AuthRemoteDatasource>((ref) {
@@ -23,7 +25,10 @@ final authStateProvider = StreamProvider<User?>((ref) {
 // Auth notifier for actions
 final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.read(authRepositoryProvider));
+  return AuthNotifier(
+    ref.read(authRepositoryProvider),
+    ref.read(sharedPreferencesProvider),
+  );
 });
 
 // Auth state
@@ -51,10 +56,23 @@ class AuthState {
   }
 }
 
+// All SharedPreferences keys that belong to a specific user account.
+// Cleared on sign-out so the next account gets a clean slate.
+const _userDataKeys = [
+  'session_history',
+  'user_progress',
+  'assessment_result',
+  'learning_plan',
+  'selected_character_id',
+  'total_free_sessions_used',
+  'is_pro_user',
+];
+
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
+  final SharedPreferences _prefs;
 
-  AuthNotifier(this._repository) : super(const AuthState());
+  AuthNotifier(this._repository, this._prefs) : super(const AuthState());
 
   Future<bool> signInWithEmail(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
@@ -108,7 +126,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> signOut() async {
     await _repository.signOut();
+    await _clearUserData();
     state = const AuthState();
+  }
+
+  Future<void> _clearUserData() async {
+    for (final key in _userDataKeys) {
+      await _prefs.remove(key);
+    }
+    debugPrint('AuthNotifier: local user data cleared on sign-out');
   }
 
   Future<bool> resetPassword(String email) async {
