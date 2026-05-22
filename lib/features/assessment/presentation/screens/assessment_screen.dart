@@ -25,6 +25,8 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   int _currentPage = 0;
   final Map<String, String> _answers = {};
 
+  List<AssessmentQuestion> get _questions => getAdaptiveQuestions(_answers['goal']);
+
   @override
   void initState() {
     super.initState();
@@ -42,7 +44,7 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   }
 
   void _nextPage() {
-    if (_currentPage < assessmentQuestions.length - 1) {
+    if (_currentPage < _questions.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
@@ -75,8 +77,9 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLastPage = _currentPage == assessmentQuestions.length - 1;
-    final currentQuestion = assessmentQuestions[_currentPage];
+    final questions = _questions;
+    final isLastPage = _currentPage == questions.length - 1;
+    final currentQuestion = questions[_currentPage];
     final hasAnswer = _answers.containsKey(currentQuestion.id);
 
     return Scaffold(
@@ -101,14 +104,14 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ProgressBar(
-                      value: (_currentPage + 1) / assessmentQuestions.length,
+                      value: (_currentPage + 1) / questions.length,
                       height: 10,
                       color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Text(
-                    '${_currentPage + 1}/${assessmentQuestions.length}',
+                    '${_currentPage + 1}/${questions.length}',
                     style: AppTypography.labelMedium(
                       color: AppColors.primary,
                     ),
@@ -125,9 +128,9 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                 onPageChanged: (page) {
                   setState(() => _currentPage = page);
                 },
-                itemCount: assessmentQuestions.length,
+                itemCount: questions.length,
                 itemBuilder: (context, index) {
-                  final question = assessmentQuestions[index];
+                  final question = questions[index];
                   return QuestionCard(
                     question: question,
                     selectedOptionId: _answers[question.id],
@@ -135,7 +138,14 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                       isLastPage
                           ? HapticFeedback.mediumImpact()
                           : HapticFeedback.selectionClick();
-                      setState(() => _answers[question.id] = optionId);
+                      setState(() {
+                        // Changing goal clears downstream adaptive answers
+                        if (question.id == 'goal' && _answers['goal'] != optionId) {
+                          _answers.remove('sub_goal');
+                          _answers.remove('challenge');
+                        }
+                        _answers[question.id] = optionId;
+                      });
                       if (!isLastPage) {
                         Future.delayed(const Duration(milliseconds: 400), () {
                           if (mounted) _nextPage();
@@ -147,7 +157,7 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
               ),
             ),
 
-            // Bottom CTA (last page only, or continue button)
+            // Bottom CTA (last page only)
             Padding(
               padding: EdgeInsets.fromLTRB(
                 24,
@@ -162,14 +172,7 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                       width: double.infinity,
                       onTap: _generatePlan,
                     ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1)
-                  : hasAnswer && !isLastPage
-                      ? DuoButton.primary(
-                          text: 'Continue',
-                          icon: Icons.arrow_forward_rounded,
-                          width: double.infinity,
-                          onTap: _nextPage,
-                        )
-                      : const SizedBox(height: 52),
+                  : const SizedBox(height: 52),
             ),
           ],
         ),

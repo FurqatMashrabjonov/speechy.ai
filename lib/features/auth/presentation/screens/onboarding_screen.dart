@@ -23,11 +23,11 @@ import 'package:speech_coach/shared/widgets/tappable.dart';
 
 // Page indices
 const _kIntroPage    = 0;
-const _kQuestionCount = 6;
-const _kRoadmapPage  = _kIntroPage + 1 + _kQuestionCount; // 7
-const _kWidgetPage   = _kRoadmapPage + 1;                  // 8
-const _kNotifPage    = _kWidgetPage + 1;                   // 9
-const _kLoginPage    = _kNotifPage + 1;                    // 10
+const _kQuestionCount = 4;
+const _kRoadmapPage  = _kIntroPage + 1 + _kQuestionCount; // 5
+const _kWidgetPage   = _kRoadmapPage + 1;                  // 6
+const _kNotifPage    = _kWidgetPage + 1;                   // 7
+const _kLoginPage    = _kNotifPage + 1;                    // 8
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -43,6 +43,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _generatingPlan = false;
   String _recommendedTemplateId = 'well_rounded';
   String _selectedTemplateId    = 'well_rounded';
+
+  List<AssessmentQuestion> get _questions => getAdaptiveQuestions(_answers['goal']);
 
   @override
   void dispose() {
@@ -73,7 +75,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     isLast
         ? HapticFeedback.mediumImpact()
         : HapticFeedback.selectionClick();
-    setState(() => _answers[questionId] = optionId);
+    setState(() {
+      if (questionId == 'goal' && _answers['goal'] != optionId) {
+        _answers.remove('sub_goal');
+        _answers.remove('challenge');
+      }
+      _answers[questionId] = optionId;
+    });
 
     Future.delayed(const Duration(milliseconds: 380), () {
       if (!mounted) return;
@@ -200,14 +208,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     onAlreadyHaveAccount: _goToLogin,
                   ),
 
-                  // 1-6 — Questions
+                  // 1-4 — Questions (adaptive based on Q1 goal answer)
                   for (int i = 0; i < _kQuestionCount; i++)
                     _QuestionPage(
-                      question: assessmentQuestions[i],
-                      selectedOptionId: _answers[assessmentQuestions[i].id],
+                      question: _questions[i],
+                      selectedOptionId: _answers[_questions[i].id],
                       isLast: i == _kQuestionCount - 1,
                       onSelect: (optionId) => _onOptionSelected(
-                        assessmentQuestions[i].id,
+                        _questions[i].id,
                         optionId,
                         isLast: i == _kQuestionCount - 1,
                       ),

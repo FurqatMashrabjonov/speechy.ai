@@ -407,9 +407,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               scenarioPrompt: extra?['scenarioPrompt'] as String?,
               durationMinutes: extra?['durationMinutes'] as int?,
               userRole: extra?['userRole'] as String?,
-              characterName: extra?['characterName'] as String?,
-              characterVoice: extra?['characterVoice'] as String?,
-              characterPersonality: extra?['characterPersonality'] as String?,
             ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {

@@ -8,7 +8,6 @@ import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
-import 'package:speech_coach/features/characters/domain/character_entity.dart';
 import 'package:speech_coach/features/conversation/domain/conversation_entity.dart';
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
@@ -26,10 +25,6 @@ class ConversationScreen extends ConsumerStatefulWidget {
   final String? scenarioPrompt;
   final int? durationMinutes;
   final String? userRole;
-  final String? characterName;
-  final String? characterVoice;
-  final String? characterPersonality;
-
   const ConversationScreen({
     super.key,
     required this.category,
@@ -38,9 +33,6 @@ class ConversationScreen extends ConsumerStatefulWidget {
     this.scenarioPrompt,
     this.durationMinutes,
     this.userRole,
-    this.characterName,
-    this.characterVoice,
-    this.characterPersonality,
   });
 
   @override
@@ -59,23 +51,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final notifier = ref.read(conversationProvider(widget.category).notifier);
 
-      if (widget.characterName != null && widget.scenarioId == null) {
-        notifier.setCharacter(
-          name: widget.characterName!,
-          voiceName: widget.characterVoice ?? ref.read(defaultVoiceProvider),
-          personality: widget.characterPersonality ?? '',
-        );
-      }
-
       if (widget.scenarioId != null) {
         notifier.setScenario(
           scenarioId: widget.scenarioId!,
           scenarioTitle: widget.scenarioTitle ?? widget.category,
           scenarioPrompt: widget.scenarioPrompt ?? '',
           durationMinutes: widget.durationMinutes ?? 3,
-          characterName: widget.characterName,
-          characterVoice: widget.characterVoice,
-          characterPersonality: widget.characterPersonality,
+          voiceName: ref.read(defaultVoiceProvider),
         );
       }
 
@@ -266,18 +248,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                       ),
                       child: Row(
                         children: [
-                          // Character avatar
-                          ClipOval(
-                            child: _characterImagePath != null
-                                ? Image.asset(
-                                    _characterImagePath!,
-                                    width: 36,
-                                    height: 36,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        _defaultCharacterAvatar(36),
-                                  )
-                                : _defaultCharacterAvatar(36),
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.smart_toy_rounded, color: AppColors.primary, size: 20),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -285,7 +263,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  widget.characterName ?? 'AI Coach',
+                                  'AI Coach',
                                   style: AppTypography.titleMedium(),
                                 ),
                                 Text(
@@ -494,9 +472,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                   ),
                 ],
               ] else ...[
-                // Character avatar as hero center
+                // AI avatar hero
                 _HeroAvatar(
-                  imagePath: _characterImagePath,
+                  imagePath: null,
                   isAiSpeaking: state.status == ConversationStatus.aiSpeaking,
                   isUserSpeaking:
                       state.status == ConversationStatus.userSpeaking,
@@ -506,9 +484,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Character name
                 Text(
-                  widget.characterName ?? 'AI Coach',
+                  widget.scenarioTitle ?? 'AI Coach',
                   style: AppTypography.titleLarge(color: context.textPrimary),
                 ),
                 const SizedBox(height: 4),
@@ -677,21 +654,6 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     );
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────
-
-  Widget _defaultCharacterAvatar(double size) {
-    return Container(
-      width: size,
-      height: size,
-      color: AppColors.primary.withValues(alpha: 0.15),
-      child: Icon(
-        Icons.auto_awesome,
-        color: AppColors.primary,
-        size: size * 0.5,
-      ),
-    );
-  }
-
   void _showEndDialog(BuildContext context) {
     final currentState = ref.read(conversationProvider(widget.category));
     showDialog(
@@ -791,17 +753,6 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     }
   }
 
-  String? get _characterImagePath {
-    final name = widget.characterName;
-    if (name == null) return null;
-    try {
-      return CharacterRepository.characters
-          .firstWhere((c) => c.name == name)
-          .imagePath;
-    } catch (_) {
-      return null;
-    }
-  }
 }
 
 // ── Timer Pill ────────────────────────────────────────────────────────────

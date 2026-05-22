@@ -131,91 +131,144 @@ class AssessmentQuestion {
   });
 }
 
-const assessmentQuestions = [
-  AssessmentQuestion(
-    id: 'goal',
-    text: "What's your main speaking goal?",
-    options: [
-      AssessmentOption(
-          id: 'career', label: 'Ace job interviews', emoji: '\u{1F4BC}'),
-      AssessmentOption(
-          id: 'social', label: 'Feel confident socially', emoji: '\u{1F91D}'),
-      AssessmentOption(
-          id: 'public', label: 'Master public speaking', emoji: '\u{1F3A4}'),
-      AssessmentOption(
-          id: 'dating',
-          label: 'Navigate dating conversations',
-          emoji: '\u{1F496}'),
-    ],
-  ),
-  AssessmentQuestion(
-    id: 'level',
-    text: 'How would you rate your current speaking skills?',
-    options: [
-      AssessmentOption(
-          id: 'beginner', label: 'Just starting out', emoji: '\u{1F331}'),
-      AssessmentOption(
-          id: 'intermediate',
-          label: 'Decent but want to improve',
-          emoji: '\u{1F4AA}'),
-      AssessmentOption(
-          id: 'advanced',
-          label: 'Good but want to be great',
-          emoji: '\u{2B50}'),
-    ],
-  ),
-  AssessmentQuestion(
-    id: 'challenge',
-    text: "What's your biggest speaking challenge?",
-    options: [
-      AssessmentOption(
-          id: 'confidence', label: 'Lack of confidence', emoji: '\u{1F614}'),
-      AssessmentOption(
-          id: 'filler', label: 'Too many filler words', emoji: '\u{1F4AC}'),
-      AssessmentOption(
-          id: 'structure', label: 'Organizing my thoughts', emoji: '\u{1F9E9}'),
-      AssessmentOption(
-          id: 'anxiety', label: 'Speaking anxiety', emoji: '\u{1F630}'),
-    ],
-  ),
-  AssessmentQuestion(
-    id: 'context',
-    text: 'Where do you speak most?',
-    options: [
-      AssessmentOption(
-          id: 'work', label: 'Work / professional', emoji: '\u{1F3E2}'),
-      AssessmentOption(
-          id: 'social', label: 'Social gatherings', emoji: '\u{1F389}'),
-      AssessmentOption(
-          id: 'school', label: 'School / university', emoji: '\u{1F393}'),
-      AssessmentOption(
-          id: 'phone', label: 'Phone calls', emoji: '\u{1F4F1}'),
-    ],
-  ),
-  AssessmentQuestion(
-    id: 'time',
-    text: 'How much time can you practice daily?',
-    options: [
-      AssessmentOption(id: '5min', label: '5 minutes', emoji: '\u{23F1}'),
-      AssessmentOption(id: '10min', label: '10 minutes', emoji: '\u{23F0}'),
-      AssessmentOption(id: '15min', label: '15+ minutes', emoji: '\u{1F525}'),
-    ],
-  ),
-  AssessmentQuestion(
-    id: 'event_date',
-    text: 'When is your target event?',
-    options: [
-      AssessmentOption(
-          id: 'this_week', label: 'This week', emoji: '\u{1F525}'),
-      AssessmentOption(
-          id: 'this_month', label: 'This month', emoji: '\u{1F4C5}'),
-      AssessmentOption(
-          id: 'two_months', label: 'In 2+ months', emoji: '\u{1F5D3}'),
-      AssessmentOption(
-          id: 'no_date', label: 'No specific date', emoji: '\u{1F3AF}'),
-    ],
-  ),
-];
+// Q1 — universal: primary goal
+const _q1 = AssessmentQuestion(
+  id: 'goal',
+  text: 'What do you most want to get better at?',
+  options: [
+    AssessmentOption(id: 'career', label: 'Job interviews & career', emoji: '\u{1F4BC}'),
+    AssessmentOption(id: 'social', label: 'Social confidence', emoji: '\u{1F91D}'),
+    AssessmentOption(id: 'speaking', label: 'Presentations & public speaking', emoji: '\u{1F3A4}'),
+    AssessmentOption(id: 'conflict', label: 'Standing up for myself', emoji: '\u{1F525}'),
+  ],
+);
+
+// Q2 — adaptive per goal
+const _q2Career = AssessmentQuestion(
+  id: 'sub_goal',
+  text: 'Tell me more about your situation:',
+  options: [
+    AssessmentOption(id: 'entry', label: "I'm new to the job market", emoji: '\u{1F331}'),
+    AssessmentOption(id: 'experienced', label: 'Experienced, want to sharpen', emoji: '\u{1F4C8}'),
+    AssessmentOption(id: 'nervous', label: 'I get very nervous in interviews', emoji: '\u{1F630}'),
+    AssessmentOption(id: 'switch', label: 'Switching careers or industries', emoji: '\u{1F504}'),
+  ],
+);
+
+const _q2Social = AssessmentQuestion(
+  id: 'sub_goal',
+  text: 'What feels hardest for you?',
+  options: [
+    AssessmentOption(id: 'strangers', label: 'Meeting new people', emoji: '\u{1F44B}'),
+    AssessmentOption(id: 'groups', label: 'Large groups and parties', emoji: '\u{1F389}'),
+    AssessmentOption(id: 'dating', label: 'Dating & romantic connections', emoji: '\u{2764}'),
+    AssessmentOption(id: 'deepen', label: 'Deepening friendships', emoji: '\u{1F91D}'),
+  ],
+);
+
+const _q2Speaking = AssessmentQuestion(
+  id: 'sub_goal',
+  text: 'What kind of speaking?',
+  options: [
+    AssessmentOption(id: 'work', label: 'Work or school presentations', emoji: '\u{1F4CA}'),
+    AssessmentOption(id: 'events', label: 'Public events or conferences', emoji: '\u{1F3A4}'),
+    AssessmentOption(id: 'lead', label: 'Leading meetings', emoji: '\u{1F4CB}'),
+    AssessmentOption(id: 'big_crowd', label: 'Speaking to a large crowd', emoji: '\u{1F3DF}'),
+  ],
+);
+
+const _q2Conflict = AssessmentQuestion(
+  id: 'sub_goal',
+  text: 'Where do you need it most?',
+  options: [
+    AssessmentOption(id: 'boss', label: 'With my boss or manager', emoji: '\u{1F454}'),
+    AssessmentOption(id: 'coworker', label: 'With coworkers or teammates', emoji: '\u{1F465}'),
+    AssessmentOption(id: 'personal', label: 'With friends or family', emoji: '\u{2764}'),
+    AssessmentOption(id: 'strangers', label: 'With strangers or services', emoji: '\u{1F30D}'),
+  ],
+);
+
+// Q3 — adaptive per goal
+const _q3Career = AssessmentQuestion(
+  id: 'challenge',
+  text: "What's your biggest block in interviews?",
+  options: [
+    AssessmentOption(id: 'anxiety', label: 'I freeze up and go blank', emoji: '\u{1F630}'),
+    AssessmentOption(id: 'ramble', label: 'I ramble and lose my point', emoji: '\u{1F9E9}'),
+    AssessmentOption(id: 'confidence', label: 'I undersell myself', emoji: '\u{1F4AA}'),
+    AssessmentOption(id: 'tough', label: 'Tough questions (salary, weaknesses)', emoji: '\u{1F525}'),
+  ],
+);
+
+const _q3Social = AssessmentQuestion(
+  id: 'challenge',
+  text: 'What holds you back most?',
+  options: [
+    AssessmentOption(id: 'anxiety', label: 'Strong social anxiety', emoji: '\u{1F630}'),
+    AssessmentOption(id: 'blank', label: 'I go blank mid-conversation', emoji: '\u{1F9E9}'),
+    AssessmentOption(id: 'fear', label: 'Fear of rejection', emoji: '\u{1F494}'),
+    AssessmentOption(id: 'boring', label: 'I worry I seem boring', emoji: '\u{1F614}'),
+  ],
+);
+
+const _q3Speaking = AssessmentQuestion(
+  id: 'challenge',
+  text: "What's your biggest challenge?",
+  options: [
+    AssessmentOption(id: 'anxiety', label: 'I panic on stage', emoji: '\u{1F630}'),
+    AssessmentOption(id: 'structure', label: 'I lose my train of thought', emoji: '\u{1F9E9}'),
+    AssessmentOption(id: 'filler', label: "I say um/uh constantly", emoji: '\u{1F910}'),
+    AssessmentOption(id: 'flat', label: 'My delivery feels flat', emoji: '\u{1F4C9}'),
+  ],
+);
+
+const _q3Conflict = AssessmentQuestion(
+  id: 'challenge',
+  text: "What's hardest for you?",
+  options: [
+    AssessmentOption(id: 'avoidance', label: 'I avoid the conversation entirely', emoji: '\u{1F6AB}'),
+    AssessmentOption(id: 'emotional', label: 'I get too emotional', emoji: '\u{1F62D}'),
+    AssessmentOption(id: 'freeze', label: "I freeze and can't respond", emoji: '\u{2744}'),
+    AssessmentOption(id: 'assertive', label: "I don't know how to stay firm", emoji: '\u{1F4AA}'),
+  ],
+);
+
+// Q4 — universal: urgency
+const _q4 = AssessmentQuestion(
+  id: 'event_date',
+  text: 'When do you need to be ready?',
+  options: [
+    AssessmentOption(id: 'this_week', label: 'This week', emoji: '\u{1F525}'),
+    AssessmentOption(id: 'this_month', label: 'This month', emoji: '\u{1F4C5}'),
+    AssessmentOption(id: 'two_months', label: 'In 2+ months', emoji: '\u{1F5D3}'),
+    AssessmentOption(id: 'no_date', label: 'No rush — just improving', emoji: '\u{1F3AF}'),
+  ],
+);
+
+List<AssessmentQuestion> getAdaptiveQuestions(String? goal) {
+  final AssessmentQuestion q2;
+  final AssessmentQuestion q3;
+
+  switch (goal) {
+    case 'career':
+      q2 = _q2Career;
+      q3 = _q3Career;
+    case 'social':
+      q2 = _q2Social;
+      q3 = _q3Social;
+    case 'speaking':
+      q2 = _q2Speaking;
+      q3 = _q3Speaking;
+    case 'conflict':
+      q2 = _q2Conflict;
+      q3 = _q3Conflict;
+    default:
+      q2 = _q2Career;
+      q3 = _q3Career;
+  }
+
+  return [_q1, q2, q3, _q4];
+}
 
 // --- Chain Step Config ---
 
@@ -257,6 +310,7 @@ const _templates = [
       _ChainStep(scenarioId: 'int_1', difficulty: 'easy', minPassScore: 55),
       _ChainStep(scenarioId: 'int_6', difficulty: 'easy', minPassScore: 55),
       _ChainStep(scenarioId: 'int_7', difficulty: 'easy', minPassScore: 60),
+      _ChainStep(scenarioId: 'stage_1', difficulty: 'easy', minPassScore: 60), // elevator pitch for networking
       _ChainStep(scenarioId: 'int_2', difficulty: 'medium', minPassScore: 65),
       _ChainStep(scenarioId: 'int_8', difficulty: 'medium', minPassScore: 65),
       _ChainStep(scenarioId: 'int_9', difficulty: 'medium', minPassScore: 65),
@@ -264,8 +318,7 @@ const _templates = [
       _ChainStep(scenarioId: 'int_5', difficulty: 'medium', minPassScore: 70),
       _ChainStep(scenarioId: 'int_11', difficulty: 'medium', minPassScore: 70),
       _ChainStep(scenarioId: 'int_12', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'conf_1', difficulty: 'medium', minPassScore: 70),
-      _ChainStep(scenarioId: 'pres_1', difficulty: 'medium', minPassScore: 70),
+      _ChainStep(scenarioId: 'stage_5', difficulty: 'medium', minPassScore: 70), // present results to manager
       _ChainStep(scenarioId: 'int_13', difficulty: 'hard', minPassScore: 75),
       _ChainStep(scenarioId: 'int_4', difficulty: 'hard', minPassScore: 75),
       _ChainStep(scenarioId: 'int_3', difficulty: 'hard', minPassScore: 80),
@@ -420,33 +473,34 @@ DateTime? _eventDate(String? eventDateId) {
 // --- Mapping Engine ---
 
 String matchTemplate(List<AssessmentAnswer> answers) {
-  final answerMap = {for (final a in answers) a.questionId: a.optionId};
+  final a = {for (final x in answers) x.questionId: x.optionId};
+  final goal = a['goal'];
+  final subGoal = a['sub_goal'];
+  final challenge = a['challenge'];
 
-  // Priority 1: Anxiety override
-  if (answerMap['challenge'] == 'anxiety') return 'anxiety_buster';
+  // Anxiety override — any path
+  if (challenge == 'anxiety') return 'anxiety_buster';
 
-  // Priority 2: Filler/structure challenge → boundaries + workplace fit
-  if (answerMap['challenge'] == 'confidence' &&
-      answerMap['context'] == 'work') {
-    return 'gen_z_work';
-  }
-
-  // Priority 3: Goal-based
-  switch (answerMap['goal']) {
+  switch (goal) {
     case 'career':
-      // Level beginner → gen_z_work (easier entry), others → interview prep
-      return answerMap['level'] == 'beginner'
-          ? 'gen_z_work'
-          : 'career_confidence';
-    case 'social':
-    case 'dating':
-      return 'social_butterfly';
-    case 'public':
-      return 'stage_ready';
-  }
+      // Very nervous in interviews → anxiety track first
+      if (subGoal == 'nervous') return 'anxiety_buster';
+      // New to job market → gen z work fundamentals first
+      if (subGoal == 'entry') return 'gen_z_work';
+      return 'career_confidence';
 
-  // Default → tough_conversations (replaced well_rounded)
-  return 'tough_conversations';
+    case 'social':
+      return 'social_butterfly';
+
+    case 'speaking':
+      return 'stage_ready';
+
+    case 'conflict':
+      return 'tough_conversations';
+
+    default:
+      return 'social_butterfly';
+  }
 }
 
 LearningPlan generatePlan(AssessmentResult result) {

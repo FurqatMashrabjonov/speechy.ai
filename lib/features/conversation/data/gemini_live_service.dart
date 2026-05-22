@@ -62,26 +62,11 @@ CRITICAL RULES — follow these at all times:
   String _buildFullSystemPrompt({
     required String category,
     String? scenarioPrompt,
-    String? characterPersonality,
     int? durationMinutes,
   }) {
     final buffer = StringBuffer();
 
-    // Layer 1: Character personality (if selected)
-    if (characterPersonality != null && characterPersonality.isNotEmpty) {
-      buffer.writeln(characterPersonality);
-      buffer.writeln();
-      // If there's also a scenario, bridge the two
-      if (scenarioPrompt != null && scenarioPrompt.isNotEmpty) {
-        buffer.writeln(
-          'Apply the personality above to the role below. If they conflict, '
-          'prioritize the role but keep the personality\'s speech patterns.',
-        );
-        buffer.writeln();
-      }
-    }
-
-    // Layer 2: Scenario prompt OR category persona
+    // Scenario prompt OR category persona
     if (scenarioPrompt != null && scenarioPrompt.isNotEmpty) {
       buffer.writeln(scenarioPrompt);
     } else {
@@ -104,7 +89,6 @@ CRITICAL RULES — follow these at all times:
   Future<void> connect(
     String category, {
     String? scenarioPrompt,
-    String? characterPersonality,
     int? durationMinutes,
     String? voiceName,
   }) async {
@@ -112,7 +96,6 @@ CRITICAL RULES — follow these at all times:
       final systemInstruction = _buildFullSystemPrompt(
         category: category,
         scenarioPrompt: scenarioPrompt,
-        characterPersonality: characterPersonality,
         durationMinutes: durationMinutes,
       );
 

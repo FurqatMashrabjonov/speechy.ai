@@ -2,10 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/auth/data/auth_remote_datasource.dart';
 import 'package:speech_coach/features/auth/data/auth_repository_impl.dart';
 import 'package:speech_coach/features/auth/domain/auth_repository.dart';
 import 'package:speech_coach/features/auth/domain/user_entity.dart';
+import 'package:speech_coach/features/history/presentation/providers/session_history_provider.dart';
+import 'package:speech_coach/features/progress/presentation/providers/progress_provider.dart';
 import 'package:speech_coach/shared/providers/user_provider.dart';
 
 // Repository providers
@@ -28,6 +31,7 @@ final authNotifierProvider =
   return AuthNotifier(
     ref.read(authRepositoryProvider),
     ref.read(sharedPreferencesProvider),
+    ref,
   );
 });
 
@@ -63,7 +67,6 @@ const _userDataKeys = [
   'user_progress',
   'assessment_result',
   'learning_plan',
-  'selected_character_id',
   'total_free_sessions_used',
   'is_pro_user',
 ];
@@ -71,8 +74,9 @@ const _userDataKeys = [
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
   final SharedPreferences _prefs;
+  final Ref _ref;
 
-  AuthNotifier(this._repository, this._prefs) : super(const AuthState());
+  AuthNotifier(this._repository, this._prefs, this._ref) : super(const AuthState());
 
   Future<bool> signInWithEmail(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
@@ -127,6 +131,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> signOut() async {
     await _repository.signOut();
     await _clearUserData();
+    _invalidateUserProviders();
     state = const AuthState();
   }
 
@@ -135,6 +140,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _prefs.remove(key);
     }
     debugPrint('AuthNotifier: local user data cleared on sign-out');
+  }
+
+  // Force providers to re-initialize on next access so they fetch fresh
+  // Firestore data under the new user UID instead of serving stale memory.
+  void _invalidateUserProviders() {
+    _ref.invalidate(progressProvider);
+    _ref.invalidate(learningPlanProvider);
+    _ref.invalidate(sessionHistoryProvider);
+    _ref.invalidate(hasAssessmentProvider);
+    _ref.invalidate(assessmentRepositoryProvider);
+    debugPrint('AuthNotifier: user providers invalidated');
   }
 
   Future<bool> resetPassword(String email) async {

@@ -5,11 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
-import 'package:speech_coach/features/characters/domain/character_entity.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
-import 'package:speech_coach/features/characters/presentation/providers/character_provider.dart';
 import 'package:speech_coach/features/scenarios/domain/scenario_entity.dart';
 import 'package:speech_coach/features/scenarios/presentation/providers/scenario_provider.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
@@ -22,7 +20,6 @@ class ScenarioDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scenario = ref.watch(scenarioByIdProvider(scenarioId));
-    final selectedCharacter = ref.watch(selectedCharacterProvider);
 
     if (scenario == null) {
       return Scaffold(
@@ -140,18 +137,6 @@ class ScenarioDetailScreen extends ConsumerWidget {
                     ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
                     const SizedBox(height: 28),
 
-                    // Character picker
-                    _CharacterPicker(
-                      category: scenario.category,
-                      selectedCharacter: selectedCharacter,
-                      onSelect: (character) {
-                        ref
-                            .read(selectedCharacterProvider.notifier)
-                            .select(character);
-                      },
-                    ).animate().fadeIn(delay: 250.ms, duration: 400.ms),
-                    const SizedBox(height: 28),
-
                     // Tips
                     Container(
                       width: double.infinity,
@@ -179,8 +164,7 @@ class ScenarioDetailScreen extends ConsumerWidget {
                           const SizedBox(height: 8),
                           _TipRow(
                             icon: Icons.chat_rounded,
-                            text:
-                                '${selectedCharacter.name} will respond naturally — engage with them',
+                            text: 'The AI will respond naturally — engage with them',
                           ),
                           const SizedBox(height: 8),
                           _TipRow(
@@ -209,8 +193,7 @@ class ScenarioDetailScreen extends ConsumerWidget {
                 text: 'Start Practice',
                 icon: Icons.mic_rounded,
                 width: double.infinity,
-                onTap: () => _startPractice(
-                    context, ref, scenario, selectedCharacter),
+                onTap: () => _startPractice(context, ref, scenario),
               ),
             ),
           ],
@@ -219,8 +202,7 @@ class ScenarioDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _startPractice(BuildContext context, WidgetRef ref, Scenario scenario,
-      AICharacter character) {
+  void _startPractice(BuildContext context, WidgetRef ref, Scenario scenario) {
     final usage = ref.read(usageServiceProvider);
     if (!usage.canStartSession()) {
       context.push('/paywall');
@@ -234,172 +216,7 @@ class ScenarioDetailScreen extends ConsumerWidget {
         'scenarioPrompt': scenario.systemPrompt,
         'durationMinutes': scenario.durationMinutes,
         'userRole': scenario.userRole,
-        'characterName': character.name,
-        'characterVoice': character.voiceName,
-        'characterPersonality': character.personality,
       },
-    );
-  }
-}
-
-class _CharacterPicker extends StatelessWidget {
-  final String category;
-  final AICharacter selectedCharacter;
-  final void Function(AICharacter) onSelect;
-
-  const _CharacterPicker({
-    required this.category,
-    required this.selectedCharacter,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final recommended = CharacterRepository.getForCategory(category);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Choose your AI partner', style: AppTypography.titleMedium()),
-        const SizedBox(height: 4),
-        Text(
-          'Each character has a unique voice and personality',
-          style: AppTypography.bodySmall(color: context.textSecondary),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 108,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: recommended.length,
-            itemBuilder: (context, index) => _CharacterCard(
-              character: recommended[index],
-              isSelected: recommended[index].id == selectedCharacter.id,
-              onTap: () => onSelect(recommended[index]),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Selected character description
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: selectedCharacter.color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              ClipOval(
-                child: Image.asset(
-                  selectedCharacter.imagePath,
-                  width: 24,
-                  height: 24,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Icon(
-                    selectedCharacter.icon,
-                    color: selectedCharacter.color,
-                    size: 20,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      selectedCharacter.name,
-                      style: AppTypography.labelMedium(
-                        color: selectedCharacter.color,
-                      ),
-                    ),
-                    Text(
-                      selectedCharacter.description,
-                      style: AppTypography.bodySmall(
-                        color: context.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CharacterCard extends StatelessWidget {
-  final AICharacter character;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _CharacterCard({
-    required this.character,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tappable(
-      onTap: onTap,
-      child: Container(
-        width: 88,
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? character.color.withValues(alpha: 0.22)
-              : AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? character.color : const Color(0xFFE5E5E5),
-            width: 2,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ClipOval(
-              child: Image.asset(
-                character.imagePath,
-                width: 44,
-                height: 44,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: character.color.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      character.avatarEmoji,
-                      style: AppTypography.titleLarge(
-                        color: character.color,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              character.name,
-              style: AppTypography.labelSmall(
-                color: isSelected ? character.color : context.textPrimary,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

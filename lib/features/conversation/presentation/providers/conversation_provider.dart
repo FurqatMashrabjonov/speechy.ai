@@ -38,10 +38,8 @@ class ConversationState {
   final String? scenarioPrompt;
   final int? durationLimitMinutes;
   final bool isCountdown;
-  // Character fields
-  final String? characterName;
-  final String? characterVoice;
-  final String? characterPersonality;
+  // Voice selection (from Settings)
+  final String? voiceName;
   // Mic mute state
   final bool isMicMuted;
   // Real-time mic amplitude 0.0–1.0 for waveform UI
@@ -60,9 +58,7 @@ class ConversationState {
     this.scenarioPrompt,
     this.durationLimitMinutes,
     this.isCountdown = false,
-    this.characterName,
-    this.characterVoice,
-    this.characterPersonality,
+    this.voiceName,
     this.isMicMuted = false,
     this.micAmplitude = 0.0,
     this.sessionFeedback,
@@ -96,9 +92,7 @@ class ConversationState {
     String? scenarioPrompt,
     int? durationLimitMinutes,
     bool? isCountdown,
-    String? characterName,
-    String? characterVoice,
-    String? characterPersonality,
+    String? voiceName,
     bool? isMicMuted,
     double? micAmplitude,
     ConversationFeedback? sessionFeedback,
@@ -114,9 +108,7 @@ class ConversationState {
       scenarioPrompt: scenarioPrompt ?? this.scenarioPrompt,
       durationLimitMinutes: durationLimitMinutes ?? this.durationLimitMinutes,
       isCountdown: isCountdown ?? this.isCountdown,
-      characterName: characterName ?? this.characterName,
-      characterVoice: characterVoice ?? this.characterVoice,
-      characterPersonality: characterPersonality ?? this.characterPersonality,
+      voiceName: voiceName ?? this.voiceName,
       isMicMuted: isMicMuted ?? this.isMicMuted,
       micAmplitude: micAmplitude ?? this.micAmplitude,
       sessionFeedback: sessionFeedback ?? this.sessionFeedback,
@@ -166,9 +158,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     required String scenarioTitle,
     required String scenarioPrompt,
     required int durationMinutes,
-    String? characterName,
-    String? characterVoice,
-    String? characterPersonality,
+    String? voiceName,
   }) {
     state = state.copyWith(
       scenarioId: scenarioId,
@@ -176,21 +166,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       scenarioPrompt: scenarioPrompt,
       durationLimitMinutes: durationMinutes,
       isCountdown: true,
-      characterName: characterName,
-      characterVoice: characterVoice,
-      characterPersonality: characterPersonality,
-    );
-  }
-
-  void setCharacter({
-    required String name,
-    required String voiceName,
-    required String personality,
-  }) {
-    state = state.copyWith(
-      characterName: name,
-      characterVoice: voiceName,
-      characterPersonality: personality,
+      voiceName: voiceName,
     );
   }
 
@@ -322,9 +298,8 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       await _service.connect(
         category,
         scenarioPrompt: state.scenarioPrompt,
-        characterPersonality: state.characterPersonality,
         durationMinutes: state.durationLimitMinutes,
-        voiceName: state.characterVoice,
+        voiceName: state.voiceName,
       );
       _startTimer();
 

@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
+import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/scenarios/data/scenario_repository.dart';
@@ -82,16 +83,9 @@ class PlanSummaryScreen extends ConsumerWidget {
                     // Plan header
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(20),
+                      clipBehavior: Clip.hardEdge,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.primary.withValues(alpha: 0.08),
-                            AppColors.primary.withValues(alpha: 0.03),
-                          ],
-                        ),
+                        color: context.surface,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: AppColors.primary.withValues(alpha: 0.2),
@@ -101,134 +95,124 @@ class PlanSummaryScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
+                          // Track banner image
+                          _TrackBanner(templateId: plan.templateId),
+
+                          Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  plan.title,
+                                  style: AppTypography.headlineSmall(),
                                 ),
-                                child: const Icon(
-                                  Icons.route_rounded,
-                                  color: AppColors.primary,
-                                  size: 24,
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${plan.totalSteps} lessons',
+                                  style: AppTypography.labelSmall(
+                                    color: AppColors.primary,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      plan.title,
-                                      style: AppTypography.headlineSmall(),
+                                const SizedBox(height: 8),
+                                Text(
+                                  plan.description,
+                                  style: AppTypography.bodySmall(
+                                    color: context.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Event date + sessions/day
+                                if (plan.eventDate != null)
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: plan.isIntensiveMode
+                                          ? AppColors.error.withValues(alpha: 0.08)
+                                          : AppColors.primary.withValues(alpha: 0.06),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: plan.isIntensiveMode
+                                            ? AppColors.error.withValues(alpha: 0.25)
+                                            : AppColors.primary.withValues(alpha: 0.15),
+                                      ),
                                     ),
-                                    const SizedBox(height: 2),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          plan.isIntensiveMode
+                                              ? Icons.local_fire_department_rounded
+                                              : Icons.event_rounded,
+                                          size: 16,
+                                          color: plan.isIntensiveMode
+                                              ? AppColors.error
+                                              : AppColors.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            plan.isIntensiveMode
+                                                ? '${plan.daysUntilEvent} days left — intensive mode active'
+                                                : '${plan.daysUntilEvent} days to your event',
+                                            style: AppTypography.labelSmall(
+                                              color: plan.isIntensiveMode
+                                                  ? AppColors.error
+                                                  : AppColors.primary,
+                                            ).copyWith(fontWeight: FontWeight.w700),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: plan.isIntensiveMode
+                                                ? AppColors.error.withValues(alpha: 0.12)
+                                                : AppColors.primary.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '${plan.sessionsPerDayTarget}×/day',
+                                            style: AppTypography.labelSmall(
+                                              color: plan.isIntensiveMode
+                                                  ? AppColors.error
+                                                  : AppColors.primary,
+                                            ).copyWith(fontWeight: FontWeight.w800),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ProgressBar(
+                                        value: plan.progressPercent,
+                                        height: 10,
+                                        color: AppColors.success,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
                                     Text(
-                                      '${plan.totalSteps} lessons',
-                                      style: AppTypography.labelSmall(
-                                        color: AppColors.primary,
+                                      '${plan.completedCount}/${plan.totalSteps}',
+                                      style: AppTypography.labelMedium(
+                                        color: AppColors.success,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            plan.description,
-                            style: AppTypography.bodySmall(
-                              color: context.textSecondary,
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Event date + sessions/day
-                          if (plan.eventDate != null)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: plan.isIntensiveMode
-                                    ? AppColors.error.withValues(alpha: 0.08)
-                                    : AppColors.primary.withValues(alpha: 0.06),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: plan.isIntensiveMode
-                                      ? AppColors.error.withValues(alpha: 0.25)
-                                      : AppColors.primary
-                                          .withValues(alpha: 0.15),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    plan.isIntensiveMode
-                                        ? Icons.local_fire_department_rounded
-                                        : Icons.event_rounded,
-                                    size: 16,
-                                    color: plan.isIntensiveMode
-                                        ? AppColors.error
-                                        : AppColors.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      plan.isIntensiveMode
-                                          ? '${plan.daysUntilEvent} days left — intensive mode active'
-                                          : '${plan.daysUntilEvent} days to your event',
-                                      style: AppTypography.labelSmall(
-                                        color: plan.isIntensiveMode
-                                            ? AppColors.error
-                                            : AppColors.primary,
-                                      ).copyWith(fontWeight: FontWeight.w700),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: plan.isIntensiveMode
-                                          ? AppColors.error
-                                              .withValues(alpha: 0.12)
-                                          : AppColors.primary
-                                              .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      '${plan.sessionsPerDayTarget}×/day',
-                                      style: AppTypography.labelSmall(
-                                        color: plan.isIntensiveMode
-                                            ? AppColors.error
-                                            : AppColors.primary,
-                                      ).copyWith(fontWeight: FontWeight.w800),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ProgressBar(
-                                  value: plan.progressPercent,
-                                  height: 10,
-                                  color: AppColors.success,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                '${plan.completedCount}/${plan.totalSteps}',
-                                style: AppTypography.labelMedium(
-                                  color: AppColors.success,
-                                ),
-                              ),
-                            ],
                           ),
                         ],
                       ),
@@ -401,19 +385,7 @@ class _PlanStepCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: scenario!.categoryColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      scenario!.categoryIcon,
-                      color: scenario!.categoryColor,
-                      size: 20,
-                    ),
-                  ),
+                  _ScenarioThumb(scenarioId: step.scenarioId, scenario: scenario!),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -505,5 +477,59 @@ class _PlanStepCard extends StatelessWidget {
       default:
         return AppColors.primary;
     }
+  }
+}
+
+// ── Track banner at top of plan header card ───────────────────────────────────
+
+class _TrackBanner extends StatelessWidget {
+  final String templateId;
+  const _TrackBanner({required this.templateId});
+
+  @override
+  Widget build(BuildContext context) {
+    final path = AppImages.trackBannerMap[templateId];
+    if (path == null) {
+      return Container(
+        height: 150,
+        color: AppColors.primary.withValues(alpha: 0.08),
+        child: const Center(
+          child: Icon(Icons.route_rounded, color: AppColors.primary, size: 40),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 150,
+      width: double.infinity,
+      child: Image.asset(path, fit: BoxFit.cover),
+    );
+  }
+}
+
+// ── Scenario thumbnail in each step card ─────────────────────────────────────
+
+class _ScenarioThumb extends StatelessWidget {
+  final String scenarioId;
+  final Scenario scenario;
+  const _ScenarioThumb({required this.scenarioId, required this.scenario});
+
+  @override
+  Widget build(BuildContext context) {
+    final path = AppImages.scenarioImageMap[scenarioId];
+    if (path == null) {
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: scenario.categoryColor.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(scenario.categoryIcon, color: scenario.categoryColor, size: 22),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.asset(path, width: 48, height: 48, fit: BoxFit.cover),
+    );
   }
 }
