@@ -13,7 +13,6 @@ class SessionHistoryEntry {
   final List<String>? improvements;
   final String transcript;
   final int durationSeconds;
-  final int? xpEarned;
   final DateTime createdAt;
   final String feedbackStatus; // "pending" | "completed" | "failed"
   final String scenarioPrompt;
@@ -34,7 +33,6 @@ class SessionHistoryEntry {
     this.improvements,
     required this.transcript,
     required this.durationSeconds,
-    this.xpEarned,
     required this.createdAt,
     this.feedbackStatus = 'completed',
     this.scenarioPrompt = '',
@@ -60,7 +58,6 @@ class SessionHistoryEntry {
       'improvements': improvements,
       'transcript': transcript,
       'durationSeconds': durationSeconds,
-      'xpEarned': xpEarned,
       'createdAt': createdAt.toIso8601String(),
       'feedbackStatus': feedbackStatus,
       'scenarioPrompt': scenarioPrompt,
@@ -89,7 +86,6 @@ class SessionHistoryEntry {
           : null,
       transcript: map['transcript'] as String? ?? '',
       durationSeconds: (map['durationSeconds'] as num?)?.toInt() ?? 0,
-      xpEarned: (map['xpEarned'] as num?)?.toInt(),
       createdAt: map['createdAt'] is String
           ? DateTime.tryParse(map['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),
@@ -108,7 +104,6 @@ class SessionHistoryEntry {
     String? summary,
     List<String>? strengths,
     List<String>? improvements,
-    int? xpEarned,
     String? feedbackStatus,
     String? feedbackGeneratedBy,
   }) {
@@ -127,7 +122,6 @@ class SessionHistoryEntry {
       improvements: improvements ?? this.improvements,
       transcript: transcript,
       durationSeconds: durationSeconds,
-      xpEarned: xpEarned ?? this.xpEarned,
       createdAt: createdAt,
       feedbackStatus: feedbackStatus ?? this.feedbackStatus,
       scenarioPrompt: scenarioPrompt,

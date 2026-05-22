@@ -78,7 +78,6 @@ class SessionHistoryRemoteRepository {
         'strengths': e.strengths,
         'improvements': e.improvements,
         'durationSeconds': e.durationSeconds,
-        'xpEarned': e.xpEarned,
         'createdAt': e.createdAt.toIso8601String(),
         'feedbackStatus': e.feedbackStatus,
         if (e.feedbackGeneratedBy != null)
@@ -109,7 +108,6 @@ class SessionHistoryRemoteRepository {
             : null,
         transcript: '', // not stored remotely
         durationSeconds: (d['durationSeconds'] as num?)?.toInt() ?? 0,
-        xpEarned: (d['xpEarned'] as num?)?.toInt(),
         createdAt: d['createdAt'] != null
             ? DateTime.tryParse(d['createdAt'] as String) ?? DateTime.now()
             : DateTime.now(),

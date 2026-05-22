@@ -11,7 +11,6 @@ import 'package:speech_coach/features/auth/presentation/providers/auth_provider.
 import 'package:speech_coach/features/history/presentation/providers/session_history_provider.dart';
 import 'package:speech_coach/features/history/domain/session_history_entity.dart';
 import 'package:speech_coach/features/progress/presentation/providers/progress_provider.dart';
-import 'package:speech_coach/features/progress/presentation/widgets/xp_bar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -104,33 +103,11 @@ final historyState = ref.watch(sessionHistoryProvider);
                                 ),
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                'Lv.${progress.level}',
-                                style: AppTypography.labelSmall(
-                                    color: AppColors.white),
-                              ),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 12),
                         Text(name, style: AppTypography.headlineMedium()),
-                        const SizedBox(height: 2),
-                        Text(
-                          progress.levelTitle,
-                          style: AppTypography.bodySmall(
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
                           email,
                           style: AppTypography.bodySmall(
@@ -151,51 +128,30 @@ final historyState = ref.watch(sessionHistoryProvider);
               const SizedBox(height: 24),
 
               // 3. Stats 2x2 grid
-              Column(
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      _StatCard(
-                        icon: Icons.emoji_events_rounded,
-                        value: '${progress.totalXp}',
-                        label: 'Total XP',
-                        color: AppColors.gold,
-                      ),
-                      const SizedBox(width: 12),
-                      _StatCard(
-                        icon: Icons.local_fire_department_rounded,
-                        value: '${progress.streak}',
-                        label: 'Day Streak',
-                        color: AppColors.secondary,
-                      ),
-                    ],
+                  _StatCard(
+                    icon: Icons.local_fire_department_rounded,
+                    value: '${progress.streak}',
+                    label: 'Day Streak',
+                    color: AppColors.secondary,
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _StatCard(
-                        icon: Icons.mic_rounded,
-                        value: '${progress.totalSessions}',
-                        label: 'Sessions',
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: 12),
-                      _StatCard(
-                        icon: Icons.timer_rounded,
-                        value: '${progress.totalMinutes}',
-                        label: 'Minutes',
-                        color: AppColors.skyBlue,
-                      ),
-                    ],
+                  const SizedBox(width: 12),
+                  _StatCard(
+                    icon: Icons.mic_rounded,
+                    value: '${progress.totalSessions}',
+                    label: 'Sessions',
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  _StatCard(
+                    icon: Icons.timer_rounded,
+                    value: '${progress.totalMinutes}',
+                    label: 'Minutes',
+                    color: AppColors.skyBlue,
                   ),
                 ],
               ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
-              const SizedBox(height: 16),
-
-              // 4. XP Bar
-              const XpBar()
-                  .animate()
-                  .fadeIn(delay: 120.ms, duration: 400.ms),
               const SizedBox(height: 24),
 
               // 5. Badges section

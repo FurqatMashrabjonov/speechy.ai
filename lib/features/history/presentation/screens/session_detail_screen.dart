@@ -168,13 +168,6 @@ class SessionDetailScreen extends ConsumerWidget {
                         .animate()
                         .fadeIn(delay: 200.ms, duration: 600.ms)
                         .scale(begin: const Offset(0.8, 0.8)),
-                    const SizedBox(height: 8),
-                    Text(
-                      '+${session.xpEarned ?? 0} XP',
-                      style: AppTypography.titleMedium(
-                        color: AppColors.primary,
-                      ),
-                    ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
                     const SizedBox(height: 24),
 
                     // Radar chart

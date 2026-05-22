@@ -63,5 +63,4 @@ class ConversationFeedback {
     };
   }
 
-  int get xpEarned => 50 + (overallScore * 2);
 }

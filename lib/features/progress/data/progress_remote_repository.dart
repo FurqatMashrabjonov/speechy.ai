@@ -31,9 +31,6 @@ class ProgressRemoteRepository {
           : progress.sessionHistory;
 
       await doc.set({
-        'totalXp': progress.totalXp,
-        'level': progress.level,
-        'levelTitle': progress.levelTitle,
         'streak': progress.streak,
         'longestStreak': progress.longestStreak,
         'totalSessions': progress.totalSessions,
@@ -59,9 +56,6 @@ class ProgressRemoteRepository {
 
       final data = snapshot.data()!;
       return UserProgress(
-        totalXp: (data['totalXp'] as num?)?.toInt() ?? 0,
-        level: (data['level'] as num?)?.toInt() ?? 1,
-        levelTitle: data['levelTitle'] as String? ?? 'Beginner',
         streak: (data['streak'] as num?)?.toInt() ?? 0,
         longestStreak: (data['longestStreak'] as num?)?.toInt() ?? 0,
         totalSessions: (data['totalSessions'] as num?)?.toInt() ?? 0,
@@ -83,9 +77,6 @@ class ProgressRemoteRepository {
 
   /// Merge local and remote progress, taking the higher/better values.
   static UserProgress merge(UserProgress local, UserProgress remote) {
-    final mergedXp = local.totalXp > remote.totalXp ? local.totalXp : remote.totalXp;
-    final (mergedLevel, mergedTitle) = UserProgress.calculateLevel(mergedXp);
-
     final mergedBadges = {...local.badges, ...remote.badges}.toList();
 
     DateTime? mergedLastSession;
@@ -108,9 +99,6 @@ class ProgressRemoteRepository {
     mergedHistory.sort((a, b) => a.date.compareTo(b.date));
 
     return local.copyWith(
-      totalXp: mergedXp,
-      level: mergedLevel,
-      levelTitle: mergedTitle,
       streak: local.streak > remote.streak ? local.streak : remote.streak,
       longestStreak: local.longestStreak > remote.longestStreak
           ? local.longestStreak

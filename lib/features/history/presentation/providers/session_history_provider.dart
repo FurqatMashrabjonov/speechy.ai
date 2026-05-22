@@ -101,7 +101,6 @@ class SessionSaver {
       improvements: feedback.improvements,
       transcript: transcript,
       durationSeconds: feedback.durationSeconds,
-      xpEarned: feedback.xpEarned,
       createdAt: DateTime.now(),
     );
 
@@ -151,7 +150,6 @@ class PendingSessionSaver {
       summary: feedback.summary,
       strengths: feedback.strengths,
       improvements: feedback.improvements,
-      xpEarned: feedback.xpEarned,
     );
   }
 }

@@ -85,7 +85,6 @@ class SessionHistoryRepository {
     required String summary,
     required List<String> strengths,
     required List<String> improvements,
-    required int xpEarned,
   }) async {
     final entries = _loadAll();
     final idx = entries.indexWhere((e) => e.id == sessionId);
@@ -99,7 +98,6 @@ class SessionHistoryRepository {
         summary: summary,
         strengths: strengths,
         improvements: improvements,
-        xpEarned: xpEarned,
         feedbackStatus: 'completed',
         feedbackGeneratedBy: 'client',
       );

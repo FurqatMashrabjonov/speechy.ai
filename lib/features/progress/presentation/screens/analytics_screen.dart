@@ -32,9 +32,6 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   static final _demoProgress = UserProgress(
-    totalXp: 2450,
-    level: 5,
-    levelTitle: 'Skilled',
     streak: 12,
     longestStreak: 18,
     totalSessions: 47,
@@ -72,7 +69,6 @@ class AnalyticsScreen extends ConsumerWidget {
         engagement: (base - 3 + rng.nextInt(12)).clamp(20, 100),
         relevance: (base + rng.nextInt(10)).clamp(20, 100),
         durationSeconds: 120 + rng.nextInt(300),
-        xpEarned: 30 + rng.nextInt(70),
         date: now.subtract(Duration(days: daysAgo, hours: rng.nextInt(12))),
       );
     });

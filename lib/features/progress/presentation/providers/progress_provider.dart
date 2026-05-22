@@ -63,11 +63,7 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
   }
 
   Future<void> addSession(ConversationFeedback feedback) async {
-    final xp = feedback.xpEarned;
-    final newTotalXp = state.totalXp + xp;
-    final (newLevel, newLevelTitle) = UserProgress.calculateLevel(newTotalXp);
-    debugPrint('ProgressNotifier.addSession: +$xp XP (total: $newTotalXp), '
-        'level: $newLevel ($newLevelTitle), score: ${feedback.overallScore}');
+    debugPrint('ProgressNotifier.addSession: score=${feedback.overallScore}');
 
     // Calculate streak (with streak freeze support)
     final now = DateTime.now();
@@ -111,7 +107,6 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
       engagement: feedback.engagement,
       relevance: feedback.relevance,
       durationSeconds: feedback.durationSeconds,
-      xpEarned: xp,
       date: now,
     );
 
@@ -151,9 +146,6 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
     }
 
     state = state.copyWith(
-      totalXp: newTotalXp,
-      level: newLevel,
-      levelTitle: newLevelTitle,
       streak: newStreak,
       longestStreak:
           newStreak > state.longestStreak ? newStreak : state.longestStreak,
@@ -195,12 +187,9 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
             return diff < 7;
           })
           .length;
-      final weekXp = state.sessionHistory
-          .where((s) => now2.difference(s.date).inDays < 7)
-          .fold(0, (sum, s) => sum + s.xpEarned);
       await NotificationService.scheduleWeeklySummary(
         sessionsThisWeek: weekSessions,
-        xpThisWeek: weekXp,
+        xpThisWeek: 0,
         streak: newStreak,
       );
     }

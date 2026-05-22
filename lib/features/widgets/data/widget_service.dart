@@ -14,12 +14,7 @@ class WidgetService {
 
       final saves = <Future>[
         HomeWidget.saveWidgetData<int>('streak', progress.streak),
-        HomeWidget.saveWidgetData<int>('level', progress.level),
-        HomeWidget.saveWidgetData<String>('levelTitle', progress.levelTitle),
-        HomeWidget.saveWidgetData<int>('totalXp', progress.totalXp),
         HomeWidget.saveWidgetData<int>('totalSessions', progress.totalSessions),
-        HomeWidget.saveWidgetData<double>('xpProgress', progress.levelProgress),
-        HomeWidget.saveWidgetData<int>('xpForNext', progress.xpForNextLevel),
         HomeWidget.saveWidgetData<String>('activityGrid', activityGrid),
       ];
 

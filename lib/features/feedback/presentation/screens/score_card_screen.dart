@@ -637,8 +637,8 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                     ).animate().fadeIn(duration: 400.ms),
                     const SizedBox(height: 16),
 
-                    // XP + Streak row
-                    _XpStreakRow(xpEarned: feedback.xpEarned)
+                    // Streak row
+                    _StreakPill()
                         .animate()
                         .fadeIn(delay: 200.ms, duration: 400.ms)
                         .slideY(begin: 0.3, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
@@ -1189,81 +1189,32 @@ class _FillerWordsCard extends StatelessWidget {
   }
 }
 
-class _XpStreakRow extends ConsumerWidget {
-  final int xpEarned;
-
-  const _XpStreakRow({required this.xpEarned});
+class _StreakPill extends ConsumerWidget {
+  const _StreakPill();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final progress = ref.watch(progressProvider);
-    final streak = progress.streak;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // XP pill with count-up animation
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFFB800), Color(0xFFFF8C00)],
-            ),
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFFB800).withValues(alpha: 0.35),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.bolt_rounded, color: Colors.white, size: 18),
-              const SizedBox(width: 4),
-              TweenAnimationBuilder<int>(
-                tween: IntTween(begin: 0, end: xpEarned),
-                duration: const Duration(milliseconds: 1200),
-                curve: Curves.easeOutCubic,
-                builder: (_, value, _) => Text(
-                  '+$value XP',
-                  style: AppTypography.titleMedium(color: Colors.white)
-                      .copyWith(fontWeight: FontWeight.w800),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        if (streak > 0) ...[
-          const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF6B35).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: const Color(0xFFFF6B35).withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('\u{1F525}', style: TextStyle(fontSize: 14)),
-                const SizedBox(width: 4),
-                Text(
-                  '$streak-day streak',
-                  style: AppTypography.labelMedium(
-                    color: const Color(0xFFFF6B35),
-                  ).copyWith(fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
+    final streak = ref.watch(progressProvider.select((p) => p.streak));
+    if (streak <= 0) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF6B35).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFF6B35).withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('\u{1F525}', style: TextStyle(fontSize: 14)),
+          const SizedBox(width: 4),
+          Text(
+            '$streak-day streak',
+            style: AppTypography.labelMedium(color: const Color(0xFFFF6B35))
+                .copyWith(fontWeight: FontWeight.w700),
           ),
         ],
-      ],
+      ),
     );
   }
 }
