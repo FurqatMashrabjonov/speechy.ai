@@ -154,80 +154,15 @@ class _SessionHistoryScreenState extends ConsumerState<SessionHistoryScreen> {
         itemCount: sessions.length,
         itemBuilder: (context, index) {
           final session = sessions[index];
-          return Dismissible(
-            key: Key(session.id),
-            direction: DismissDirection.endToStart,
-            confirmDismiss: (_) => _confirmDelete(session),
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
-              margin: const EdgeInsets.only(bottom: 10),
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Icons.delete_rounded,
-                color: AppColors.error,
-              ),
-            ),
-            child: _SessionTile(session: session)
-                .animate()
-                .fadeIn(
-                  delay: Duration(milliseconds: index < 6 ? index * 25 : 0),
-                  duration: 180.ms,
-                ),
-          );
+          return _SessionTile(session: session)
+              .animate()
+              .fadeIn(
+                delay: Duration(milliseconds: index < 6 ? index * 25 : 0),
+                duration: 180.ms,
+              );
         },
       ),
     );
-  }
-
-  Future<bool> _confirmDelete(SessionHistoryEntry session) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          'Delete Session?',
-          style: AppTypography.headlineSmall(),
-        ),
-        content: Text(
-          'This will permanently delete this session record.',
-          style: AppTypography.bodyMedium(
-            color: context.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Cancel',
-              style: AppTypography.labelLarge(
-                color: context.textSecondary,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Delete',
-              style: AppTypography.labelLarge(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await ref
-          .read(sessionHistoryProvider.notifier)
-          .deleteSession(session.id);
-      return true;
-    }
-    return false;
   }
 }
 

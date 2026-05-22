@@ -66,16 +66,6 @@ class SessionHistoryNotifier extends StateNotifier<SessionHistoryState> {
     } catch (_) {}
   }
 
-  Future<void> deleteSession(String id) async {
-    try {
-      await _repository.deleteSession(id);
-      state = state.copyWith(
-        sessions: state.sessions.where((s) => s.id != id).toList(),
-      );
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
-    }
-  }
 }
 
 final sessionHistoryProvider =

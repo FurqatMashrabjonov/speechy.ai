@@ -31,16 +31,6 @@ class SessionHistoryRemoteRepository {
     }
   }
 
-  Future<void> delete(String id) async {
-    final col = _sessionsCol;
-    if (col == null) return;
-    try {
-      await col.doc(id).delete();
-    } catch (e) {
-      debugPrint('SessionHistoryRemote: delete failed: $e');
-    }
-  }
-
   Future<List<SessionHistoryEntry>> loadAll({int limit = 50}) async {
     final col = _sessionsCol;
     if (col == null) return [];

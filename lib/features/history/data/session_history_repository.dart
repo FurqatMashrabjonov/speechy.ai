@@ -120,13 +120,6 @@ class SessionHistoryRepository {
     }
   }
 
-  Future<void> deleteSession(String id) async {
-    final entries = _loadAll();
-    entries.removeWhere((e) => e.id == id);
-    await _saveAll(entries);
-    _remote.delete(id).catchError((_) {});
-  }
-
   /// Restore sessions from Firestore into local cache.
   /// Used on first login / new device — merges without overwriting local transcripts.
   Future<List<SessionHistoryEntry>> syncFromCloud() async {
