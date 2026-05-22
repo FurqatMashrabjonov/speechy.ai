@@ -439,7 +439,7 @@ class _ShellScreen extends StatelessWidget {
             case 2:
               context.go('/history');
             case 3:
-              context.go('/progress');
+              context.go('/profile');
           }
         },
       ),
@@ -451,7 +451,7 @@ class _ShellScreen extends StatelessWidget {
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/tracks')) return 1;
     if (location.startsWith('/history')) return 2;
-    if (location.startsWith('/progress')) return 3;
+    if (location.startsWith('/profile')) return 3;
     return 0;
   }
 }

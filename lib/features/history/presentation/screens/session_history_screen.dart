@@ -174,10 +174,9 @@ class _SessionHistoryScreenState extends ConsumerState<SessionHistoryScreen> {
             child: _SessionTile(session: session)
                 .animate()
                 .fadeIn(
-                  delay: Duration(milliseconds: index * 50),
-                  duration: 400.ms,
-                )
-                .slideX(begin: 0.05),
+                  delay: Duration(milliseconds: index < 6 ? index * 25 : 0),
+                  duration: 180.ms,
+                ),
           );
         },
       ),
