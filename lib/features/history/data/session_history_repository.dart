@@ -5,14 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_coach/features/history/data/session_history_remote_repository.dart';
 import 'package:speech_coach/features/history/domain/session_history_entity.dart';
+import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
 import 'package:speech_coach/shared/providers/user_provider.dart';
 
 class SessionHistoryRepository {
   static const _key = 'session_history';
   final SharedPreferences _prefs;
   final SessionHistoryRemoteRepository _remote;
+  // Checked at call-time so Pro upgrades take effect without restart
+  final bool Function() _isPro;
 
-  SessionHistoryRepository(this._prefs, this._remote);
+  SessionHistoryRepository(this._prefs, this._remote,
+      {required bool Function() isProGetter})
+      : _isPro = isProGetter;
 
   List<SessionHistoryEntry> _loadAll() {
     final json = _prefs.getString(_key);
@@ -42,8 +47,8 @@ class SessionHistoryRepository {
       entries.add(entry);
     }
     await _saveAll(entries);
-    // Dual-write to Firestore (background — local is source of truth)
-    _remote.save(entry).catchError((_) {});
+    // Pro only: dual-write to Firestore for cross-device restore
+    if (_isPro()) _remote.save(entry).catchError((_) {});
   }
 
   Future<String> savePendingSession({
@@ -120,9 +125,9 @@ class SessionHistoryRepository {
     }
   }
 
-  /// Restore sessions from Firestore into local cache.
-  /// Used on first login / new device — merges without overwriting local transcripts.
+  /// Pro only: restore sessions from Firestore into local cache.
   Future<List<SessionHistoryEntry>> syncFromCloud() async {
+    if (!_isPro()) return getSessions(); // free users: local only
     try {
       final remote = await _remote
           .loadAll()
@@ -143,6 +148,10 @@ final sessionHistoryRepositoryProvider = Provider<SessionHistoryRepository>(
   (ref) {
     final prefs = ref.read(sharedPreferencesProvider);
     final remote = ref.read(sessionHistoryRemoteRepositoryProvider);
-    return SessionHistoryRepository(prefs, remote);
+    return SessionHistoryRepository(
+      prefs,
+      remote,
+      isProGetter: () => ref.read(subscriptionProvider).isPro,
+    );
   },
 );
