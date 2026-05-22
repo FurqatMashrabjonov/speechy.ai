@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_coach/app/constants/app_constants.dart';
@@ -857,15 +858,7 @@ class _WidgetPage extends StatelessWidget {
                         color: Colors.white, size: 16),
                     const SizedBox(width: 4),
                     Text('0 day streak',
-                        style:
-                            AppTypography.labelSmall(color: Colors.white)),
-                    const SizedBox(width: 16),
-                    const Icon(Icons.bolt_rounded,
-                        color: Colors.white, size: 16),
-                    const SizedBox(width: 4),
-                    Text('0 XP',
-                        style:
-                            AppTypography.labelSmall(color: Colors.white)),
+                        style: AppTypography.labelSmall(color: Colors.white)),
                   ],
                 ),
               ],
@@ -1073,26 +1066,38 @@ class _LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<_LoginPage> {
-  bool _showEmailForm = false;
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   bool _obscure = true;
+  bool _isRegisterMode = true; // default register for new users from onboarding
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
-  Future<void> _signInWithEmail() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     HapticFeedback.mediumImpact();
-    final success = await ref.read(authNotifierProvider.notifier).signInWithEmail(
-          _emailController.text.trim(),
-          _passwordController.text,
-        );
+    final notifier = ref.read(authNotifierProvider.notifier);
+    final bool success;
+    if (_isRegisterMode) {
+      success = await notifier.registerWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text,
+        _nameController.text.trim(),
+      );
+    } else {
+      success = await notifier.signInWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+    }
     if (success && mounted) {
       HapticFeedback.heavyImpact();
       widget.onDone();
@@ -1111,142 +1116,182 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
     });
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        children: [
-          const SizedBox(height: 32),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _MascotIcon(),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: context.surface,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                    border: Border.all(color: context.divider),
-                  ),
-                  child: Text(
-                    'Save your progress — create a free account!',
-                    style: AppTypography.titleMedium(),
-                  ),
-                ),
-              ),
-            ],
-          ).animate().fadeIn(duration: 350.ms),
-          const SizedBox(height: 32),
-          _SocialButton(
-            label: 'Continue with Google',
-            isLoading: authState.isLoading,
-            onTap: () async {
-              HapticFeedback.mediumImpact();
-              final success = await ref
-                  .read(authNotifierProvider.notifier)
-                  .signInWithGoogle();
-              if (success && mounted) {
-                HapticFeedback.heavyImpact();
-                widget.onDone();
-              }
-            },
-          ).animate().fadeIn(delay: 100.ms),
-          if (Platform.isIOS && kReleaseMode) ...[
-            const SizedBox(height: 12),
-            _SocialButton(
-              label: 'Continue with Apple',
-              icon: Icons.apple_rounded,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            const SizedBox(height: 32),
+
+            Text(
+              _isRegisterMode ? 'Create Account' : 'Sign In',
+              style: AppTypography.displaySmall(),
+            ).animate().fadeIn(duration: 300.ms),
+
+            const SizedBox(height: 6),
+
+            Text(
+              'Practice speaking. Build confidence.',
+              style: AppTypography.bodyMedium(color: context.textSecondary),
+              textAlign: TextAlign.center,
+            ).animate().fadeIn(delay: 80.ms),
+
+            const SizedBox(height: 28),
+
+            // Google
+            _OnboardingGoogleButton(
               isLoading: authState.isLoading,
               onTap: () async {
                 HapticFeedback.mediumImpact();
-                final success = await ref
-                    .read(authNotifierProvider.notifier)
-                    .signInWithApple();
+                final success = await ref.read(authNotifierProvider.notifier).signInWithGoogle();
                 if (success && mounted) {
                   HapticFeedback.heavyImpact();
                   widget.onDone();
                 }
               },
-            ).animate().fadeIn(delay: 150.ms),
-          ],
-          const SizedBox(height: 20),
-          if (!_showEmailForm)
-            Tappable(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                setState(() => _showEmailForm = true);
+            ).animate().fadeIn(delay: 120.ms),
+
+            if (Platform.isIOS && kReleaseMode) ...[
+              const SizedBox(height: 12),
+              _OnboardingAppleButton(
+                isLoading: authState.isLoading,
+                onTap: () async {
+                  HapticFeedback.mediumImpact();
+                  final success = await ref.read(authNotifierProvider.notifier).signInWithApple();
+                  if (success && mounted) {
+                    HapticFeedback.heavyImpact();
+                    widget.onDone();
+                  }
+                },
+              ).animate().fadeIn(delay: 160.ms),
+            ],
+
+            const SizedBox(height: 22),
+
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('or', style: AppTypography.labelMedium(color: context.textSecondary)),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+
+            const SizedBox(height: 18),
+
+            // Name (register only)
+            if (_isRegisterMode) ...[
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Full Name',
+                  prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                validator: (v) => v == null || v.trim().isEmpty ? 'Enter your name' : null,
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Email
+            TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Enter your email';
+                if (!v.contains('@')) return 'Enter a valid email';
+                return null;
               },
-              child: Text('Sign in with email',
-                  style: AppTypography.labelMedium(
-                      color: context.textSecondary)),
-            ).animate().fadeIn(delay: 200.ms)
-          else
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon:
-                          const Icon(Icons.email_outlined, size: 20),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Enter email';
-                      if (!v.contains('@')) return 'Enter valid email';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscure,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon:
-                          const Icon(Icons.lock_outline_rounded, size: 20),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscure
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          size: 20,
-                        ),
-                        onPressed: () =>
-                            setState(() => _obscure = !_obscure),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Password
+            TextFormField(
+              controller: _passwordController,
+              obscureText: _obscure,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Enter your password';
+                if (_isRegisterMode && v.length < 6) return 'Minimum 6 characters';
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 18),
+
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: authState.isLoading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: authState.isLoading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(
+                        _isRegisterMode ? 'Create Account' : 'Sign In',
+                        style: AppTypography.titleMedium(color: Colors.white),
                       ),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Enter password' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  DuoButton.primary(
-                    text: 'Sign In',
-                    width: double.infinity,
-                    onTap: authState.isLoading ? null : _signInWithEmail,
-                  ),
-                ],
               ),
             ),
-          const SizedBox(height: 32),
-          Text(
-            'By continuing, you agree to our Terms & Privacy Policy.',
-            style: AppTypography.labelSmall(color: context.textTertiary),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-        ],
+
+            const SizedBox(height: 18),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _isRegisterMode ? 'Already have an account? ' : "Don't have an account? ",
+                  style: AppTypography.bodyMedium(color: context.textSecondary),
+                ),
+                Tappable(
+                  onTap: () => setState(() {
+                    _isRegisterMode = !_isRegisterMode;
+                    _nameController.clear();
+                  }),
+                  child: Text(
+                    _isRegisterMode ? 'Sign In' : 'Sign Up',
+                    style: AppTypography.bodyMedium(color: AppColors.primary)
+                        .copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            Text(
+              'By continuing, you agree to our Terms & Privacy Policy.',
+              style: AppTypography.labelSmall(color: context.textTertiary),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 32),
+          ],
+        ),
       ),
     );
   }
@@ -1269,20 +1314,12 @@ class _MascotIcon extends StatelessWidget {
   }
 }
 
-// ─── Social Button ────────────────────────────────────────────────────────────
+// ─── Onboarding Social Buttons ────────────────────────────────────────────────
 
-class _SocialButton extends StatelessWidget {
-  final String label;
-  final IconData? icon;
+class _OnboardingGoogleButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onTap;
-
-  const _SocialButton({
-    required this.label,
-    required this.isLoading,
-    required this.onTap,
-    this.icon,
-  });
+  const _OnboardingGoogleButton({required this.isLoading, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1290,7 +1327,7 @@ class _SocialButton extends StatelessWidget {
       onTap: isLoading ? null : onTap,
       child: Container(
         width: double.infinity,
-        height: 56,
+        height: 54,
         decoration: BoxDecoration(
           color: context.surface,
           borderRadius: BorderRadius.circular(16),
@@ -1299,24 +1336,39 @@ class _SocialButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (icon != null)
-              Icon(icon, size: 22)
-            else
-              Container(
-                width: 22,
-                height: 22,
-                decoration: const BoxDecoration(
-                    shape: BoxShape.circle, color: Colors.white),
-                child: const Center(
-                  child: Text('G',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF4285F4))),
-                ),
-              ),
+            SvgPicture.asset('assets/icons/google_logo.svg', width: 22, height: 22),
             const SizedBox(width: 12),
-            Text(label, style: AppTypography.titleMedium()),
+            Text('Continue with Google', style: AppTypography.titleMedium()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardingAppleButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onTap;
+  const _OnboardingAppleButton({required this.isLoading, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tappable(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        width: double.infinity,
+        height: 54,
+        decoration: BoxDecoration(
+          color: context.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.divider, width: 1.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.apple_rounded, size: 24),
+            const SizedBox(width: 12),
+            Text('Continue with Apple', style: AppTypography.titleMedium()),
           ],
         ),
       ),
