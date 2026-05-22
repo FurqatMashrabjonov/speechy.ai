@@ -763,7 +763,9 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         final status = state.status;
 
         if (status == ConversationStatus.ended ||
-            status == ConversationStatus.analyzing) return;
+            status == ConversationStatus.analyzing) {
+          return;
+        }
 
         // Hard cap: 14m30s — end before Firebase 15-min server disconnect
         if (elapsed >= _sessionHardLimit) {

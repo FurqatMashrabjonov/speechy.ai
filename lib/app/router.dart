@@ -155,6 +155,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             },
           ),
           GoRoute(
+            path: '/history',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SessionHistoryScreen(),
+            ),
+          ),
+          GoRoute(
             path: '/profile',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: ProfileScreen(),
@@ -264,25 +270,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             return SlideTransition(
               position: Tween<Offset>(
                 begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
-              child: child,
-            );
-          },
-        ),
-      ),
-      // Session history
-      GoRoute(
-        path: '/history',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const SessionHistoryScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
                 end: Offset.zero,
               ).animate(CurvedAnimation(
                 parent: animation,
@@ -450,9 +437,9 @@ class _ShellScreen extends StatelessWidget {
             case 1:
               context.go('/tracks');
             case 2:
-              context.go('/progress');
+              context.go('/history');
             case 3:
-              context.go('/profile');
+              context.go('/progress');
           }
         },
       ),
@@ -463,8 +450,8 @@ class _ShellScreen extends StatelessWidget {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/tracks')) return 1;
-    if (location.startsWith('/progress')) return 2;
-    if (location.startsWith('/profile')) return 3;
+    if (location.startsWith('/history')) return 2;
+    if (location.startsWith('/progress')) return 3;
     return 0;
   }
 }

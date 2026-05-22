@@ -3,7 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
-import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/feedback/domain/feedback_entity.dart';
@@ -1228,7 +1227,7 @@ class _XpStreakRow extends ConsumerWidget {
                 tween: IntTween(begin: 0, end: xpEarned),
                 duration: const Duration(milliseconds: 1200),
                 curve: Curves.easeOutCubic,
-                builder: (_, value, __) => Text(
+                builder: (_, value, _) => Text(
                   '+$value XP',
                   style: AppTypography.titleMedium(color: Colors.white)
                       .copyWith(fontWeight: FontWeight.w800),

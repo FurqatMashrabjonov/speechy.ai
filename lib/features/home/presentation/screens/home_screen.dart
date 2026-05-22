@@ -85,6 +85,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   usage.totalFreeSessionsUsed < UsageService.freeTotalSessions)
                 const SizedBox(height: 14),
 
+              // Quick-start CTA — most important action, always visible
+              if (plan != null && plan.nextStep != null)
+                _QuickStartButton(plan: plan)
+                    .animate()
+                    .fadeIn(delay: 120.ms, duration: 400.ms)
+                    .slideY(begin: 0.04),
+              if (plan != null && plan.nextStep != null)
+                const SizedBox(height: 14),
+
               // Roadmap — vertical Duolingo path
               _RoadmapHero()
                   .animate()
@@ -332,6 +341,80 @@ class _FreeSessionsBanner extends StatelessWidget {
   }
 }
 
+// ── Quick-start CTA ──────────────────────────────────────────────────────────
+
+class _QuickStartButton extends StatelessWidget {
+  final LearningPlan plan;
+  const _QuickStartButton({required this.plan});
+
+  @override
+  Widget build(BuildContext context) {
+    final nextStep = plan.nextStep!;
+    final scenario = ScenarioRepository().getById(nextStep.scenarioId);
+    final title = scenario?.title ?? nextStep.scenarioId;
+
+    return Tappable(
+      onTap: () => context.push(
+        '/scenario/${Uri.encodeComponent(nextStep.scenarioId)}',
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, Color(0xFF6B5AED)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.28),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.play_arrow_rounded,
+                  color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Step ${plan.completedCount + 1} of ${plan.totalSteps}',
+                    style: AppTypography.labelSmall(
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ).copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    title,
+                    style: AppTypography.titleMedium(color: Colors.white)
+                        .copyWith(fontSize: 15),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                color: Colors.white, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Roadmap Hero ──────────────────────────────────────────────────────────────
 
 class _RoadmapHero extends ConsumerStatefulWidget {
@@ -363,7 +446,6 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
   @override
   Widget build(BuildContext context) {
     final plan = ref.watch(learningPlanProvider);
-    final progress = ref.watch(progressProvider);
 
     if (plan == null) {
       return _NoRoadmapCard();
@@ -542,9 +624,6 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
             ),
           ),
 
-          // ── Week heatmap ──────────────────────────────────────────────────
-          _WeekHeatmap(sessions: progress.sessionHistory),
-
           // ── CTA ───────────────────────────────────────────────────────────
           if (allComplete)
             Padding(
@@ -647,7 +726,7 @@ class _VerticalStepRow extends StatelessWidget {
         if (isCurrent)
           AnimatedBuilder(
             animation: pulseController,
-            builder: (_, __) {
+            builder: (_, _) {
               final scale = 1.0 + pulseController.value * 0.12;
               return Transform.scale(
                 scale: scale,
@@ -888,88 +967,6 @@ class _NoRoadmapCard extends StatelessWidget {
             icon: Icons.assessment_rounded,
             width: double.infinity,
             onTap: () => context.push('/assessment'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Week heatmap ──────────────────────────────────────────────────────────────
-
-class _WeekHeatmap extends StatelessWidget {
-  final List<SessionRecord> sessions;
-
-  const _WeekHeatmap({required this.sessions});
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final monday = now.subtract(Duration(days: now.weekday - 1));
-    final today = now.weekday - 1;
-
-    final practicedDays = <int>{};
-    for (final s in sessions) {
-      final diff = DateTime(s.date.year, s.date.month, s.date.day)
-          .difference(
-              DateTime(monday.year, monday.month, monday.day))
-          .inDays;
-      if (diff >= 0 && diff < 7) practicedDays.add(diff);
-    }
-
-    const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 4, 18, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'This week',
-            style: AppTypography.labelSmall(color: context.textTertiary),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(7, (i) {
-              final practiced = practicedDays.contains(i);
-              final isFuture = i > today;
-              return Column(
-                children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: practiced
-                          ? AppColors.primary
-                          : isFuture
-                              ? Colors.transparent
-                              : AppColors.primary.withValues(alpha: 0.06),
-                      border: Border.all(
-                        color: practiced
-                            ? AppColors.primary
-                            : const Color(0xFFDDDDDD),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: practiced
-                        ? const Icon(Icons.check_rounded,
-                            size: 14, color: AppColors.white)
-                        : null,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    dayLabels[i],
-                    style: AppTypography.labelSmall(
-                      color: practiced
-                          ? AppColors.primary
-                          : context.textTertiary,
-                    ).copyWith(fontSize: 11),
-                  ),
-                ],
-              );
-            }),
           ),
         ],
       ),
