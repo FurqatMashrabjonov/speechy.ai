@@ -36,13 +36,15 @@ class _SessionHistoryScreenState extends ConsumerState<SessionHistoryScreen> {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'History',
-                  style: AppTypography.headlineSmall(),
-                ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    onPressed: () => context.pop(),
+                  ),
+                  Text('History', style: AppTypography.headlineSmall()),
+                ],
               ),
             ),
 
