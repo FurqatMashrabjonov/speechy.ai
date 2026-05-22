@@ -15,12 +15,14 @@ class AnalyticsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final realProgress = ref.watch(progressProvider);
+    // Only rebuild when sessionHistory changes — not on every streak/xp tick.
+    final hasRealSessions = ref.watch(
+      progressProvider.select((p) => p.sessionHistory.isNotEmpty),
+    );
+    final realProgress = hasRealSessions ? ref.watch(progressProvider) : null;
 
-    final progress = realProgress.sessionHistory.isNotEmpty
-        ? realProgress
-        : _demoProgress;
-    final isDemo = realProgress.sessionHistory.isEmpty;
+    final progress = realProgress ?? _demoProgress;
+    final isDemo = realProgress == null;
 
     return Scaffold(
       body: SafeArea(
