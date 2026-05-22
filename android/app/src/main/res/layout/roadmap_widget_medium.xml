@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Medium layout: 2×2 or narrow tall. Shows streak + track + dots. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_roadmap"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <!-- Streak pill row -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/widget_streak_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:id="@+id/streak"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔥 0 day streak"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Track name -->
+    <TextView
+        android:id="@+id/track_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Interview Prep"
+        android:textColor="#FFFFFF"
+        android:textSize="17sp"
+        android:textStyle="bold" />
+
+    <!-- Step label -->
+    <TextView
+        android:id="@+id/step_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Step 1 of 15"
+        android:textColor="#CCFFFFFF"
+        android:textSize="11sp" />
+
+    <!-- Dot progress -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/dots_filled"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:letterSpacing="0.15" />
+
+        <TextView
+            android:id="@+id/dots_empty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="○○○○○○○○○○"
+            android:textColor="#44FFFFFF"
+            android:textSize="13sp"
+            android:letterSpacing="0.15" />
+    </LinearLayout>
+
+</LinearLayout>
