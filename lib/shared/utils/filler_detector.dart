@@ -1,16 +1,7 @@
 class FillerDetector {
   static const _fillerWords = [
-    'um',
-    'uh',
-    'like',
-    'you know',
-    'basically',
-    'actually',
-    'literally',
-    'right',
-    'so',
-    'er',
-    'ah',
+    'um', 'uh', 'like', 'you know', 'basically',
+    'actually', 'literally', 'right', 'so', 'er', 'ah',
   ];
 
   static final _patterns = _fillerWords.map((word) {
@@ -22,14 +13,11 @@ class FillerDetector {
     final result = <String, int>{};
     for (final entry in _patterns) {
       final count = entry.value.allMatches(text).length;
-      if (count > 0) {
-        result[entry.key] = count;
-      }
+      if (count > 0) result[entry.key] = count;
     }
     return result;
   }
 
-  static int totalCount(String text) {
-    return detect(text).values.fold(0, (sum, count) => sum + count);
-  }
+  static int totalCount(String text) =>
+      detect(text).values.fold(0, (sum, count) => sum + count);
 }

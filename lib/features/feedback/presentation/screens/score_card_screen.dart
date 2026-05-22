@@ -18,7 +18,7 @@ import 'package:speech_coach/features/progress/presentation/providers/progress_p
 import 'package:confetti/confetti.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dart';
-import 'package:speech_coach/features/filler_challenge/domain/filler_detector.dart';
+import 'package:speech_coach/shared/utils/filler_detector.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
