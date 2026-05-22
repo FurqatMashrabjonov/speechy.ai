@@ -703,10 +703,10 @@ class _BottomCta extends StatelessWidget {
     if (isActive) {
       if (planComplete) {
         return _PrimaryButton(
-          label: 'Track Complete — View Progress',
+          label: 'Track Complete — View Profile',
           icon: Icons.emoji_events_rounded,
           color: AppColors.success,
-          onTap: () => context.push('/progress'),
+          onTap: () => context.go('/profile'),
         );
       }
       final stepNum = (nextStep?.order ?? 0) + 1;
@@ -727,22 +727,11 @@ class _BottomCta extends StatelessWidget {
       );
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _PrimaryButton(
-          label: 'Unlock All Tracks',
-          icon: Icons.lock_open_rounded,
-          color: AppColors.primary,
-          onTap: onUnlock,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Current track always free',
-          style: AppTypography.bodySmall(color: context.textTertiary),
-          textAlign: TextAlign.center,
-        ),
-      ],
+    return _PrimaryButton(
+      label: 'Unlock ${meta.title}',
+      icon: Icons.lock_open_rounded,
+      color: AppColors.primary,
+      onTap: onUnlock,
     );
   }
 }
