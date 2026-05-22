@@ -38,17 +38,32 @@ class SessionHistoryNotifier extends StateNotifier<SessionHistoryState> {
   Future<void> loadSessions() async {
     state = state.copyWith(status: SessionHistoryStatus.loading);
     try {
-      final sessions = await _repository.getSessions();
+      // Show local data immediately (fast)
+      final local = await _repository.getSessions();
       state = state.copyWith(
         status: SessionHistoryStatus.loaded,
-        sessions: sessions,
+        sessions: local,
       );
+      // Then merge with Firestore in background (restores cross-device history)
+      _syncFromCloud();
     } catch (e) {
       state = state.copyWith(
         status: SessionHistoryStatus.error,
         error: e.toString(),
       );
     }
+  }
+
+  Future<void> _syncFromCloud() async {
+    try {
+      final merged = await _repository.syncFromCloud();
+      if (mounted) {
+        state = state.copyWith(
+          status: SessionHistoryStatus.loaded,
+          sessions: merged,
+        );
+      }
+    } catch (_) {}
   }
 
   Future<void> deleteSession(String id) async {

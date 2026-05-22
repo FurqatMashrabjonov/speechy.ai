@@ -25,6 +25,11 @@ class ProgressRemoteRepository {
     if (doc == null) return;
 
     try {
+      // Store last 50 session records for analytics restore on new device
+      final recentHistory = progress.sessionHistory.length > 50
+          ? progress.sessionHistory.sublist(progress.sessionHistory.length - 50)
+          : progress.sessionHistory;
+
       await doc.set({
         'totalXp': progress.totalXp,
         'level': progress.level,
@@ -35,6 +40,8 @@ class ProgressRemoteRepository {
         'totalMinutes': progress.totalMinutes,
         'lastSessionDate': progress.lastSessionDate?.toIso8601String(),
         'badges': progress.badges,
+        'sessionHistory': recentHistory.map((s) => s.toMap()).toList(),
+        'streakFreezes': progress.streakFreezes,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -63,6 +70,10 @@ class ProgressRemoteRepository {
             ? DateTime.tryParse(data['lastSessionDate'] as String)
             : null,
         badges: List<String>.from(data['badges'] as List? ?? []),
+        sessionHistory: (data['sessionHistory'] as List? ?? [])
+            .map((s) => SessionRecord.fromMap(s as Map<String, dynamic>))
+            .toList(),
+        streakFreezes: (data['streakFreezes'] as num?)?.toInt() ?? 0,
       );
     } catch (e) {
       debugPrint('Failed to load progress from Firestore: $e');
@@ -71,16 +82,12 @@ class ProgressRemoteRepository {
   }
 
   /// Merge local and remote progress, taking the higher/better values.
-  /// sessionHistory is NOT included in remote — it stays local only
-  /// (detailed records are already in users/{uid}/sessions).
   static UserProgress merge(UserProgress local, UserProgress remote) {
     final mergedXp = local.totalXp > remote.totalXp ? local.totalXp : remote.totalXp;
     final (mergedLevel, mergedTitle) = UserProgress.calculateLevel(mergedXp);
 
-    // Union of badges
     final mergedBadges = {...local.badges, ...remote.badges}.toList();
 
-    // Pick the more recent lastSessionDate
     DateTime? mergedLastSession;
     if (local.lastSessionDate != null && remote.lastSessionDate != null) {
       mergedLastSession = local.lastSessionDate!.isAfter(remote.lastSessionDate!)
@@ -89,6 +96,16 @@ class ProgressRemoteRepository {
     } else {
       mergedLastSession = local.lastSessionDate ?? remote.lastSessionDate;
     }
+
+    // Union sessionHistory by date — dedupe by scenarioId+date combo
+    final allRecords = {...local.sessionHistory, ...remote.sessionHistory}.toList();
+    final seen = <String>{};
+    final mergedHistory = <SessionRecord>[];
+    for (final r in allRecords) {
+      final key = '${r.scenarioId}_${r.date.toIso8601String()}';
+      if (seen.add(key)) mergedHistory.add(r);
+    }
+    mergedHistory.sort((a, b) => a.date.compareTo(b.date));
 
     return local.copyWith(
       totalXp: mergedXp,
@@ -106,6 +123,10 @@ class ProgressRemoteRepository {
           : remote.totalMinutes,
       lastSessionDate: mergedLastSession,
       badges: mergedBadges,
+      sessionHistory: mergedHistory,
+      streakFreezes: local.streakFreezes > remote.streakFreezes
+          ? local.streakFreezes
+          : remote.streakFreezes,
     );
   }
 }

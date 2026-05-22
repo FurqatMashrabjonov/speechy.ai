@@ -3,14 +3,16 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_coach/features/history/data/session_history_remote_repository.dart';
 import 'package:speech_coach/features/history/domain/session_history_entity.dart';
 import 'package:speech_coach/shared/providers/user_provider.dart';
 
 class SessionHistoryRepository {
   static const _key = 'session_history';
   final SharedPreferences _prefs;
+  final SessionHistoryRemoteRepository _remote;
 
-  SessionHistoryRepository(this._prefs);
+  SessionHistoryRepository(this._prefs, this._remote);
 
   List<SessionHistoryEntry> _loadAll() {
     final json = _prefs.getString(_key);
@@ -33,7 +35,6 @@ class SessionHistoryRepository {
 
   Future<void> saveSession(SessionHistoryEntry entry) async {
     final entries = _loadAll();
-    // Replace if exists (update), otherwise add
     final idx = entries.indexWhere((e) => e.id == entry.id);
     if (idx >= 0) {
       entries[idx] = entry;
@@ -41,6 +42,8 @@ class SessionHistoryRepository {
       entries.add(entry);
     }
     await _saveAll(entries);
+    // Dual-write to Firestore (background — local is source of truth)
+    _remote.save(entry).catchError((_) {});
   }
 
   Future<String> savePendingSession({
@@ -121,12 +124,32 @@ class SessionHistoryRepository {
     final entries = _loadAll();
     entries.removeWhere((e) => e.id == id);
     await _saveAll(entries);
+    _remote.delete(id).catchError((_) {});
+  }
+
+  /// Restore sessions from Firestore into local cache.
+  /// Used on first login / new device — merges without overwriting local transcripts.
+  Future<List<SessionHistoryEntry>> syncFromCloud() async {
+    try {
+      final remote = await _remote
+          .loadAll()
+          .timeout(const Duration(seconds: 8));
+      if (remote.isEmpty) return getSessions();
+      final local = _loadAll();
+      final merged = SessionHistoryRemoteRepository.merge(local, remote);
+      await _saveAll(merged);
+      return merged..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    } catch (e) {
+      debugPrint('SessionHistoryRepository: cloud sync failed: $e');
+      return getSessions();
+    }
   }
 }
 
 final sessionHistoryRepositoryProvider = Provider<SessionHistoryRepository>(
   (ref) {
     final prefs = ref.read(sharedPreferencesProvider);
-    return SessionHistoryRepository(prefs);
+    final remote = ref.read(sessionHistoryRemoteRepositoryProvider);
+    return SessionHistoryRepository(prefs, remote);
   },
 );
