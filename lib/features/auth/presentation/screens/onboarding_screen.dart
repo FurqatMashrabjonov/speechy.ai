@@ -16,6 +16,7 @@ import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/assessment/data/assessment_data.dart';
 import 'package:speech_coach/features/assessment/domain/assessment_entity.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
+import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/features/auth/presentation/providers/auth_provider.dart';
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
@@ -212,16 +213,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ),
                     ),
 
-                  // 7 — Roadmap selection
+                  // 7 — Roadmap selection (auto-confirms on tap)
                   _RoadmapSelectionPage(
                     recommendedId: _recommendedTemplateId,
                     selectedId: _selectedTemplateId,
                     isGenerating: _generatingPlan,
                     onSelect: (id) {
-                      HapticFeedback.selectionClick();
+                      if (_generatingPlan) return;
+                      HapticFeedback.mediumImpact();
                       setState(() => _selectedTemplateId = id);
+                      Future.delayed(const Duration(milliseconds: 350), _confirmRoadmap);
                     },
-                    onConfirm: _confirmRoadmap,
                   ),
 
                   // 8 — Widget
@@ -463,14 +465,12 @@ class _RoadmapSelectionPage extends StatelessWidget {
   final String selectedId;
   final bool isGenerating;
   final ValueChanged<String> onSelect;
-  final VoidCallback onConfirm;
 
   const _RoadmapSelectionPage({
     required this.recommendedId,
     required this.selectedId,
     required this.isGenerating,
     required this.onSelect,
-    required this.onConfirm,
   });
 
   @override
@@ -534,18 +534,13 @@ class _RoadmapSelectionPage extends StatelessWidget {
             },
           ),
         ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-              24, 12, 24, MediaQuery.of(context).padding.bottom + 16),
-          child: isGenerating
-              ? const Center(child: CircularProgressIndicator())
-              : DuoButton.primary(
-                  text: 'Start My Journey',
-                  icon: Icons.rocket_launch_rounded,
-                  width: double.infinity,
-                  onTap: onConfirm,
-                ).animate().fadeIn(delay: 300.ms),
-        ),
+        if (isGenerating)
+          Padding(
+            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).padding.bottom + 16),
+            child: const Center(child: CircularProgressIndicator()),
+          )
+        else
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
       ],
     );
   }
@@ -561,10 +556,10 @@ class _ExpandedRoadmapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bannerPath = AppImages.trackBannerMap[meta.id];
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isSelected
             ? meta.color.withValues(alpha: 0.09)
@@ -578,86 +573,89 @@ class _ExpandedRoadmapCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: meta.color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(meta.emoji,
-                      style: const TextStyle(fontSize: 26)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: meta.color,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Best match for you',
-                        style: AppTypography.labelSmall(color: Colors.white)
-                            .copyWith(
-                                fontWeight: FontWeight.w700, fontSize: 10),
-                      ),
+          // Banner image
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Stack(
+              children: [
+                if (bannerPath != null)
+                  Image.asset(
+                    bannerPath,
+                    width: double.infinity,
+                    height: 130,
+                    fit: BoxFit.cover,
+                  )
+                else
+                  Container(
+                    width: double.infinity,
+                    height: 130,
+                    color: meta.color.withValues(alpha: 0.2),
+                    child: Center(child: Text(meta.emoji, style: const TextStyle(fontSize: 48))),
+                  ),
+                // "Best match" badge top-left
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: meta.color,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      meta.title,
-                      style: AppTypography.headlineSmall(color: meta.color),
+                    child: Text(
+                      'Best match for you',
+                      style: AppTypography.labelSmall(color: Colors.white)
+                          .copyWith(fontWeight: FontWeight.w700, fontSize: 10),
+                    ),
+                  ),
+                ),
+                // Selected checkmark top-right
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: isSelected ? meta.color : Colors.black26,
+                      shape: BoxShape.circle,
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(meta.title, style: AppTypography.headlineSmall(color: meta.color)),
+                const SizedBox(height: 6),
+                Text(meta.description, style: AppTypography.bodySmall(color: context.textSecondary)),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _InfoChip(
+                      icon: Icons.format_list_numbered_rounded,
+                      label: '${meta.stepCount} steps',
+                      color: meta.color,
+                    ),
+                    const SizedBox(width: 8),
+                    _InfoChip(
+                      icon: Icons.trending_up_rounded,
+                      label: meta.difficultyLabel,
+                      color: meta.color,
                     ),
                   ],
                 ),
-              ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: isSelected ? meta.color : Colors.transparent,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isSelected ? meta.color : meta.color.withValues(alpha: 0.4),
-                    width: 2,
-                  ),
-                ),
-                child: isSelected
-                    ? const Icon(Icons.check_rounded,
-                        size: 15, color: Colors.white)
-                    : null,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            meta.description,
-            style: AppTypography.bodySmall(color: context.textSecondary),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _InfoChip(
-                icon: Icons.format_list_numbered_rounded,
-                label: '${meta.stepCount} steps',
-                color: meta.color,
-              ),
-              const SizedBox(width: 8),
-              _InfoChip(
-                icon: Icons.trending_up_rounded,
-                label: meta.difficultyLabel,
-                color: meta.color,
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -673,10 +671,11 @@ class _CompactRoadmapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bannerPath = AppImages.trackBannerMap[meta.id];
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isSelected ? meta.color.withValues(alpha: 0.08) : AppColors.white,
         borderRadius: BorderRadius.circular(16),
@@ -687,17 +686,17 @@ class _CompactRoadmapCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: meta.color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child:
-                  Text(meta.emoji, style: const TextStyle(fontSize: 21)),
-            ),
+          // Thumbnail
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: bannerPath != null
+                ? Image.asset(bannerPath, width: 52, height: 52, fit: BoxFit.cover)
+                : Container(
+                    width: 52,
+                    height: 52,
+                    color: meta.color.withValues(alpha: 0.15),
+                    child: Center(child: Text(meta.emoji, style: const TextStyle(fontSize: 22))),
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -712,8 +711,7 @@ class _CompactRoadmapCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   meta.description,
-                  style:
-                      AppTypography.bodySmall(color: context.textSecondary),
+                  style: AppTypography.bodySmall(color: context.textSecondary),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -729,14 +727,12 @@ class _CompactRoadmapCard extends StatelessWidget {
               color: isSelected ? meta.color : Colors.transparent,
               shape: BoxShape.circle,
               border: Border.all(
-                color:
-                    isSelected ? meta.color : const Color(0xFFE5E5E5),
+                color: isSelected ? meta.color : const Color(0xFFE5E5E5),
                 width: 2,
               ),
             ),
             child: isSelected
-                ? const Icon(Icons.check_rounded,
-                    size: 13, color: Colors.white)
+                ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
                 : null,
           ),
         ],
