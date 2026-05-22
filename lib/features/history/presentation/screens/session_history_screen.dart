@@ -34,22 +34,15 @@ class _SessionHistoryScreenState extends ConsumerState<SessionHistoryScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // App bar
+            // Header
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Tappable(
-                    onTap: () => context.pop(),
-                    child: const Icon(Icons.arrow_back_rounded, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Session History',
-                    style: AppTypography.headlineSmall(),
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'History',
+                  style: AppTypography.headlineSmall(),
+                ),
               ),
             ),
 
