@@ -20,7 +20,7 @@ final _sessionDetailProvider =
 class SessionDetailScreen extends ConsumerWidget {
   final String sessionId;
 
-  SessionDetailScreen({super.key, required this.sessionId});
+  const SessionDetailScreen({super.key, required this.sessionId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

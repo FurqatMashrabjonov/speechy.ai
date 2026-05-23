@@ -31,6 +31,7 @@ class ConversationState {
   final List<ConversationMessage> messages;
   final String currentTranscription;
   final String? error;
+  final ConversationErrorType? errorType;
   final Duration elapsed;
   // Scenario fields
   final String? scenarioId;
@@ -52,6 +53,7 @@ class ConversationState {
     this.messages = const [],
     this.currentTranscription = '',
     this.error,
+    this.errorType,
     this.elapsed = Duration.zero,
     this.scenarioId,
     this.scenarioTitle,
@@ -86,6 +88,7 @@ class ConversationState {
     List<ConversationMessage>? messages,
     String? currentTranscription,
     String? error,
+    ConversationErrorType? errorType,
     Duration? elapsed,
     String? scenarioId,
     String? scenarioTitle,
@@ -102,6 +105,7 @@ class ConversationState {
       messages: messages ?? this.messages,
       currentTranscription: currentTranscription ?? this.currentTranscription,
       error: error,
+      errorType: errorType,
       elapsed: elapsed ?? this.elapsed,
       scenarioId: scenarioId ?? this.scenarioId,
       scenarioTitle: scenarioTitle ?? this.scenarioTitle,
@@ -152,6 +156,41 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
 
   ConversationNotifier(this._service, this.category)
     : super(const ConversationState());
+
+  ConversationErrorType _classifyError(dynamic e) {
+    final s = e.toString().toLowerCase();
+    if (s.contains('permission') || s.contains('microphone')) {
+      return ConversationErrorType.permission;
+    }
+    if (s.contains('firebase_app_check') || s.contains('app check') ||
+        s.contains('too many attempts') || s.contains('appcheck') ||
+        s.contains('unauthorized') || s.contains('403')) {
+      return ConversationErrorType.appCheck;
+    }
+    if (s.contains('quota') || s.contains('rate limit') ||
+        s.contains('resource exhausted') || s.contains('429') ||
+        s.contains('too many requests')) {
+      return ConversationErrorType.quota;
+    }
+    if (s.contains('socketexception') || s.contains('connection refused') ||
+        s.contains('network') || s.contains('unreachable') ||
+        s.contains('no address') || s.contains('failed host lookup') ||
+        s.contains('websocket closed') || s.contains('connection reset') ||
+        s.contains('connection closed') || s.contains('connection lost') ||
+        s.contains('ioexception')) {
+      return ConversationErrorType.network;
+    }
+    return ConversationErrorType.unknown;
+  }
+
+  String _friendlyMessage(ConversationErrorType type) => switch (type) {
+    ConversationErrorType.network => 'No internet connection.\nCheck your connection and try again.',
+    ConversationErrorType.permission => 'Microphone access is required\nto start a conversation.',
+    ConversationErrorType.appCheck => 'Connection failed.\nPlease try again.',
+    ConversationErrorType.quota => 'Service is busy right now.\nPlease wait a moment and try again.',
+    ConversationErrorType.midSession => 'Connection lost during your session.\nYou can reconnect or end the session.',
+    ConversationErrorType.unknown => 'Something went wrong.\nPlease try again.',
+  };
 
   void setScenario({
     required String scenarioId,
@@ -317,9 +356,11 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       state = state.copyWith(status: ConversationStatus.aiSpeaking);
     } catch (e) {
       debugPrint('Start conversation error: $e');
+      final errorType = _classifyError(e);
       state = state.copyWith(
         status: ConversationStatus.error,
-        error: 'Failed to connect: ${e.toString().split(':').last.trim()}',
+        error: _friendlyMessage(errorType),
+        errorType: errorType,
       );
     }
   }
@@ -439,18 +480,12 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         if (_closed) break;
         debugPrint('Receive loop error: $e');
         if (mounted) {
-          final errorStr = e.toString();
-          String userError;
-          if (errorStr.contains('invalid argument')) {
-            userError = 'Invalid configuration. Please try again.';
-          } else if (errorStr.contains('WebSocket Closed')) {
-            userError = 'Connection closed by server. Please try again.';
-          } else {
-            userError = 'Connection lost. Please try again.';
-          }
+          final isMidSession = state.messages.isNotEmpty;
+          final errorType = isMidSession ? ConversationErrorType.midSession : _classifyError(e);
           state = state.copyWith(
             status: ConversationStatus.error,
-            error: userError,
+            error: _friendlyMessage(errorType),
+            errorType: errorType,
           );
         }
         break;

@@ -25,9 +25,8 @@ import 'package:speech_coach/shared/widgets/tappable.dart';
 const _kIntroPage    = 0;
 const _kQuestionCount = 4;
 const _kRoadmapPage  = _kIntroPage + 1 + _kQuestionCount; // 5
-const _kWidgetPage   = _kRoadmapPage + 1;                  // 6
-const _kNotifPage    = _kWidgetPage + 1;                   // 7
-const _kLoginPage    = _kNotifPage + 1;                    // 8
+const _kNotifPage    = _kRoadmapPage + 1;                  // 6
+const _kLoginPage    = _kNotifPage + 1;                    // 7
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -221,28 +220,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ),
                     ),
 
-                  // 7 — Roadmap selection (auto-confirms on tap)
+                  // 7 — Roadmap selection
                   _RoadmapSelectionPage(
                     recommendedId: _recommendedTemplateId,
                     selectedId: _selectedTemplateId,
                     isGenerating: _generatingPlan,
                     onSelect: (id) {
                       if (_generatingPlan) return;
-                      HapticFeedback.mediumImpact();
+                      HapticFeedback.selectionClick();
                       setState(() => _selectedTemplateId = id);
-                      Future.delayed(const Duration(milliseconds: 350), _confirmRoadmap);
                     },
+                    onConfirm: _confirmRoadmap,
                   ),
 
-                  // 8 — Widget
-                  _WidgetPage(
-                    onContinue: () {
-                      HapticFeedback.lightImpact();
-                      _next();
-                    },
-                  ),
-
-                  // 9 — Notifications
+                  // 6 — Notifications
                   _NotifPage(
                     onAllow: _requestNotifications,
                     onSkip: () {
@@ -407,12 +398,12 @@ class _QuestionPage extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primary.withValues(alpha: 0.08)
-                        : AppColors.white,
+                        : context.card,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.primary
-                          : const Color(0xFFE5E5E5),
+                          : context.divider,
                       width: 2,
                     ),
                   ),
@@ -443,7 +434,7 @@ class _QuestionPage extends StatelessWidget {
                           border: Border.all(
                             color: isSelected
                                 ? AppColors.primary
-                                : const Color(0xFFE5E5E5),
+                                : context.divider,
                             width: 2,
                           ),
                         ),
@@ -473,16 +464,24 @@ class _RoadmapSelectionPage extends StatelessWidget {
   final String selectedId;
   final bool isGenerating;
   final ValueChanged<String> onSelect;
+  final VoidCallback onConfirm;
 
   const _RoadmapSelectionPage({
     required this.recommendedId,
     required this.selectedId,
     required this.isGenerating,
     required this.onSelect,
+    required this.onConfirm,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Recommended always first
+    final sorted = [
+      ...allRoadmapMetas.where((m) => m.id == recommendedId),
+      ...allRoadmapMetas.where((m) => m.id != recommendedId),
+    ];
+
     return Column(
       children: [
         const SizedBox(height: 20),
@@ -519,36 +518,33 @@ class _RoadmapSelectionPage extends StatelessWidget {
         const SizedBox(height: 20),
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            itemCount: allRoadmapMetas.length,
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            itemCount: sorted.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, i) {
-              final meta = allRoadmapMetas[i];
+              final meta = sorted[i];
               final isRecommended = meta.id == recommendedId;
               final isSelected = meta.id == selectedId;
 
               return GestureDetector(
                 onTap: () => onSelect(meta.id),
                 child: isRecommended
-                    ? _ExpandedRoadmapCard(
-                        meta: meta,
-                        isSelected: isSelected,
-                      )
-                    : _CompactRoadmapCard(
-                        meta: meta,
-                        isSelected: isSelected,
-                      ),
+                    ? _ExpandedRoadmapCard(meta: meta, isSelected: isSelected)
+                    : _CompactRoadmapCard(meta: meta, isSelected: isSelected),
               ).animate().fadeIn(delay: Duration(milliseconds: 60 + i * 50));
             },
           ),
         ),
-        if (isGenerating)
-          Padding(
-            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).padding.bottom + 16),
-            child: const Center(child: CircularProgressIndicator()),
-          )
-        else
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
+        Padding(
+          padding: EdgeInsets.fromLTRB(24, 8, 24, MediaQuery.of(context).padding.bottom + 16),
+          child: isGenerating
+              ? const Center(child: CircularProgressIndicator())
+              : DuoButton.primary(
+                  text: 'Start My Track',
+                  width: double.infinity,
+                  onTap: onConfirm,
+                ),
+        ),
       ],
     );
   }
@@ -685,10 +681,10 @@ class _CompactRoadmapCard extends StatelessWidget {
       curve: Curves.easeOutCubic,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isSelected ? meta.color.withValues(alpha: 0.08) : AppColors.white,
+        color: isSelected ? meta.color.withValues(alpha: 0.08) : context.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isSelected ? meta.color : const Color(0xFFE5E5E5),
+          color: isSelected ? meta.color : context.divider,
           width: isSelected ? 2.5 : 2,
         ),
       ),
@@ -735,7 +731,7 @@ class _CompactRoadmapCard extends StatelessWidget {
               color: isSelected ? meta.color : Colors.transparent,
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected ? meta.color : const Color(0xFFE5E5E5),
+                color: isSelected ? meta.color : context.divider,
                 width: 2,
               ),
             ),
@@ -781,177 +777,6 @@ class _InfoChip extends StatelessWidget {
   }
 }
 
-// ─── Widget Page ──────────────────────────────────────────────────────────────
-
-class _WidgetPage extends StatelessWidget {
-  final VoidCallback onContinue;
-  const _WidgetPage({required this.onContinue});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-          24, 20, 24, MediaQuery.of(context).padding.bottom + 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Mascot bubble
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _MascotIcon(),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: context.surface,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                    border: Border.all(color: context.divider),
-                  ),
-                  child: Text(
-                    'We have a home screen widget — see your streak without opening the app!',
-                    style: AppTypography.titleMedium(),
-                  ),
-                ),
-              ),
-            ],
-          ).animate().fadeIn(duration: 350.ms),
-          const SizedBox(height: 24),
-          // Widget preview card
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.mic_rounded,
-                        color: Colors.white, size: 26),
-                    const SizedBox(width: 8),
-                    Text('Speechy AI',
-                        style:
-                            AppTypography.titleMedium(color: Colors.white)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text('Tap to practice today',
-                    style: AppTypography.bodySmall(
-                        color: Colors.white.withValues(alpha: 0.75))),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    const Icon(Icons.local_fire_department_rounded,
-                        color: Colors.white, size: 16),
-                    const SizedBox(width: 4),
-                    Text('0 day streak',
-                        style: AppTypography.labelSmall(color: Colors.white)),
-                  ],
-                ),
-              ],
-            ),
-          ).animate().fadeIn(delay: 150.ms).scale(
-                begin: const Offset(0.92, 0.92),
-                curve: Curves.easeOutBack,
-              ),
-          const SizedBox(height: 24),
-          Text('How to add it',
-                  style: AppTypography.titleMedium())
-              .animate()
-              .fadeIn(delay: 250.ms),
-          const SizedBox(height: 12),
-          ...[
-            (
-              icon: Icons.touch_app_rounded,
-              step: '1',
-              text: 'Long press empty area on your home screen',
-            ),
-            (
-              icon: Icons.add_circle_outline_rounded,
-              step: '2',
-              text: 'Tap "+" or "Edit" → "Add Widget"',
-            ),
-            (
-              icon: Icons.search_rounded,
-              step: '3',
-              text: 'Search for "Speechy"',
-            ),
-            (
-              icon: Icons.widgets_rounded,
-              step: '4',
-              text: 'Select the widget and tap "Add Widget"',
-            ),
-          ].asMap().entries.map((e) {
-            final s = e.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(s.icon,
-                        size: 18, color: AppColors.primary),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(s.text,
-                        style: AppTypography.bodyMedium(
-                            color: context.textPrimary)),
-                  ),
-                ],
-              )
-                  .animate()
-                  .fadeIn(delay: Duration(milliseconds: 300 + e.key * 60))
-                  .slideX(begin: 0.05),
-            );
-          }),
-          const SizedBox(height: 28),
-          DuoButton.primary(
-            text: 'Got it!',
-            icon: Icons.thumb_up_rounded,
-            width: double.infinity,
-            onTap: onContinue,
-          ).animate().fadeIn(delay: 550.ms),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: onContinue,
-            child: Center(
-              child: Text(
-                'Maybe later',
-                style: AppTypography.labelMedium(
-                    color: context.textSecondary),
-              ),
-            ),
-          ).animate().fadeIn(delay: 600.ms),
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-}
-
 // ─── Notification Page ────────────────────────────────────────────────────────
 
 class _NotifPage extends StatelessWidget {
@@ -964,93 +789,46 @@ class _NotifPage extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Spacer(),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _MascotIcon(),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: context.surface,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                    border: Border.all(color: context.divider),
-                  ),
-                  child: Text(
-                    'Can I remind you to practice every day?',
-                    style: AppTypography.titleMedium(),
-                  ),
-                ),
-              ),
-            ],
-          ).animate().fadeIn(duration: 400.ms),
-          const SizedBox(height: 28),
-          // Notification preview
+          const Spacer(flex: 2),
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            width: 88,
+            height: 88,
             decoration: BoxDecoration(
-              color: context.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: context.divider),
+              color: AppColors.primary.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child:
-                      const Icon(Icons.mic_rounded, color: Colors.white, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Speechy AI', style: AppTypography.labelMedium()),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Ready to practice? Step 1 is waiting for you.',
-                        style: AppTypography.bodySmall(
-                            color: context.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            child: const Icon(
+              Icons.notifications_rounded,
+              size: 44,
+              color: AppColors.primary,
             ),
-          ).animate().fadeIn(delay: 200.ms),
+          ).animate().fadeIn(duration: 400.ms).scale(begin: const Offset(0.8, 0.8)),
+          const SizedBox(height: 28),
+          Text(
+            'Stay on track',
+            style: AppTypography.headlineMedium(),
+            textAlign: TextAlign.center,
+          ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
           const SizedBox(height: 10),
           Text(
-            'Daily reminders + streak alerts. No spam.',
-            style: AppTypography.bodySmall(color: context.textSecondary),
+            'Get a daily nudge so you never miss a practice session or break your streak.',
+            style: AppTypography.bodyMedium(color: context.textSecondary),
             textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 300.ms),
-          const Spacer(),
+          ).animate().fadeIn(delay: 180.ms, duration: 400.ms),
+          const Spacer(flex: 2),
           DuoButton.primary(
             text: 'Allow Notifications',
             width: double.infinity,
             onTap: onAllow,
-          ).animate().fadeIn(delay: 350.ms),
+          ).animate().fadeIn(delay: 260.ms),
           const SizedBox(height: 14),
           TextButton(
             onPressed: onSkip,
             child: Text('Not now',
-                style:
-                    AppTypography.bodyMedium(color: context.textSecondary)),
-          ).animate().fadeIn(delay: 400.ms),
+                style: AppTypography.bodyMedium(color: context.textSecondary)),
+          ).animate().fadeIn(delay: 300.ms),
           const SizedBox(height: 32),
         ],
       ),

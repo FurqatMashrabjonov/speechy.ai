@@ -240,18 +240,6 @@ class AnalyticsScreen extends ConsumerWidget {
           ).animate().fadeIn(delay: 160.ms, duration: 400.ms),
           const SizedBox(height: 20),
 
-          // ── Badges ────────────────────────────────────────────────────────
-          if (progress.badges.isNotEmpty) ...[
-            _SectionCard(
-              title: 'Badges (${progress.badges.length})',
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children:
-                    progress.badges.map((b) => _BadgeChip(badge: b)).toList(),
-              ),
-            ).animate().fadeIn(delay: 240.ms, duration: 400.ms),
-          ],
           const SizedBox(height: 32),
         ],
       ),
@@ -301,84 +289,6 @@ class _MiniStat extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ─── Section Card ────────────────────────────────────────────────────────────
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget child;
-
-  const _SectionCard({required this.title, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5E5), width: 2),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTypography.titleMedium()),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Badge Chip ──────────────────────────────────────────────────────────────
-
-class _BadgeChip extends StatelessWidget {
-  final String badge;
-
-  const _BadgeChip({required this.badge});
-
-  static const _badgeInfo = {
-    'first_conversation': ('First Chat', Icons.chat_bubble_rounded),
-    '5_day_streak': ('5-Day Streak', Icons.local_fire_department_rounded),
-    '10_day_streak': ('10-Day Streak', Icons.local_fire_department_rounded),
-    'perfect_clarity': ('Perfect Clarity', Icons.visibility_rounded),
-    'star_performer': ('Star Performer', Icons.star_rounded),
-    'dedicated_10': ('10 Sessions', Icons.emoji_events_rounded),
-    'dedicated_50': ('50 Sessions', Icons.workspace_premium_rounded),
-    'interviews_5': ('Interview Pro', Icons.work_rounded),
-    'presentations_5': ('Presenter', Icons.slideshow_rounded),
-    'public_speaking_5': ('Public Speaker', Icons.campaign_rounded),
-    'conversations_5': ('Conversationalist', Icons.chat_rounded),
-    'debates_5': ('Debater', Icons.forum_rounded),
-    'storytelling_5': ('Storyteller', Icons.auto_stories_rounded),
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final info = _badgeInfo[badge];
-    final label = info?.$1 ?? badge.replaceAll('_', ' ');
-    final icon = info?.$2 ?? Icons.emoji_events_rounded;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.gold.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: AppColors.gold),
-          const SizedBox(width: 6),
-          Text(label,
-              style: AppTypography.labelSmall(color: AppColors.gold)),
-        ],
       ),
     );
   }

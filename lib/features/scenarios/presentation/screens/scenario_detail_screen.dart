@@ -14,8 +14,15 @@ import 'package:speech_coach/features/paywall/data/usage_service.dart';
 
 class ScenarioDetailScreen extends ConsumerWidget {
   final String scenarioId;
+  final String? trackId;
+  final int? stepOrder;
 
-  const ScenarioDetailScreen({super.key, required this.scenarioId});
+  const ScenarioDetailScreen({
+    super.key,
+    required this.scenarioId,
+    this.trackId,
+    this.stepOrder,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -82,7 +89,7 @@ class ScenarioDetailScreen extends ConsumerWidget {
                         width: 120,
                         height: 120,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, _, _) => Container(
                           width: 120,
                           height: 120,
                           decoration: BoxDecoration(
@@ -204,8 +211,11 @@ class ScenarioDetailScreen extends ConsumerWidget {
 
   void _startPractice(BuildContext context, WidgetRef ref, Scenario scenario) {
     final usage = ref.read(usageServiceProvider);
-    if (!usage.canStartSession()) {
-      context.push('/paywall');
+    if (!usage.canStartSession(trackId: trackId, stepOrder: stepOrder)) {
+      context.push('/paywall', extra: {
+        'trackId': trackId ?? '',
+        'trackTitle': scenario.title,
+      });
       return;
     }
     context.push(

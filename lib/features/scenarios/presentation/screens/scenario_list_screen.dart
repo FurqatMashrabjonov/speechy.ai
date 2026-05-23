@@ -67,7 +67,7 @@ class ScenarioListScreen extends ConsumerWidget {
                         width: 40,
                         height: 40,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
                       ),
                     ),
                 ],
@@ -206,7 +206,7 @@ class _ScenarioCard extends StatelessWidget {
                         ? Image.asset(
                             scenario.imagePath!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildImageFallback(),
+                            errorBuilder: (_, _, _) => _buildImageFallback(),
                           )
                         : _buildImageFallback(),
                   ),

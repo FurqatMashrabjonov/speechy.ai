@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 enum MessageRole { user, ai }
 
+enum ConversationErrorType { network, permission, appCheck, quota, midSession, unknown }
+
 enum ConversationStatus {
   idle,
   connecting,

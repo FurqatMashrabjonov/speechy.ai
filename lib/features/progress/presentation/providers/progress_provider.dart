@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speech_coach/features/assessment/data/assessment_repository.dart';
+import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/feedback/domain/feedback_entity.dart';
 import 'package:speech_coach/features/notifications/data/notification_service.dart';
 import 'package:speech_coach/features/progress/data/progress_remote_repository.dart';
 import 'package:speech_coach/features/progress/data/progress_repository.dart';
 import 'package:speech_coach/features/progress/domain/progress_entity.dart';
-import 'package:speech_coach/features/widgets/data/widget_service.dart';
 import 'package:speech_coach/shared/providers/user_provider.dart';
 
 final progressRepositoryProvider = Provider<ProgressRepository>((ref) {
@@ -16,8 +17,9 @@ final progressRepositoryProvider = Provider<ProgressRepository>((ref) {
 class ProgressNotifier extends StateNotifier<UserProgress> {
   final ProgressRepository _repository;
   final ProgressRemoteRepository _remoteRepository;
+  final AssessmentRepository _assessmentRepository;
 
-  ProgressNotifier(this._repository, this._remoteRepository)
+  ProgressNotifier(this._repository, this._remoteRepository, this._assessmentRepository)
       : super(const UserProgress()) {
     _loadAndSync();
   }
@@ -32,8 +34,8 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
       final daysSinceLast =
           DateTime.now().difference(local.lastSessionDate!).inDays;
       if (daysSinceLast >= 3) {
-        final plan = _planTitle(local);
-        NotificationService.scheduleReEngagement(plan);
+        final trackTitle = _assessmentRepository.getLearningPlan()?.title ?? _planTitle(local);
+        NotificationService.scheduleReEngagement(trackTitle);
       }
     }
 
@@ -169,9 +171,6 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
       debugPrint('ProgressNotifier: Firestore sync failed (non-critical): $e');
     });
 
-    // Update home screen widgets
-    WidgetService.updateWidgetData(state);
-
     // Cancel streak warning — user practiced today
     await NotificationService.cancelStreakWarning();
 
@@ -189,7 +188,6 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
           .length;
       await NotificationService.scheduleWeeklySummary(
         sessionsThisWeek: weekSessions,
-        xpThisWeek: 0,
         streak: newStreak,
       );
     }
@@ -230,5 +228,6 @@ final progressProvider =
     StateNotifierProvider<ProgressNotifier, UserProgress>((ref) {
   final repository = ref.read(progressRepositoryProvider);
   final remoteRepository = ref.read(progressRemoteRepositoryProvider);
-  return ProgressNotifier(repository, remoteRepository);
+  final assessmentRepository = ref.read(assessmentRepositoryProvider);
+  return ProgressNotifier(repository, remoteRepository, assessmentRepository);
 });

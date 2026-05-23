@@ -8,6 +8,7 @@ import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/assessment/data/assessment_data.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
+import 'package:speech_coach/features/paywall/domain/track_tier.dart';
 import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
@@ -19,12 +20,12 @@ class RoadmapCatalogScreen extends ConsumerWidget {
     final plan = ref.watch(learningPlanProvider);
     final sub = ref.watch(subscriptionProvider);
     final activeId = plan?.templateId;
-    final isPro = sub.isPro;
 
-    // Active track first, then rest
+    // Sort: active → purchased → locked
     final sorted = [
       ...allRoadmapMetas.where((m) => m.id == activeId),
-      ...allRoadmapMetas.where((m) => m.id != activeId),
+      ...allRoadmapMetas.where((m) => m.id != activeId && sub.purchasedTiers.containsKey(m.id)),
+      ...allRoadmapMetas.where((m) => m.id != activeId && !sub.purchasedTiers.containsKey(m.id)),
     ];
 
     return Scaffold(
@@ -36,42 +37,7 @@ class RoadmapCatalogScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Tracks', style: AppTypography.titleLarge()),
-                        Text(
-                          isPro
-                              ? 'All tracks unlocked — switch any time'
-                              : 'Your active track is free. Unlock all 5.',
-                          style: AppTypography.bodySmall(
-                              color: context.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (isPro)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.workspace_premium_rounded,
-                              size: 14, color: AppColors.primary),
-                          const SizedBox(width: 4),
-                          Text('Pro',
-                              style: AppTypography.labelSmall(
-                                  color: AppColors.primary)
-                                  .copyWith(fontWeight: FontWeight.w700)),
-                        ],
-                      ),
-                    ),
+                  Text('Tracks', style: AppTypography.headlineLarge()),
                 ],
               ),
             ),
@@ -80,11 +46,12 @@ class RoadmapCatalogScreen extends ConsumerWidget {
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 itemCount: sorted.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (context, i) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final meta = sorted[index];
                   final isActive = meta.id == activeId;
-                  final isUnlocked = isPro || isActive;
+                  final tier = sub.tierForTrack(meta.id);
+                  final isUnlocked = tier != null || isActive;
                   final completedSteps = isActive
                       ? (plan?.steps.where((s) => s.isCompleted).length ?? 0)
                       : 0;
@@ -96,6 +63,7 @@ class RoadmapCatalogScreen extends ConsumerWidget {
                     meta: meta,
                     isActive: isActive,
                     isUnlocked: isUnlocked,
+                    tier: tier,
                     completedSteps: completedSteps,
                     totalSteps: totalSteps,
                     onTap: () => context.push('/tracks/${meta.id}'),
@@ -117,6 +85,7 @@ class _TrackCard extends StatelessWidget {
   final RoadmapMeta meta;
   final bool isActive;
   final bool isUnlocked;
+  final TrackTier? tier;
   final int completedSteps;
   final int totalSteps;
   final VoidCallback onTap;
@@ -125,6 +94,7 @@ class _TrackCard extends StatelessWidget {
     required this.meta,
     required this.isActive,
     required this.isUnlocked,
+    required this.tier,
     required this.completedSteps,
     required this.totalSteps,
     required this.onTap,
@@ -132,6 +102,8 @@ class _TrackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLocked = !isUnlocked;
+
     return Tappable(
       onTap: onTap,
       child: Container(
@@ -139,12 +111,14 @@ class _TrackCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isActive
               ? AppColors.primary.withValues(alpha: 0.07)
-              : AppColors.white,
+              : isLocked
+                  ? context.surface
+                  : context.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isActive
                 ? AppColors.primary.withValues(alpha: 0.4)
-                : const Color(0xFFE5E5E5),
+                : context.divider,
             width: isActive ? 2 : 1.5,
           ),
           boxShadow: isActive
@@ -164,19 +138,15 @@ class _TrackCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               child: () {
                 final bannerPath = AppImages.trackBannerMap[meta.id];
-                if (bannerPath != null) {
-                  return Image.asset(
-                    bannerPath,
-                    width: 64,
-                    height: 64,
-                    fit: BoxFit.cover,
-                  );
-                }
-                return Container(
-                  width: 64,
-                  height: 64,
-                  color: meta.color.withValues(alpha: 0.15),
-                );
+                Widget image = bannerPath != null
+                    ? Image.asset(bannerPath,
+                        width: 64, height: 64, fit: BoxFit.cover)
+                    : Container(
+                        width: 64,
+                        height: 64,
+                        color: meta.color.withValues(alpha: 0.15),
+                      );
+                return image;
               }(),
             ),
             const SizedBox(width: 14),
@@ -209,27 +179,49 @@ class _TrackCard extends StatelessWidget {
                                       color: Colors.white)
                                   .copyWith(fontWeight: FontWeight.w700)),
                         )
-                      else if (!isUnlocked)
-                        const Icon(Icons.lock_rounded,
-                            size: 16, color: Color(0xFFBBBBBB)),
-                      const SizedBox(width: 4),
-                      Icon(Icons.chevron_right_rounded,
-                          size: 20,
-                          color: isActive
-                              ? AppColors.primary
-                              : const Color(0xFFBBBBBB)),
+                      else if (tier != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: tier == TrackTier.ultra
+                                ? const Color(0xFF7C3AED).withValues(alpha: 0.12)
+                                : const Color(0xFFD97706).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: tier == TrackTier.ultra
+                                  ? const Color(0xFF7C3AED).withValues(alpha: 0.35)
+                                  : const Color(0xFFD97706).withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Text(
+                            tier!.displayName,
+                            style: AppTypography.labelSmall(
+                              color: tier == TrackTier.ultra
+                                  ? const Color(0xFF7C3AED)
+                                  : const Color(0xFFD97706),
+                            ).copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        )
+                      else
+                        Icon(
+                          isLocked
+                              ? Icons.lock_rounded
+                              : Icons.chevron_right_rounded,
+                          size: isLocked ? 16 : 20,
+                          color: context.textTertiary,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 3),
                   Text(
                     meta.description,
-                    style: AppTypography.bodySmall(
-                        color: context.textSecondary),
+                    style: AppTypography.bodySmall(color: context.textSecondary),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 8),
                   if (isActive) ...[
-                    const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
@@ -242,23 +234,23 @@ class _TrackCard extends StatelessWidget {
                               minHeight: 5,
                               backgroundColor:
                                   AppColors.primary.withValues(alpha: 0.15),
-                              valueColor:
-                                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  AppColors.primary),
                             ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           '$completedSteps/$totalSteps',
-                          style: AppTypography.labelSmall(color: AppColors.primary)
+                          style: AppTypography.labelSmall(
+                                  color: AppColors.primary)
                               .copyWith(fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
                   ] else ...[
-                    const SizedBox(height: 4),
                     Text(
-                      '${meta.stepCount} steps · ${meta.difficultyLabel}',
+                      '${meta.stepCount} steps',
                       style: AppTypography.labelSmall(
                               color: context.textTertiary)
                           .copyWith(fontSize: 11),

@@ -12,7 +12,6 @@ import 'package:speech_coach/features/conversation/domain/conversation_entity.da
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 import 'package:speech_coach/features/conversation/presentation/providers/conversation_provider.dart';
-import 'package:speech_coach/features/profile/presentation/providers/settings_provider.dart';
 import 'package:speech_coach/features/feedback/presentation/providers/feedback_provider.dart';
 import 'package:speech_coach/features/history/presentation/providers/session_history_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -57,7 +56,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           scenarioTitle: widget.scenarioTitle ?? widget.category,
           scenarioPrompt: widget.scenarioPrompt ?? '',
           durationMinutes: widget.durationMinutes ?? 3,
-          voiceName: ref.read(defaultVoiceProvider),
+          voiceName: 'Puck',
         );
       }
 
@@ -163,7 +162,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                             width: 120,
                             height: 120,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            errorBuilder: (_, _, _) => Container(
                               width: 120,
                               height: 120,
                               decoration: BoxDecoration(
@@ -374,7 +373,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 width: 32,
                 height: 32,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
@@ -442,35 +441,26 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             children: [
               // Error state
               if (state.status == ConversationStatus.error) ...[
-                Icon(
-                  Icons.error_outline_rounded,
-                  size: 48,
-                  color: AppColors.error.withValues(alpha: 0.6),
+                _ErrorCard(
+                  errorType: state.errorType,
+                  message: state.error,
+                  hasMessages: state.messages.isNotEmpty,
+                  hasScenario: state.scenarioId != null,
+                  onRetry: () => ref
+                      .read(conversationProvider(widget.category).notifier)
+                      .startConversation(),
+                  onEndSession: state.scenarioId != null
+                      ? () {
+                          if (!_hasNavigatedToScoreCard) {
+                            _hasNavigatedToScoreCard = true;
+                            ref
+                                .read(conversationProvider(widget.category).notifier)
+                                .endConversation();
+                            _endAndNavigate(state);
+                          }
+                        }
+                      : null,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  state.error ?? 'Something went wrong',
-                  textAlign: TextAlign.center,
-                  style: AppTypography.bodyMedium(color: context.textSecondary),
-                ),
-                const SizedBox(height: 24),
-                DuoButton.primary(
-                  text: 'Try Again',
-                  onTap: () {
-                    ref
-                        .read(conversationProvider(widget.category).notifier)
-                        .startConversation();
-                  },
-                ),
-                if ((state.error ?? '').toLowerCase().contains('permission') ||
-                    (state.error ?? '').toLowerCase().contains('microphone')) ...[
-                  const SizedBox(height: 12),
-                  TextButton.icon(
-                    onPressed: () => launchUrl(Uri.parse('app-settings:')),
-                    icon: Icon(Icons.settings_rounded, color: context.textTertiary, size: 18),
-                    label: Text('Open Settings', style: AppTypography.labelMedium(color: context.textSecondary)),
-                  ),
-                ],
               ] else ...[
                 // AI avatar hero
                 _HeroAvatar(
@@ -886,7 +876,7 @@ class _HeroAvatarState extends State<_HeroAvatar>
                         width: 160,
                         height: 160,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _fallbackAvatar(),
+                        errorBuilder: (_, _, _) => _fallbackAvatar(),
                       )
                     : _fallbackAvatar(),
               ),
@@ -1038,4 +1028,101 @@ class _CaptionOverlay extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Error Card ────────────────────────────────────────────────────────────
+
+class _ErrorCard extends StatelessWidget {
+  final ConversationErrorType? errorType;
+  final String? message;
+  final bool hasMessages;
+  final bool hasScenario;
+  final VoidCallback onRetry;
+  final VoidCallback? onEndSession;
+
+  const _ErrorCard({
+    required this.errorType,
+    required this.message,
+    required this.hasMessages,
+    required this.hasScenario,
+    required this.onRetry,
+    this.onEndSession,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, iconColor) = _iconForType(errorType);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 36, color: iconColor),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            _titleForType(errorType),
+            style: AppTypography.titleLarge(),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message ?? 'Something went wrong.\nPlease try again.',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyMedium(color: context.textSecondary),
+          ),
+          const SizedBox(height: 28),
+          if (errorType == ConversationErrorType.permission) ...[
+            DuoButton.primary(
+              text: 'Open Settings',
+              icon: Icons.settings_rounded,
+              onTap: () => launchUrl(Uri.parse('app-settings:')),
+            ),
+          ] else ...[
+            DuoButton.primary(
+              text: hasMessages ? 'Reconnect' : 'Try Again',
+              icon: Icons.refresh_rounded,
+              onTap: onRetry,
+            ),
+          ],
+          if (hasMessages && hasScenario && onEndSession != null) ...[
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: onEndSession,
+              child: Text(
+                'End & Get Score Card',
+                style: AppTypography.labelLarge(color: context.textSecondary),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _titleForType(ConversationErrorType? type) => switch (type) {
+    ConversationErrorType.network => 'No Internet',
+    ConversationErrorType.permission => 'Microphone Needed',
+    ConversationErrorType.appCheck => 'Connection Failed',
+    ConversationErrorType.quota => 'Service Busy',
+    ConversationErrorType.midSession => 'Connection Lost',
+    _ => 'Something Went Wrong',
+  };
+
+  (IconData, Color) _iconForType(ConversationErrorType? type) => switch (type) {
+    ConversationErrorType.network => (Icons.wifi_off_rounded, AppColors.error),
+    ConversationErrorType.permission => (Icons.mic_off_rounded, AppColors.error),
+    ConversationErrorType.appCheck => (Icons.lock_outline_rounded, AppColors.primary),
+    ConversationErrorType.quota => (Icons.hourglass_empty_rounded, AppColors.primary),
+    ConversationErrorType.midSession => (Icons.signal_wifi_statusbar_connected_no_internet_4_rounded, AppColors.error),
+    _ => (Icons.error_outline_rounded, AppColors.error),
+  };
 }

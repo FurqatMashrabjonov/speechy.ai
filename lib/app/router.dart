@@ -210,8 +210,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           final scenarioId = Uri.decodeComponent(
             state.pathParameters['scenarioId']!,
           );
+          final extra = state.extra as Map<String, dynamic>?;
           return CustomTransitionPage(
-            child: ScenarioDetailScreen(scenarioId: scenarioId),
+            child: ScenarioDetailScreen(
+              scenarioId: scenarioId,
+              trackId: extra?['trackId'] as String?,
+              stepOrder: extra?['stepOrder'] as int?,
+            ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
                 position: Tween<Offset>(
@@ -258,8 +263,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Paywall
       GoRoute(
         path: '/paywall',
-        pageBuilder: (context, state) => CustomTransitionPage(
-          child: const PaywallScreen(),
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final trackId = extra?['trackId'] as String? ?? '';
+          final trackTitle = extra?['trackTitle'] as String? ?? 'This Track';
+          return CustomTransitionPage(
+          child: PaywallScreen(trackId: trackId, trackTitle: trackTitle),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return SlideTransition(
               position: Tween<Offset>(
@@ -272,7 +281,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: child,
             );
           },
-        ),
+          );
+        },
       ),
       GoRoute(
         path: '/history',

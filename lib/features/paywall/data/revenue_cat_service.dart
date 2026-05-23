@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class RevenueCatService {
+  // TODO: replace with production Android API key from RevenueCat dashboard
   static const _apiKey = 'test_wpYJJTxBrHOoUrDwlCMpNiCDbRJ';
-  static const proEntitlementId = 'pro';
 
   bool _initialized = false;
 
@@ -27,12 +27,11 @@ class RevenueCatService {
   Future<bool> checkProStatus() async {
     try {
       final customerInfo = await Purchases.getCustomerInfo();
-      final isPro =
-          customerInfo.entitlements.all[proEntitlementId]?.isActive ?? false;
-      log('[RevenueCat] Pro status: $isPro');
-      return isPro;
+      final hasAny = customerInfo.entitlements.active.isNotEmpty;
+      log('[RevenueCat] Has active entitlement: $hasAny');
+      return hasAny;
     } catch (e) {
-      log('[RevenueCat] Error checking pro status: $e');
+      log('[RevenueCat] Error checking status: $e');
       return false;
     }
   }
@@ -50,8 +49,10 @@ class RevenueCatService {
 
   Future<bool> purchasePackage(Package package) async {
     try {
-      final result = await Purchases.purchasePackage(package);
-      return result.customerInfo.entitlements.all[proEntitlementId]?.isActive ?? false;
+      final result = await Purchases.purchase(PurchaseParams.package(package));
+      // Check the specific tier entitlement (identifier = 'basic'/'pro'/'ultra')
+      final entitlement = result.customerInfo.entitlements.all[package.identifier];
+      return entitlement?.isActive ?? result.customerInfo.entitlements.active.isNotEmpty;
     } on PlatformException catch (e) {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
       if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
@@ -66,10 +67,9 @@ class RevenueCatService {
   Future<bool> restorePurchases() async {
     try {
       final customerInfo = await Purchases.restorePurchases();
-      final isPro =
-          customerInfo.entitlements.all[proEntitlementId]?.isActive ?? false;
-      log('[RevenueCat] Restore result - isPro: $isPro');
-      return isPro;
+      final hasAny = customerInfo.entitlements.active.isNotEmpty;
+      log('[RevenueCat] Restore result - has active: $hasAny');
+      return hasAny;
     } catch (e) {
       log('[RevenueCat] Restore error: $e');
       return false;

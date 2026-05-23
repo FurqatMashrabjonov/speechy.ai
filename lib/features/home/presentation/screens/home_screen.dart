@@ -8,14 +8,14 @@ import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/skeleton.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
-import 'package:speech_coach/features/progress/presentation/providers/progress_provider.dart';
 import 'package:speech_coach/features/auth/presentation/providers/auth_provider.dart';
-import 'package:speech_coach/features/progress/domain/progress_entity.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
+import 'package:speech_coach/features/progress/presentation/providers/progress_provider.dart';
 import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dart';
 import 'package:speech_coach/features/scenarios/data/scenario_repository.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
-import 'package:speech_coach/features/paywall/data/usage_service.dart';
+import 'package:speech_coach/shared/widgets/user_avatar.dart';
+import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -25,81 +25,68 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  String get _greeting {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final todayCount = ref.watch(progressProvider.select((p) {
-      final today = DateTime.now();
-      final d = DateTime(today.year, today.month, today.day);
-      return p.sessionHistory.where((s) {
-        final sd = DateTime(s.date.year, s.date.month, s.date.day);
-        return sd == d;
-      }).length;
-    }));
-    final progress = ref.watch(progressProvider);
     final firstName = ref.watch(authStateProvider.select((s) {
       final name = s.whenData((u) => u?.displayName).value;
       if (name == null || name.isEmpty) return 'Speaker';
       return name.split(' ').first;
     }));
-    final usage = ref.watch(usageServiceProvider);
     final plan = ref.watch(learningPlanProvider);
+
+    // Today's session count vs daily target
+    final todaySessions = ref.watch(progressProvider.select((p) {
+      final today = DateTime.now();
+      return p.sessionHistory
+          .where((s) =>
+              s.date.year == today.year &&
+              s.date.month == today.month &&
+              s.date.day == today.day)
+          .length;
+    }));
+    final dailyTarget = plan?.sessionsPerDayTarget ?? 1;
+    final dailyGoalDone = todaySessions >= dailyTarget;
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
 
-              _Header(
-                greeting: _greeting,
-                firstName: firstName,
-                progress: progress,
-              ).animate().fadeIn(duration: 400.ms),
+              _Header(firstName: firstName).animate().fadeIn(duration: 400.ms),
               const SizedBox(height: 16),
 
-              // Daily goal strip — only when plan exists
-              if (plan != null)
-                _DailyGoalStrip(
-                  target: plan.sessionsPerDayTarget,
-                  done: todayCount,
-                ).animate().fadeIn(delay: 80.ms, duration: 400.ms),
-              if (plan != null) const SizedBox(height: 14),
-
-              // Free sessions banner
-              if (!usage.isPro &&
-                  usage.totalFreeSessionsUsed < UsageService.freeTotalSessions)
-                _FreeSessionsBanner(remaining: usage.remainingSessions)
+              // Daily goal complete banner — shows when target reached
+              if (dailyGoalDone && plan != null)
+                _DailyGoalBanner(
+                  sessionsToday: todaySessions,
+                  target: dailyTarget,
+                )
                     .animate()
-                    .fadeIn(delay: 100.ms, duration: 400.ms),
-              if (!usage.isPro &&
-                  usage.totalFreeSessionsUsed < UsageService.freeTotalSessions)
-                const SizedBox(height: 14),
+                    .fadeIn(delay: 80.ms, duration: 350.ms)
+                    .slideY(begin: -0.05),
+              if (dailyGoalDone && plan != null) const SizedBox(height: 10),
 
               // Quick-start CTA — most important action, always visible
-              if (plan != null && plan.nextStep != null)
+              if (plan != null && plan.nextStep != null && !dailyGoalDone)
                 _QuickStartButton(plan: plan)
                     .animate()
                     .fadeIn(delay: 120.ms, duration: 400.ms)
                     .slideY(begin: 0.04),
-              if (plan != null && plan.nextStep != null)
+              if (plan != null && plan.nextStep != null && !dailyGoalDone)
                 const SizedBox(height: 14),
 
-              // Roadmap — vertical Duolingo path
-              _RoadmapHero()
-                  .animate()
-                  .fadeIn(delay: 150.ms, duration: 400.ms)
-                  .slideY(begin: 0.04),
-              const SizedBox(height: 32),
+              // Roadmap — fills all remaining vertical space
+              Expanded(
+                child: _RoadmapHero()
+                    .animate()
+                    .fadeIn(delay: 150.ms, duration: 400.ms)
+                    .slideY(begin: 0.04),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -110,230 +97,167 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
 // ── Header ───────────────────────────────────────────────────────────────────
 
-class _Header extends StatelessWidget {
-  final String greeting;
+class _Header extends ConsumerWidget {
   final String firstName;
-  final UserProgress progress;
 
-  const _Header({
-    required this.greeting,
-    required this.firstName,
-    required this.progress,
-  });
+  const _Header({required this.firstName});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final streak = ref.watch(progressProvider.select((p) => p.streak));
+    final photoUrl = ref.watch(authStateProvider.select((s) => s.value?.photoURL));
+    final tier = ref.watch(subscriptionProvider.select((s) => s.highestTier));
+
     return Row(
       children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.person_rounded,
-              color: AppColors.primary, size: 22),
-        ),
+        UserAvatar(photoUrl: photoUrl, name: firstName, radius: 21),
         const SizedBox(width: 12),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                greeting.toUpperCase(),
-                style: AppTypography.labelSmall(color: context.textTertiary)
-                    .copyWith(letterSpacing: 1.0, fontSize: 10),
-              ),
-              Text(firstName, style: AppTypography.headlineSmall()),
-            ],
-          ),
+          child: Text(firstName, style: AppTypography.headlineSmall()),
         ),
-        _HeaderPill(
-          icon: Icons.local_fire_department_rounded,
-          value: '${progress.streak}',
-          color: AppColors.error,
-        ),
-        const SizedBox(width: 8),
-        _HeaderPill(
-          icon: Icons.bar_chart_rounded,
-          value: progress.avgScore > 0 ? '${progress.avgScore}' : '--',
-          label: 'avg',
-          color: AppColors.accent,
-        ),
-        const SizedBox(width: 8),
-        Builder(builder: (ctx) {
-          return Tappable(
-            onTap: () => ctx.push('/settings'),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: context.surface,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.settings_outlined,
-                  color: context.textSecondary, size: 18),
-            ),
-          );
-        }),
+        if (streak > 0) _StreakPill(streak: streak, isPremium: tier != null),
       ],
     );
   }
 }
 
-class _HeaderPill extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final Color color;
-  final String? label;
-
-  const _HeaderPill(
-      {required this.icon, required this.value, required this.color, this.label});
+class _StreakPill extends StatelessWidget {
+  final int streak;
+  final bool isPremium;
+  const _StreakPill({required this.streak, this.isPremium = false});
 
   @override
   Widget build(BuildContext context) {
+    final colors = isPremium
+        ? const [Color(0xFFB45309), Color(0xFFD97706)]
+        : const [Color(0xFFFF6B35), Color(0xFFFF9500)];
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        gradient: LinearGradient(colors: colors),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
+          const Icon(Icons.local_fire_department_rounded,
+              color: Colors.white, size: 16),
+          const SizedBox(width: 3),
           Text(
-            value,
-            style: AppTypography.labelSmall(color: color)
-                .copyWith(fontWeight: FontWeight.w800),
+            '$streak',
+            style: AppTypography.titleMedium(color: Colors.white)
+                .copyWith(fontWeight: FontWeight.w800, fontSize: 14),
           ),
-          if (label != null) ...[
-            const SizedBox(width: 2),
-            Text(
-              label!,
-              style: AppTypography.labelSmall(color: color.withValues(alpha: 0.7))
-                  .copyWith(fontSize: 9, fontWeight: FontWeight.w600),
-            ),
-          ],
         ],
       ),
     );
   }
 }
 
-// ── Daily goal strip ─────────────────────────────────────────────────────────
+// ── Daily Goal Banner ─────────────────────────────────────────────────────────
 
-class _DailyGoalStrip extends StatelessWidget {
+class _DailyGoalBanner extends StatelessWidget {
+  final int sessionsToday;
   final int target;
-  final int done;
 
-  const _DailyGoalStrip({required this.target, required this.done});
-
-  @override
-  Widget build(BuildContext context) {
-    final isComplete = done >= target;
-    final color = isComplete ? AppColors.success : AppColors.primary;
-    final dots = target.clamp(1, 5);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isComplete
-                ? Icons.check_circle_rounded
-                : Icons.flag_rounded,
-            size: 16,
-            color: color,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              isComplete
-                  ? 'Daily goal complete!'
-                  : "Today's goal: $target session${target > 1 ? 's' : ''}",
-              style: AppTypography.labelSmall(color: color)
-                  .copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Row(
-            children: List.generate(dots, (i) {
-              final filled = i < done;
-              return Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: filled ? color : color.withValues(alpha: 0.2),
-                    border: Border.all(
-                        color: color.withValues(alpha: 0.4), width: 1),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Free sessions banner ──────────────────────────────────────────────────────
-
-class _FreeSessionsBanner extends StatelessWidget {
-  final int remaining;
-
-  const _FreeSessionsBanner({required this.remaining});
+  const _DailyGoalBanner({
+    required this.sessionsToday,
+    required this.target,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final color = remaining == 1 ? AppColors.error : AppColors.warning;
+    final isIntensive = target >= 3;
+    final List<Color> gradientColors = isIntensive
+        ? [const Color(0xFFFF6B35), const Color(0xFFFF9500)]
+        : [const Color(0xFF22C55E), const Color(0xFF16A34A)];
+    final shadowColor = isIntensive
+        ? const Color(0xFFFF6B35)
+        : const Color(0xFF22C55E);
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor.withValues(alpha: 0.32),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline_rounded, size: 16, color: color),
-          const SizedBox(width: 8),
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Icon(
+                isIntensive ? Icons.local_fire_department_rounded : Icons.check_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              remaining == 1
-                  ? 'Last free session! Unlock to keep going.'
-                  : '$remaining free sessions remaining.',
-              style: AppTypography.labelSmall(color: color)
-                  .copyWith(fontWeight: FontWeight.w600),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Today's goal complete!",
+                  style: AppTypography.titleMedium(color: Colors.white)
+                      .copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  isIntensive
+                      ? 'Great push — rest and come back tomorrow.'
+                      : 'Come back tomorrow — spaced practice sticks.',
+                  style: AppTypography.bodySmall(
+                      color: Colors.white.withValues(alpha: 0.88)),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
-          Tappable(
-            onTap: () => context.push('/paywall'),
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                '$sessionsToday/$target',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
               ),
-              child: Text('Unlock',
-                  style: AppTypography.labelSmall(color: AppColors.white)
-                      .copyWith(fontWeight: FontWeight.w700)),
-            ),
+              Text(
+                'today',
+                style: AppTypography.labelSmall(
+                    color: Colors.white.withValues(alpha: 0.8)),
+              ),
+            ],
           ),
         ],
       ),
@@ -356,6 +280,7 @@ class _QuickStartButton extends StatelessWidget {
     return Tappable(
       onTap: () => context.push(
         '/scenario/${Uri.encodeComponent(nextStep.scenarioId)}',
+        extra: {'trackId': plan.templateId, 'stepOrder': nextStep.order},
       ),
       child: Container(
         width: double.infinity,
@@ -455,29 +380,14 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
     final allComplete = currentIdx == -1;
     final effectiveIdx = allComplete ? plan.steps.length : currentIdx;
 
-    // Show window: 2 completed before current + current + 4 upcoming = 7 max
-    final startIdx = (effectiveIdx - 2).clamp(0, plan.steps.length);
-    final endIdx = (startIdx + 7).clamp(0, plan.steps.length);
-    final visibleSteps = plan.steps.sublist(startIdx, endIdx);
-
-    final nextStep = plan.nextStep;
-    final repo = ScenarioRepository();
-    final nextScenario =
-        nextStep != null ? repo.getById(nextStep.scenarioId) : null;
-
     return Container(
       width: double.infinity,
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: context.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE5E5E5), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: context.divider, width: 2),
+        boxShadow: context.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -539,7 +449,7 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
               child: LinearProgressIndicator(
                 value: plan.progressPercent,
                 minHeight: 6,
-                backgroundColor: const Color(0xFFF0F0F0),
+                backgroundColor: context.divider,
                 valueColor:
                     const AlwaysStoppedAnimation<Color>(AppColors.success),
               ),
@@ -576,103 +486,105 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
             ),
 
           // ── Vertical Duolingo path ────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 20, 18, 4),
-            child: Column(
+          Expanded(
+            child: Stack(
               children: [
-                for (int i = 0; i < visibleSteps.length; i++) ...[
-                  _VerticalStepRow(
-                    step: visibleSteps[i],
-                    globalIndex: startIdx + i,
-                    isCurrent: (startIdx + i) == effectiveIdx,
-                    isLocked: (startIdx + i) > effectiveIdx,
+                ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
+                  itemCount: plan.steps.length,
+                  separatorBuilder: (_, i) =>
+                      _VerticalConnector(filled: i < effectiveIdx),
+                  itemBuilder: (_, i) => _VerticalStepRow(
+                    step: plan.steps[i],
+                    globalIndex: i,
+                    isCurrent: i == effectiveIdx,
+                    isLocked: i > effectiveIdx,
                     pulseController: _pulse,
-                    onTap: (startIdx + i) == effectiveIdx
+                    onTap: i <= effectiveIdx
                         ? () => context.push(
-                              '/scenario/${Uri.encodeComponent(visibleSteps[i].scenarioId)}',
+                              '/scenario/${Uri.encodeComponent(plan.steps[i].scenarioId)}',
                             )
                         : null,
                   ),
-                  if (i < visibleSteps.length - 1)
-                    _VerticalConnector(
-                      filled: (startIdx + i) < effectiveIdx,
-                    ),
-                ],
-                // "See all X steps" link if plan has more
-                if (plan.totalSteps > 7)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Tappable(
-                      onTap: () => context.push('/tracks/${plan.templateId}'),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'See all ${plan.totalSteps} steps',
-                            style: AppTypography.labelSmall(
-                                    color: AppColors.primary)
-                                .copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.keyboard_arrow_down_rounded,
-                              size: 16, color: AppColors.primary),
-                        ],
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: IgnorePointer(
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            context.card.withValues(alpha: 0),
+                            context.card,
+                          ],
+                        ),
                       ),
                     ),
                   ),
+                ),
               ],
             ),
           ),
 
-          // ── CTA ───────────────────────────────────────────────────────────
+          // ── Track complete banner ──────────────────────────────────────────
           if (allComplete)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: AppColors.success.withValues(alpha: 0.25)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.emoji_events_rounded,
-                        color: AppColors.success, size: 24),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Track Complete!',
-                              style: AppTypography.titleMedium(
-                                  color: AppColors.success)),
-                          Text('Ready for Level ${plan.chainLevel + 1}?',
-                              style: AppTypography.bodySmall(
-                                  color: context.textSecondary)),
-                        ],
-                      ),
+              child: Tappable(
+                onTap: () => ref.read(learningPlanProvider.notifier).unlockNextLevel(),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.success.withValues(alpha: 0.12),
+                        AppColors.primary.withValues(alpha: 0.08),
+                      ],
                     ),
-                  ],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.success.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.emoji_events_rounded,
+                          color: AppColors.success, size: 24),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Track Complete!',
+                                style: AppTypography.titleMedium(
+                                    color: AppColors.success)),
+                            Text('Tap to start Level ${plan.chainLevel + 1} →',
+                                style: AppTypography.bodySmall(
+                                    color: context.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.success,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Level ${plan.chainLevel + 1}',
+                          style: AppTypography.labelSmall(color: Colors.white)
+                              .copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            )
-          else if (nextScenario != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: DuoButton.primary(
-                text: 'Start Step ${plan.completedCount + 1}: ${nextScenario.title}',
-                icon: Icons.play_arrow_rounded,
-                width: double.infinity,
-                onTap: () => context.push(
-                  '/scenario/${Uri.encodeComponent(nextStep!.scenarioId)}',
-                ),
-              ),
-            )
-          else
-            const SizedBox(height: 16),
+            ),
         ],
       ),
     );
@@ -847,6 +759,20 @@ class _VerticalStepRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  title,
+                  style: AppTypography.bodyMedium().copyWith(
+                    fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                    color: isLocked
+                        ? context.textTertiary
+                        : isCurrent
+                            ? AppColors.primary
+                            : context.textPrimary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
                 Row(
                   children: [
                     Container(
@@ -854,7 +780,7 @@ class _VerticalStepRow extends StatelessWidget {
                       height: 6,
                       decoration: BoxDecoration(
                         color: isLocked
-                            ? const Color(0xFFD1D5DB)
+                            ? context.textTertiary
                             : _difficultyColor,
                         shape: BoxShape.circle,
                       ),
@@ -864,25 +790,11 @@ class _VerticalStepRow extends StatelessWidget {
                       step.difficulty.toUpperCase(),
                       style: AppTypography.labelSmall(
                         color: isLocked
-                            ? const Color(0xFFBBBBBB)
+                            ? context.textTertiary
                             : _difficultyColor,
                       ).copyWith(fontSize: 10, fontWeight: FontWeight.w700),
                     ),
                   ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  title,
-                  style: AppTypography.bodyMedium().copyWith(
-                    fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-                    color: isLocked
-                        ? const Color(0xFFBBBBBB)
-                        : isCurrent
-                            ? AppColors.primary
-                            : context.textPrimary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (step.isCompleted && step.score != null)
                   Padding(
@@ -925,7 +837,7 @@ class _VerticalConnector extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: filled
                       ? AppColors.success
-                      : const Color(0xFFE5E7EB),
+                      : context.divider,
                   borderRadius: BorderRadius.circular(1),
                 ),
               ),
@@ -946,11 +858,12 @@ class _NoRoadmapCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: context.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE5E5E5), width: 2),
+        border: Border.all(color: context.divider, width: 2),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.map_outlined, size: 40, color: AppColors.primary),
           const SizedBox(height: 12),

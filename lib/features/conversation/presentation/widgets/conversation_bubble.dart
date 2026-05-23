@@ -111,7 +111,7 @@ class _AiAvatar extends StatelessWidget {
           width: 28,
           height: 28,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _defaultAvatar(),
+          errorBuilder: (_, _, _) => _defaultAvatar(),
         ),
       );
     }

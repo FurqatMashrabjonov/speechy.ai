@@ -151,7 +151,7 @@ class _CategoryCard extends StatelessWidget {
                       ? Image.asset(
                           imagePath,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildIconFallback(),
+                          errorBuilder: (_, _, _) => _buildIconFallback(),
                         )
                       : _buildIconFallback(),
                 ),

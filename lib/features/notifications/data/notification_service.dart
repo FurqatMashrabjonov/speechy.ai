@@ -95,12 +95,11 @@ class NotificationService {
   // ── 4. Weekly summary — Sunday 7pm ────────────────────────────────────────
   static Future<void> scheduleWeeklySummary({
     required int sessionsThisWeek,
-    required int xpThisWeek,
     required int streak,
   }) async {
     await _plugin.cancel(_idWeeklySummary);
     final now = tz.TZDateTime.now(tz.local);
-    // Next Sunday at 19:00
+    // Next Sunday at 19:00 (if today is Sunday, schedule for next week)
     final daysUntilSunday = (DateTime.sunday - now.weekday) % 7;
     final sunday = tz.TZDateTime(
       tz.local,
@@ -111,12 +110,11 @@ class NotificationService {
       0,
     );
 
-    final xpText = xpThisWeek > 0 ? '+$xpThisWeek XP' : 'new XP';
+    final sessionText = sessionsThisWeek == 1 ? '1 session' : '$sessionsThisWeek sessions';
     await _schedule(
       id: _idWeeklySummary,
       title: 'Your week in review',
-      body:
-          '$sessionsThisWeek sessions · $xpText · 🔥 $streak streak. Keep it up!',
+      body: '$sessionText this week · 🔥 $streak-day streak. Keep it up!',
       scheduledDate: sunday,
       repeat: false,
     );

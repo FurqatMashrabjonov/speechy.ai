@@ -1,47 +1,62 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:speech_coach/features/assessment/data/assessment_data.dart';
 import 'package:speech_coach/features/paywall/data/revenue_cat_service.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
+import 'package:speech_coach/features/paywall/domain/track_tier.dart';
 
 class SubscriptionState {
-  final bool isPro;
   final bool isPurchasing;
   final bool isRestoring;
   final List<Package> availablePackages;
+  final Map<String, TrackTier> purchasedTiers; // trackId → tier
   final String? error;
 
   const SubscriptionState({
-    this.isPro = false,
     this.isPurchasing = false,
     this.isRestoring = false,
     this.availablePackages = const [],
+    this.purchasedTiers = const {},
     this.error,
   });
 
-  Package? get monthlyPackage => _findPackage(PackageType.monthly);
-  Package? get yearlyPackage => _findPackage(PackageType.annual);
-  Package? get lifetimePackage => _findPackage(PackageType.lifetime);
+  // Legacy — kept so existing widgets that read isPro don't break immediately.
+  // Will be removed once all screens are migrated.
+  bool get isPro => purchasedTiers.isNotEmpty;
 
-  Package? _findPackage(PackageType type) {
+  /// Highest tier the user has purchased across all tracks.
+  TrackTier? get highestTier {
+    TrackTier? best;
+    for (final tier in purchasedTiers.values) {
+      if (best == null || tier.sessionCount > best.sessionCount) best = tier;
+    }
+    return best;
+  }
+
+  TrackTier? tierForTrack(String trackId) => purchasedTiers[trackId];
+
+  bool isTrackUnlocked(String trackId) => purchasedTiers.containsKey(trackId);
+
+  Package? packageForTier(TrackTier tier) {
     for (final pkg in availablePackages) {
-      if (pkg.packageType == type) return pkg;
+      if (pkg.identifier == tier.revenueCatIdentifier) return pkg;
     }
     return null;
   }
 
   SubscriptionState copyWith({
-    bool? isPro,
     bool? isPurchasing,
     bool? isRestoring,
     List<Package>? availablePackages,
+    Map<String, TrackTier>? purchasedTiers,
     String? error,
   }) {
     return SubscriptionState(
-      isPro: isPro ?? this.isPro,
       isPurchasing: isPurchasing ?? this.isPurchasing,
       isRestoring: isRestoring ?? this.isRestoring,
       availablePackages: availablePackages ?? this.availablePackages,
+      purchasedTiers: purchasedTiers ?? this.purchasedTiers,
       error: error,
     );
   }
@@ -52,25 +67,22 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
   final UsageService _usageService;
 
   SubscriptionNotifier(this._service, this._usageService)
-    : super(const SubscriptionState()) {
+      : super(const SubscriptionState()) {
     _init();
   }
 
   Future<void> _init() async {
-    final isPro = await _service.checkProStatus();
-    await _syncPro(isPro);
-
+    _loadStoredTiers();
     await loadOfferings();
+  }
 
-    _service.addCustomerInfoListener((customerInfo) {
-      final active =
-          customerInfo
-              .entitlements
-              .all[RevenueCatService.proEntitlementId]
-              ?.isActive ??
-          false;
-      _syncPro(active);
-    });
+  void _loadStoredTiers() {
+    final tiers = <String, TrackTier>{};
+    for (final meta in allRoadmapMetas) {
+      final tier = _usageService.getTrackTier(meta.id);
+      if (tier != null) tiers[meta.id] = tier;
+    }
+    state = state.copyWith(purchasedTiers: tiers);
   }
 
   Future<void> loadOfferings() async {
@@ -79,47 +91,57 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     state = state.copyWith(availablePackages: packages);
   }
 
-  Future<void> purchase(Package? package) async {
+  /// Purchase a tier for a specific track.
+  Future<bool> purchaseTier({
+    required String trackId,
+    required TrackTier tier,
+  }) async {
     state = state.copyWith(isPurchasing: true, error: null);
 
-    // Simulate purchase for development/fallback when RevenueCat isn't configured
+    final package = state.packageForTier(tier);
+
     if (package == null) {
-      await Future.delayed(const Duration(seconds: 1));
-      await _syncPro(true);
+      // Dev fallback: simulate purchase
+      await Future.delayed(const Duration(milliseconds: 800));
+      await _applyTier(trackId, tier);
       state = state.copyWith(isPurchasing: false);
-      return;
+      return true;
     }
 
     try {
-      final isPro = await _service.purchasePackage(package);
-      await _syncPro(isPro);
+      final success = await _service.purchasePackage(package);
+      if (success) await _applyTier(trackId, tier);
       state = state.copyWith(isPurchasing: false);
+      return success;
     } on PurchaseCancelledException {
       state = state.copyWith(isPurchasing: false);
+      return false;
     } on PlatformException catch (_) {
       state = state.copyWith(
         isPurchasing: false,
         error: 'Purchase failed. Please try again.',
       );
+      return false;
     } catch (_) {
       state = state.copyWith(
         isPurchasing: false,
         error: 'Purchase failed. Please try again.',
       );
+      return false;
     }
   }
 
-  Future<void> restore() async {
+  Future<void> restore({required String trackId}) async {
     state = state.copyWith(isRestoring: true, error: null);
     try {
       final isPro = await _service.restorePurchases();
-      await _syncPro(isPro);
       if (!isPro) {
         state = state.copyWith(
           isRestoring: false,
           error: 'No previous purchases found.',
         );
       } else {
+        await _applyTier(trackId, TrackTier.ultra);
         state = state.copyWith(isRestoring: false);
       }
     } catch (_) {
@@ -130,35 +152,15 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     }
   }
 
-  /// Show RevenueCat's remote paywall. Syncs pro status after.
-  Future<void> showPaywall() async {
-    final purchased = await _service.presentPaywall();
-    if (purchased) {
-      final isPro = await _service.checkProStatus();
-      await _syncPro(isPro);
+  Future<void> _applyTier(String trackId, TrackTier tier) async {
+    await _usageService.setTrackTier(trackId, tier);
+    final updated = Map<String, TrackTier>.from(state.purchasedTiers);
+    // Only upgrade, never downgrade
+    final current = updated[trackId];
+    if (current == null || tier.sessionCount > current.sessionCount) {
+      updated[trackId] = tier;
     }
-  }
-
-  /// Show paywall only if user is not pro. Syncs pro status after.
-  Future<void> showPaywallIfNeeded() async {
-    final purchased = await _service.presentPaywallIfNeeded();
-    if (purchased) {
-      final isPro = await _service.checkProStatus();
-      await _syncPro(isPro);
-    }
-  }
-
-  /// Open Customer Center for subscription management.
-  Future<void> showCustomerCenter() async {
-    await _service.presentCustomerCenter();
-    // Re-check status after Customer Center closes (user may have cancelled)
-    final isPro = await _service.checkProStatus();
-    await _syncPro(isPro);
-  }
-
-  Future<void> _syncPro(bool isPro) async {
-    await _usageService.setPro(isPro);
-    state = state.copyWith(isPro: isPro);
+    state = state.copyWith(purchasedTiers: updated);
   }
 }
 
@@ -168,7 +170,7 @@ final revenueCatServiceProvider = Provider<RevenueCatService>((ref) {
 
 final subscriptionProvider =
     StateNotifierProvider<SubscriptionNotifier, SubscriptionState>((ref) {
-      final service = ref.read(revenueCatServiceProvider);
-      final usageService = ref.read(usageServiceProvider);
-      return SubscriptionNotifier(service, usageService);
-    });
+  final service = ref.read(revenueCatServiceProvider);
+  final usageService = ref.read(usageServiceProvider);
+  return SubscriptionNotifier(service, usageService);
+});

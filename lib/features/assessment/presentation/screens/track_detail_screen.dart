@@ -9,6 +9,8 @@ import 'package:speech_coach/features/assessment/data/assessment_data.dart';
 import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
+import 'package:speech_coach/features/paywall/data/usage_service.dart';
+import 'package:speech_coach/features/paywall/domain/track_tier.dart';
 import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
 import 'package:speech_coach/features/scenarios/domain/scenario_entity.dart';
 import 'package:speech_coach/features/scenarios/presentation/providers/scenario_provider.dart';
@@ -27,9 +29,9 @@ class TrackDetailScreen extends ConsumerWidget {
     );
     final plan = ref.watch(learningPlanProvider);
     final sub = ref.watch(subscriptionProvider);
+    final usageService = ref.read(usageServiceProvider);
     final isActive = plan?.templateId == trackId;
-    final isPro = sub.isPro;
-    final isUnlocked = isPro || isActive;
+    final tier = sub.tierForTrack(trackId);
 
     final displayPlan =
         isActive ? plan! : generatePlanFromTemplateId(trackId);
@@ -41,6 +43,17 @@ class TrackDetailScreen extends ConsumerWidget {
         ? ref.watch(scenarioByIdProvider(nextStep.scenarioId))
         : null;
 
+    // A step is accessible if tier covers it AND attempts remain, or free trials remain
+    bool stepAccessible(int stepOrder) {
+      if (tier != null) {
+        return stepOrder < tier.sessionCount &&
+            usageService.canAttemptStep(trackId, stepOrder);
+      }
+      return isActive &&
+          usageService.hasFreeSessionsLeft &&
+          usageService.canAttemptStep(trackId, stepOrder);
+    }
+
     return Scaffold(
       backgroundColor: context.isDark ? AppColors.backgroundDark : const Color(0xFFF7F7F7),
       body: Stack(
@@ -48,7 +61,7 @@ class TrackDetailScreen extends ConsumerWidget {
           CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
-                child: _HeroHeader(meta: meta, isActive: isActive, isPro: isPro),
+                child: _HeroHeader(meta: meta, isActive: isActive, tier: tier),
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
@@ -58,13 +71,18 @@ class TrackDetailScreen extends ConsumerWidget {
                       final step = steps[i];
                       final scenario =
                           ref.watch(scenarioByIdProvider(step.scenarioId));
+                      final accessible = stepAccessible(step.order);
+                      final maxAttempts = tier?.maxAttempts ?? 1;
+                      final attemptsLeft = maxAttempts -
+                          usageService.getAttemptCount(trackId, step.order);
                       return _StepTile(
                         step: step,
                         scenario: scenario,
                         isCurrent: isActive && step.order == currentOrder,
-                        isTrackUnlocked: isUnlocked,
+                        isAccessible: accessible,
                         isLast: i == steps.length - 1,
                         trackColor: meta.color,
+                        attemptsLeft: attemptsLeft,
                       )
                           .animate(delay: (i * 25).ms)
                           .fadeIn(duration: 220.ms)
@@ -83,7 +101,8 @@ class TrackDetailScreen extends ConsumerWidget {
             child: _BottomCta(
               meta: meta,
               isActive: isActive,
-              isUnlocked: isUnlocked,
+              tier: tier,
+              hasFreeTrials: usageService.hasFreeSessionsLeft,
               nextStep: nextStep,
               nextScenario: nextScenario,
               planComplete: isActive && (plan?.isComplete ?? false),
@@ -91,14 +110,8 @@ class TrackDetailScreen extends ConsumerWidget {
                 final s = nextScenario;
                 if (s == null) return;
                 context.push(
-                  '/conversation/${Uri.encodeComponent(s.category)}',
-                  extra: {
-                    'scenarioId': s.id,
-                    'scenarioTitle': s.title,
-                    'scenarioPrompt': s.systemPrompt,
-                    'durationMinutes': s.durationMinutes,
-                    'userRole': s.userRole,
-                  },
+                  '/scenario/${Uri.encodeComponent(s.id)}',
+                  extra: {'trackId': trackId, 'stepOrder': nextStep?.order},
                 );
               },
               onSwitch: () async {
@@ -107,7 +120,10 @@ class TrackDetailScreen extends ConsumerWidget {
                     .switchRoadmap(trackId);
                 if (context.mounted) context.pop();
               },
-              onUnlock: () => context.push('/paywall'),
+              onUnlock: () => context.push('/paywall', extra: {
+                'trackId': trackId,
+                'trackTitle': meta.title,
+              }),
             ),
           ),
         ],
@@ -123,12 +139,12 @@ class TrackDetailScreen extends ConsumerWidget {
 class _HeroHeader extends StatelessWidget {
   final RoadmapMeta meta;
   final bool isActive;
-  final bool isPro;
+  final TrackTier? tier;
 
   const _HeroHeader({
     required this.meta,
     required this.isActive,
-    required this.isPro,
+    required this.tier,
   });
 
   @override
@@ -174,7 +190,7 @@ class _HeroHeader extends StatelessWidget {
                       onPressed: () => context.pop(),
                     ),
                     const Spacer(),
-                    if (isPro)
+                    if (tier != null)
                       Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: Container(
@@ -190,7 +206,7 @@ class _HeroHeader extends StatelessWidget {
                               const Icon(Icons.workspace_premium_rounded,
                                   size: 14, color: Colors.white),
                               const SizedBox(width: 4),
-                              Text('Pro',
+                              Text(tier!.displayName,
                                   style: AppTypography.labelSmall(
                                           color: Colors.white)
                                       .copyWith(fontWeight: FontWeight.w700)),
@@ -306,17 +322,19 @@ class _StepTile extends StatelessWidget {
   final PlanStep step;
   final Scenario? scenario;
   final bool isCurrent;
-  final bool isTrackUnlocked;
+  final bool isAccessible;
   final bool isLast;
   final Color trackColor;
+  final int? attemptsLeft;
 
   const _StepTile({
     required this.step,
     required this.scenario,
     required this.isCurrent,
-    required this.isTrackUnlocked,
+    required this.isAccessible,
     required this.isLast,
     required this.trackColor,
+    this.attemptsLeft,
   });
 
   Color _difficultyColor(String d) {
@@ -332,9 +350,9 @@ class _StepTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCompleted = isTrackUnlocked && step.isCompleted;
+    final isCompleted = isAccessible && step.isCompleted;
     final passed = isCompleted && step.isPassed;
-    final locked = !isTrackUnlocked;
+    final locked = !isAccessible;
 
     final textColor = locked
         ? context.textTertiary
@@ -348,7 +366,7 @@ class _StepTile extends StatelessWidget {
         children: [
           // Left: circle + line
           SizedBox(
-            width: 48,
+            width: 56,
             child: Column(
               children: [
                 _ScenarioAvatar(
@@ -388,14 +406,12 @@ class _StepTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isCurrent
                       ? AppColors.primary.withValues(alpha: 0.07)
-                      : context.isDark
-                          ? AppColors.surfaceDark
-                          : AppColors.white,
+                      : context.card,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isCurrent
                         ? AppColors.primary.withValues(alpha: 0.35)
-                        : const Color(0xFFEEEEEE),
+                        : context.divider,
                     width: isCurrent ? 1.5 : 1,
                   ),
                 ),
@@ -476,13 +492,26 @@ class _StepTile extends StatelessWidget {
                                 .copyWith(fontWeight: FontWeight.w700, fontSize: 10),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Pass: ${step.minPassScore}+',
-                          style: AppTypography.labelSmall(
-                                  color: context.textTertiary)
-                              .copyWith(fontSize: 10),
-                        ),
+                        if (!locked && (isCurrent || isCompleted)) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            'Pass: ${step.minPassScore}+',
+                            style: AppTypography.labelSmall(
+                                    color: context.textTertiary)
+                                .copyWith(fontSize: 10),
+                          ),
+                        ],
+                        if (!locked && attemptsLeft != null) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            '$attemptsLeft left',
+                            style: AppTypography.labelSmall(
+                                    color: attemptsLeft! > 0
+                                        ? context.textTertiary
+                                        : AppColors.error)
+                                .copyWith(fontSize: 10),
+                          ),
+                        ],
                         if (isCurrent) ...[
                           const Spacer(),
                           Text(
@@ -569,24 +598,12 @@ class _ScenarioAvatar extends StatelessWidget {
               child: Stack(
               fit: StackFit.expand,
               children: [
-                // Image or colored fallback
                 imagePath != null
-                    ? ColorFiltered(
-                        colorFilter: isLocked
-                            ? const ColorFilter.matrix(<double>[
-                                0.2126, 0.7152, 0.0722, 0, 0,
-                                0.2126, 0.7152, 0.0722, 0, 0,
-                                0.2126, 0.7152, 0.0722, 0, 0,
-                                0,      0,      0,      1, 0,
-                              ])
-                            : const ColorFilter.mode(
-                                Colors.transparent, BlendMode.dst),
-                        child: Image.asset(
-                          imagePath!,
-                          width: size,
-                          height: size,
-                          fit: BoxFit.cover,
-                        ),
+                    ? Image.asset(
+                        imagePath!,
+                        width: size,
+                        height: size,
+                        fit: BoxFit.cover,
                       )
                     : Container(
                         color: AppColors.primary.withValues(alpha: isLocked ? 0.07 : 0.12),
@@ -655,7 +672,8 @@ class _ScenarioAvatar extends StatelessWidget {
 class _BottomCta extends StatelessWidget {
   final RoadmapMeta meta;
   final bool isActive;
-  final bool isUnlocked;
+  final TrackTier? tier;
+  final bool hasFreeTrials;
   final bool planComplete;
   final PlanStep? nextStep;
   final Scenario? nextScenario;
@@ -666,7 +684,8 @@ class _BottomCta extends StatelessWidget {
   const _BottomCta({
     required this.meta,
     required this.isActive,
-    required this.isUnlocked,
+    required this.tier,
+    required this.hasFreeTrials,
     required this.planComplete,
     required this.nextStep,
     required this.nextScenario,
@@ -677,25 +696,44 @@ class _BottomCta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.isDark ? AppColors.surfaceDark : AppColors.white,
-        border: Border(
-          top: BorderSide(
-            color: context.isDark
-                ? AppColors.dividerDark
-                : const Color(0xFFE5E5E5),
-            width: 1,
+    final bgColor = context.isDark ? AppColors.surfaceDark : AppColors.white;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IgnorePointer(
+          child: Container(
+            height: 32,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  bgColor.withValues(alpha: 0),
+                  bgColor,
+                ],
+              ),
+            ),
           ),
         ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          child: _buildButton(context),
+        Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            border: Border(
+              top: BorderSide(
+                color: context.divider,
+                width: 1,
+              ),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              child: _buildButton(context),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -703,22 +741,31 @@ class _BottomCta extends StatelessWidget {
     if (isActive) {
       if (planComplete) {
         return _PrimaryButton(
-          label: 'Track Complete — View Profile',
+          label: 'Track Complete — Choose Next Track',
           icon: Icons.emoji_events_rounded,
           color: AppColors.success,
-          onTap: () => context.go('/profile'),
+          onTap: () => context.go('/tracks'),
         );
       }
-      final stepNum = (nextStep?.order ?? 0) + 1;
+      if (tier != null || hasFreeTrials) {
+        final stepNum = (nextStep?.order ?? 0) + 1;
+        return _PrimaryButton(
+          label: 'Continue  ·  Step $stepNum',
+          icon: Icons.play_arrow_rounded,
+          color: AppColors.primary,
+          onTap: onContinue,
+        );
+      }
+      // Active but free trials used and no tier
       return _PrimaryButton(
-        label: 'Continue  ·  Step $stepNum',
-        icon: Icons.play_arrow_rounded,
+        label: 'Unlock to Continue',
+        icon: Icons.lock_open_rounded,
         color: AppColors.primary,
-        onTap: onContinue,
+        onTap: onUnlock,
       );
     }
 
-    if (isUnlocked) {
+    if (tier != null) {
       return _PrimaryButton(
         label: 'Switch to This Track',
         icon: Icons.swap_horiz_rounded,

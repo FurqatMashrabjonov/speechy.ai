@@ -53,6 +53,8 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
   ChainResult? _chainResult;
   Map<String, int> _fillerWords = {};
   int? _wpm;
+  String? _trackId;
+  int? _stepOrder;
 
   late ConfettiController _confettiController;
   final _scoreRingKey = GlobalKey();
@@ -147,8 +149,29 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
           if (mounted) setState(() { _fillerWords = fillers; _wpm = wpm; });
         }
 
-        // Record session against free quota
-        ref.read(usageServiceProvider).recordSession();
+        // Record session against free quota — track per-step usage if in a track
+        {
+          final plan = ref.read(learningPlanProvider);
+          PlanStep? matchingStep;
+          if (plan != null && widget.scenarioId.isNotEmpty) {
+            for (final s in plan.steps) {
+              if (s.scenarioId == widget.scenarioId) {
+                matchingStep = s;
+                break;
+              }
+            }
+          }
+          if (matchingStep != null && plan != null) {
+            setState(() {
+              _trackId = plan.templateId;
+              _stepOrder = matchingStep!.order;
+            });
+          }
+          ref.read(usageServiceProvider).recordSession(
+            trackId: matchingStep != null ? plan?.templateId : null,
+            stepOrder: matchingStep?.order,
+          );
+        }
 
         // Mark learning plan step as completed, capture chain result
         ref
@@ -748,8 +771,10 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                     if (_chainResult != null)
                       _ChainResultBanner(
                         result: _chainResult!,
+                        canRetry: _canRetry,
                         onNextStep: () => context.go('/home'),
                         onRetry: () => context.go('/home'),
+                        onPaywall: _openPaywall,
                       ).animate().fadeIn(delay: 400.ms, duration: 500.ms)
                           .scale(begin: const Offset(0.95, 0.95), curve: Curves.easeOutBack),
                     if (_chainResult != null) const SizedBox(height: 16),
@@ -774,50 +799,54 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
               DuoButton.primary(
                 text: _chainResult == ChainResult.passed
                     ? 'Continue Track'
-                    : _chainResult == ChainResult.needsRetry
-                        ? 'Try Again'
-                        : 'Continue Learning',
+                    : (_chainResult == ChainResult.needsRetry && !_canRetry && _trackId != null)
+                        ? 'Unlock Retries'
+                        : _chainResult == ChainResult.needsRetry
+                            ? 'Try Again'
+                            : 'Continue Learning',
                 icon: _chainResult == ChainResult.passed
                     ? Icons.rocket_launch_rounded
-                    : Icons.arrow_forward_rounded,
+                    : (_chainResult == ChainResult.needsRetry && !_canRetry && _trackId != null)
+                        ? Icons.lock_open_rounded
+                        : Icons.arrow_forward_rounded,
                 width: double.infinity,
                 onTap: () {
-                  if (_chainResult == ChainResult.needsRetry) {
-                    context.go('/home');
+                  if (_chainResult == ChainResult.needsRetry && !_canRetry && _trackId != null) {
+                    _openPaywall();
                   } else {
                     context.go('/home');
                   }
                 },
               ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Tappable(
-                    onTap: () => context.go('/home'),
-                    child: Text(
-                      'Go Home',
-                      style: AppTypography.labelMedium(color: context.textSecondary),
-                    ),
+              Center(
+                child: Tappable(
+                  onTap: () => context.go('/home'),
+                  child: Text(
+                    'Go Home',
+                    style: AppTypography.labelMedium(color: context.textSecondary),
                   ),
-                  const SizedBox(width: 20),
-                  Tappable(
-                    onTap: () {
-                      SoundService.instance.celebration();
-                      _burstConfettiFromScoreRing();
-                    },
-                    child: Text(
-                      'Test Confetti',
-                      style: AppTypography.labelMedium(color: AppColors.primary),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
         ),
       ],
     );
+  }
+
+  bool get _canRetry {
+    if (_trackId == null || _stepOrder == null) return false;
+    return ref.read(usageServiceProvider).canAttemptStep(_trackId!, _stepOrder!);
+  }
+
+  void _openPaywall() {
+    final plan = ref.read(learningPlanProvider);
+    if (plan == null) return;
+    context.push('/paywall', extra: {
+      'trackId': plan.templateId,
+      'trackTitle': plan.title,
+    });
   }
 
   String _getScoreLabel(int score) {
@@ -1221,13 +1250,17 @@ class _StreakPill extends ConsumerWidget {
 
 class _ChainResultBanner extends StatelessWidget {
   final ChainResult result;
+  final bool canRetry;
   final VoidCallback onNextStep;
   final VoidCallback onRetry;
+  final VoidCallback onPaywall;
 
   const _ChainResultBanner({
     required this.result,
+    required this.canRetry,
     required this.onNextStep,
     required this.onRetry,
+    required this.onPaywall,
   });
 
   @override
@@ -1296,38 +1329,64 @@ class _ChainResultBanner extends StatelessWidget {
 
           if (!passed) ...[
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: Tappable(
-                    onTap: onRetry,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.warning,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Try Again',
-                          style: AppTypography.labelMedium(color: Colors.white)
-                              .copyWith(fontWeight: FontWeight.w700),
+            if (canRetry)
+              Row(
+                children: [
+                  Expanded(
+                    child: Tappable(
+                      onTap: onRetry,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Try Again',
+                            style: AppTypography.labelMedium(color: Colors.white)
+                                .copyWith(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Tappable(
-                  onTap: onNextStep,
-                  child: Text(
-                    'Skip',
-                    style: AppTypography.labelMedium(
-                        color: context.textSecondary),
+                  const SizedBox(width: 10),
+                  Tappable(
+                    onTap: onNextStep,
+                    child: Text(
+                      'Skip',
+                      style: AppTypography.labelMedium(color: context.textSecondary),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Tappable(
+                onTap: onPaywall,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.lock_open_rounded, color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Unlock Retries',
+                          style: AppTypography.labelMedium(color: Colors.white)
+                              .copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
           ],
         ],
       ),

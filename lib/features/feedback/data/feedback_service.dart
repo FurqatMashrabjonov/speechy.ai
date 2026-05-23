@@ -144,7 +144,8 @@ Analyze the speaker's performance and return ONLY a valid JSON object (no markdo
 }
 
 IMPORTANT: All scores (clarity, confidence, engagement, relevance) must be on a 0-100 scale, NOT 1-10.
-Be encouraging but honest. Provide specific, actionable feedback.''';
+Be encouraging but honest. Provide specific, actionable feedback.
+Note: This conversation should have been conducted in English. If the transcript contains non-English text, mention it in the summary and factor it into the scores — the user should be practicing English communication.''';
 
     debugPrint(
       'FeedbackService: sending ${prompt.length} char prompt to Gemini...',
