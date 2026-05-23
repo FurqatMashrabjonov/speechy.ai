@@ -6,6 +6,7 @@ import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
+import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/features/paywall/domain/track_tier.dart';
 import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
@@ -26,6 +27,12 @@ class PaywallScreen extends ConsumerStatefulWidget {
 
 class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   TrackTier _selected = TrackTier.pro;
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.instance.logPaywallViewed(trackId: widget.trackId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -360,10 +367,16 @@ class _PurchaseButton extends ConsumerWidget {
     return Tappable(
       onTap: isLoading
           ? null
-          : () => ref.read(subscriptionProvider.notifier).purchaseTier(
+          : () {
+              AnalyticsService.instance.logPurchaseInitiated(
+                trackId: trackId,
+                tier: tier.revenueCatIdentifier,
+              );
+              ref.read(subscriptionProvider.notifier).purchaseTier(
                 trackId: trackId,
                 tier: tier,
-              ),
+              );
+            },
       child: AnimatedOpacity(
         opacity: isLoading ? 0.7 : 1.0,
         duration: const Duration(milliseconds: 200),

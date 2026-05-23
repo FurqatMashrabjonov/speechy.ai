@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/features/assessment/data/assessment_data.dart';
 import 'package:speech_coach/features/paywall/data/revenue_cat_service.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
@@ -105,12 +106,24 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
       await Future.delayed(const Duration(milliseconds: 800));
       await _applyTier(trackId, tier);
       state = state.copyWith(isPurchasing: false);
+      AnalyticsService.instance.logPurchaseCompleted(
+        trackId: trackId,
+        tier: tier.revenueCatIdentifier,
+        price: tier.fallbackPrice,
+      );
       return true;
     }
 
     try {
       final success = await _service.purchasePackage(package);
-      if (success) await _applyTier(trackId, tier);
+      if (success) {
+        await _applyTier(trackId, tier);
+        AnalyticsService.instance.logPurchaseCompleted(
+          trackId: trackId,
+          tier: tier.revenueCatIdentifier,
+          price: package.storeProduct.priceString,
+        );
+      }
       state = state.copyWith(isPurchasing: false);
       return success;
     } on PurchaseCancelledException {

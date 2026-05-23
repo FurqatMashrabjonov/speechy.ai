@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/features/assessment/data/assessment_repository.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/feedback/domain/feedback_entity.dart';
@@ -119,9 +120,11 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
     }
     if (newStreak >= 5 && !newBadges.contains('5_day_streak')) {
       newBadges.add('5_day_streak');
+      AnalyticsService.instance.logStreakMilestone(streak: newStreak);
     }
     if (newStreak >= 10 && !newBadges.contains('10_day_streak')) {
       newBadges.add('10_day_streak');
+      AnalyticsService.instance.logStreakMilestone(streak: newStreak);
     }
     if (feedback.clarity >= 100 && !newBadges.contains('perfect_clarity')) {
       newBadges.add('perfect_clarity');

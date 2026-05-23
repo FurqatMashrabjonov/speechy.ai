@@ -23,6 +23,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
 import 'package:speech_coach/features/notifications/data/notification_service.dart';
 import 'package:speech_coach/shared/services/sound_service.dart';
+import 'package:speech_coach/core/analytics/analytics_service.dart';
 
 class ScoreCardScreen extends ConsumerStatefulWidget {
   final String? sessionId;
@@ -128,6 +129,16 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
       _xpAwarded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(progressProvider.notifier).addSession(feedbackState.feedback!);
+
+        // Log session completed
+        final fb = feedbackState.feedback!;
+        AnalyticsService.instance.logSessionCompleted(
+          scenarioId: widget.scenarioId,
+          trackId: _trackId ?? '',
+          score: fb.overallScore.round(),
+          durationSeconds: fb.durationSeconds,
+          result: fb.overallScore >= 75 ? 'passed' : 'needs_retry',
+        );
 
         if (widget.transcript.isNotEmpty) {
           final fillers = FillerDetector.detect(widget.transcript);

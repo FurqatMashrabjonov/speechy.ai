@@ -8,6 +8,7 @@ import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/assessment/data/assessment_data.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
+import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/features/paywall/domain/track_tier.dart';
 import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
@@ -66,7 +67,10 @@ class RoadmapCatalogScreen extends ConsumerWidget {
                     tier: tier,
                     completedSteps: completedSteps,
                     totalSteps: totalSteps,
-                    onTap: () => context.push('/tracks/${meta.id}'),
+                    onTap: () {
+                      AnalyticsService.instance.logTrackSelected(trackId: meta.id);
+                      context.push('/tracks/${meta.id}');
+                    },
                   )
                       .animate(delay: (index * 60).ms)
                       .fadeIn(duration: 300.ms)

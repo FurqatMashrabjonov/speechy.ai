@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
@@ -20,9 +21,12 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepositoryImpl(ref.read(authRemoteDatasourceProvider));
 });
 
-// Auth state stream
+// Auth state stream — also keeps Analytics user ID in sync
 final authStateProvider = StreamProvider<User?>((ref) {
-  return ref.read(authRepositoryProvider).authStateChanges;
+  return ref.read(authRepositoryProvider).authStateChanges.map((user) {
+    AnalyticsService.instance.setUserId(user?.uid);
+    return user;
+  });
 });
 
 // Auth notifier for actions

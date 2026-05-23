@@ -10,6 +10,7 @@ import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 import 'package:speech_coach/features/scenarios/domain/scenario_entity.dart';
 import 'package:speech_coach/features/scenarios/presentation/providers/scenario_provider.dart';
+import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
 
 class ScenarioDetailScreen extends ConsumerWidget {
@@ -218,6 +219,11 @@ class ScenarioDetailScreen extends ConsumerWidget {
       });
       return;
     }
+    AnalyticsService.instance.logSessionStarted(
+      scenarioId: scenario.id,
+      trackId: trackId ?? '',
+      stepOrder: stepOrder ?? 0,
+    );
     context.push(
       '/conversation/${Uri.encodeComponent(scenario.category)}',
       extra: {

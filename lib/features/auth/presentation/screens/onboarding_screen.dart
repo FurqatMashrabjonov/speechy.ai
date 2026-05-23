@@ -18,6 +18,7 @@ import 'package:speech_coach/features/assessment/domain/assessment_entity.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/features/auth/presentation/providers/auth_provider.dart';
+import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
@@ -104,6 +105,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _confirmRoadmap() async {
     HapticFeedback.heavyImpact();
     setState(() => _generatingPlan = true);
+    AnalyticsService.instance.logAssessmentCompleted(trackId: _selectedTemplateId);
     try {
       final answers = _answers.entries
           .map((e) => AssessmentAnswer(questionId: e.key, optionId: e.value))
@@ -874,11 +876,13 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
         _passwordController.text,
         _nameController.text.trim(),
       );
+      if (success) AnalyticsService.instance.logSignUp(method: 'email');
     } else {
       success = await notifier.signInWithEmail(
         _emailController.text.trim(),
         _passwordController.text,
       );
+      if (success) AnalyticsService.instance.logLogin(method: 'email');
     }
     if (success && mounted) {
       HapticFeedback.heavyImpact();
@@ -926,6 +930,7 @@ class _LoginPageState extends ConsumerState<_LoginPage> {
               onTap: () async {
                 HapticFeedback.mediumImpact();
                 final success = await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+                if (success) AnalyticsService.instance.logLogin(method: 'google');
                 if (success && mounted) {
                   HapticFeedback.heavyImpact();
                   widget.onDone();
