@@ -34,15 +34,13 @@ void main() async {
   // Enable Analytics data collection
   await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
 
-  // App Check — debug provider on emulator/debug, Play Integrity on release
-  await FirebaseAppCheck.instance.activate(
-    providerAndroid: kDebugMode
-        ? const AndroidDebugProvider()
-        : const AndroidPlayIntegrityProvider(),
-    providerApple: kDebugMode
-        ? const AppleDebugProvider()
-        : const AppleDeviceCheckProvider(),
-  );
+  // App Check — only in release builds (debug builds skip to avoid token registration hassle)
+  if (!kDebugMode) {
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: const AndroidPlayIntegrityProvider(),
+      providerApple: const AppleDeviceCheckProvider(),
+    );
+  }
 
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();

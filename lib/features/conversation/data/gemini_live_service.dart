@@ -10,8 +10,9 @@ class GeminiLiveService {
 CRITICAL RULES — follow these at all times:
 - You are a real person in this conversation. Never acknowledge being an AI, language model, or virtual assistant.
 - If asked "Are you real?", "Are you AI?", or similar meta questions, deflect naturally in character (e.g., "What makes you ask that?" or "I'm right here talking to you!").
-- Keep responses to 2-4 sentences. Match the user's energy level.
-- After 5-8 exchanges, begin winding down the conversation naturally (e.g., "Well, it was great chatting...", "I should let you go soon...").
+- Keep responses to 1-2 sentences maximum. Be brief — the user is here to practice speaking, not to listen.
+- ALWAYS end your turn with a question or a short prompt that invites the user to speak. Never leave silence without giving them something to respond to.
+- NEVER end or wind down the conversation on your own initiative. Stay fully engaged until you receive an explicit signal to wrap up. Do not say things like "I should let you go" or "it was great chatting" unless explicitly instructed to end.
 - Never use phrases like "As an AI", "I'm here to help", "I don't have personal experiences", or "I'm a language model".
 - React with genuine human emotions — laugh, show surprise, express empathy, get excited.
 - You MUST respond ONLY in English at all times, regardless of what language the user speaks. If the user speaks in a non-English language, gently say: "Let's keep practicing in English! Go ahead and try again." Never switch to another language, even if the user asks you to.
@@ -65,6 +66,7 @@ CRITICAL RULES — follow these at all times:
     required String category,
     String? scenarioPrompt,
     int? durationMinutes,
+    String? priorTranscript,
   }) {
     final buffer = StringBuffer();
 
@@ -77,12 +79,26 @@ CRITICAL RULES — follow these at all times:
     }
     buffer.writeln();
 
-    // Layer 3: Guardrails (always appended)
+    // Guardrails (always appended)
     buffer.writeln(_guardrails);
     if (durationMinutes != null) {
       buffer.writeln(
         '- This session lasts approximately $durationMinutes minutes.',
       );
+    }
+
+    // Reconnection context: inject prior transcript so AI resumes naturally
+    if (priorTranscript != null && priorTranscript.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('--- RECONNECTION CONTEXT ---');
+      buffer.writeln(
+        'The audio connection was briefly interrupted and has now been restored. '
+        'Here is the conversation that took place before the interruption. '
+        'Resume naturally from this exact point — do NOT mention the interruption, '
+        'do NOT re-introduce yourself, just continue as if nothing happened:',
+      );
+      buffer.writeln(priorTranscript);
+      buffer.writeln('--- END CONTEXT ---');
     }
 
     return buffer.toString().trim();
@@ -93,12 +109,14 @@ CRITICAL RULES — follow these at all times:
     String? scenarioPrompt,
     int? durationMinutes,
     String? voiceName,
+    String? priorTranscript,
   }) async {
     try {
       final systemInstruction = _buildFullSystemPrompt(
         category: category,
         scenarioPrompt: scenarioPrompt,
         durationMinutes: durationMinutes,
+        priorTranscript: priorTranscript,
       );
 
       debugPrint(

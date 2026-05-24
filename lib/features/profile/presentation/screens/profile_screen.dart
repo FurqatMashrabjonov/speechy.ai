@@ -79,41 +79,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 data: (user) {
                   final name = user?.displayName ?? 'User';
                   final photoUrl = user?.photoURL;
-                  final tier = ref.watch(
-                      subscriptionProvider.select((s) => s.highestTier));
-                  final isPremium = tier != null;
-                  final borderColor = isPremium
-                      ? const Color(0xFFEAB308)
-                      : AppColors.primary;
-
                   return Center(
                     child: Column(
                       children: [
-                        Container(
-                          padding: EdgeInsets.all(isPremium ? 3.5 : 3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: borderColor,
-                              width: isPremium ? 3.0 : 2.5,
-                            ),
-                            boxShadow: isPremium
-                                ? [
-                                    BoxShadow(
-                                      color: const Color(0xFFEAB308)
-                                          .withValues(alpha: 0.35),
-                                      blurRadius: 12,
-                                      spreadRadius: 1,
-                                    ),
-                                  ]
-                                : null,
-                          ),
-
-                          child: UserAvatar(
-                            photoUrl: photoUrl,
-                            name: name,
-                            radius: 48,
-                          ),
+                        UserAvatar(
+                          photoUrl: photoUrl,
+                          name: name,
+                          radius: 48,
                         ),
                         const SizedBox(height: 12),
                         Text(name, style: AppTypography.headlineMedium()),

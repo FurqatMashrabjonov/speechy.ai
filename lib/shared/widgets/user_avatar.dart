@@ -55,22 +55,25 @@ class _InitialsCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'S';
+    final parts = name.trim().split(RegExp(r'\s+'));
+    final initials = parts.length >= 2
+        ? '${parts.first[0]}${parts.last[0]}'.toUpperCase()
+        : (name.isNotEmpty ? name[0].toUpperCase() : 'S');
+
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color,
         shape: BoxShape.circle,
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
       ),
       child: Center(
         child: Text(
-          initial,
+          initials,
           style: TextStyle(
-            color: color,
-            fontSize: size * 0.42,
-            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            fontSize: size * 0.38,
+            fontWeight: FontWeight.w700,
             height: 1,
           ),
         ),

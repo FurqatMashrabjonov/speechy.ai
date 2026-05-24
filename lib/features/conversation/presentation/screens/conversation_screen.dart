@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +14,25 @@ import 'package:speech_coach/features/feedback/presentation/providers/feedback_p
 import 'package:speech_coach/features/history/presentation/providers/session_history_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:speech_coach/shared/services/sound_service.dart';
+
+const _kDarkBg = Color(0xFF0D0D0D);
+const _kDarkSurface = Color(0xFF1C1C1E);
+const _kDarkBorder = Color(0xFF2A2A2A);
+const _kDarkTextPrimary = Colors.white;
+const _kDarkTextSecondary = Color(0xFF9A9A9A);
+
+const _personaInfo = <String, (String, String)>{
+  'Presentations':       ('David Chen',      'Senior VP of Product'),
+  'Interviews':          ('Rachel Torres',   'Head of Talent · Vertex Labs'),
+  'Public Speaking':     ('Marcus Webb',     'Speech Coach'),
+  'Conversations':       ('Jamie',           'Graphic Designer'),
+  'Debates':             ('Prof. Vasquez',   'Political Science Professor'),
+  'Storytelling':        ('Nadia',           'Writer & Podcast Host'),
+  'Phone Anxiety':       ('Support Agent',   'On the other end of the line'),
+  'Dating & Social':     ('Alex',            'Marketing · New connection'),
+  'Conflict & Boundaries': ('Your contact',  'Difficult conversation'),
+  'Social Situations':   ('Chris',           'Teacher · New acquaintance'),
+};
 
 class ConversationScreen extends ConsumerStatefulWidget {
   final String category;
@@ -39,7 +56,6 @@ class ConversationScreen extends ConsumerStatefulWidget {
 }
 
 class _ConversationScreenState extends ConsumerState<ConversationScreen> {
-  final ScrollController _scrollController = ScrollController();
   bool _hasNavigatedToScoreCard = false;
   bool _showBriefing = true;
   bool _showCaptions = true;
@@ -78,22 +94,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
     super.dispose();
-  }
-
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
   }
 
   @override
@@ -101,10 +102,6 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final state = ref.watch(conversationProvider(widget.category));
 
     ref.listen(conversationProvider(widget.category), (prev, next) {
-      if (prev != null && prev.messages.length != next.messages.length) {
-        _scrollToBottom();
-      }
-
       // Timer auto-end path: navigate immediately when analyzing begins
       if (next.status == ConversationStatus.analyzing &&
           next.scenarioId != null &&
@@ -336,7 +333,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   Widget _buildMeetScreen(BuildContext context, ConversationState state) {
     return Scaffold(
-      backgroundColor: context.background,
+      backgroundColor: _kDarkBg,
       body: SafeArea(
         child: Column(
           children: [
@@ -392,7 +389,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             Expanded(
               child: Text(
                 widget.scenarioTitle ?? widget.category,
-                style: AppTypography.labelMedium(color: context.textSecondary),
+                style: AppTypography.labelMedium(color: _kDarkTextSecondary),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -400,12 +397,12 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           ] else
             const Spacer(),
 
-          // Timer pill (centered-ish)
+          // Timer pill
           if (state.isCountdown)
-            _TimerPill(remaining: state.remaining)
+            _TimerPill(remaining: state.remaining, onDark: true)
           else if (state.status != ConversationStatus.idle &&
               state.status != ConversationStatus.ended)
-            _TimerPill(elapsed: state.elapsed),
+            _TimerPill(elapsed: state.elapsed, onDark: true),
 
           if (widget.scenarioId == null) const Spacer(),
           if (widget.scenarioId != null) const SizedBox(width: 8),
@@ -415,23 +412,6 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   }
 
   Widget _buildHeroCenter(BuildContext context, ConversationState state) {
-    // Determine status label
-    String statusLabel;
-    switch (state.status) {
-      case ConversationStatus.aiSpeaking:
-        statusLabel = 'Speaking...';
-      case ConversationStatus.userSpeaking:
-        statusLabel = 'Listening...';
-      case ConversationStatus.connecting:
-        statusLabel = 'Connecting...';
-      case ConversationStatus.analyzing:
-        statusLabel = 'Compiling Feedback...';
-      case ConversationStatus.error:
-        statusLabel = 'Error';
-      default:
-        statusLabel = 'Ready';
-    }
-
     return Stack(
       children: [
         // Main content centered
@@ -462,41 +442,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                       : null,
                 ),
               ] else ...[
-                // AI avatar hero
-                _HeroAvatar(
-                  imagePath: null,
+                // Orb hero
+                _OrbWidget(
                   isAiSpeaking: state.status == ConversationStatus.aiSpeaking,
-                  isUserSpeaking:
-                      state.status == ConversationStatus.userSpeaking,
-                  isConnecting:
-                      state.status == ConversationStatus.connecting ||
+                  isUserSpeaking: state.status == ConversationStatus.userSpeaking,
+                  isConnecting: state.status == ConversationStatus.connecting ||
                       state.status == ConversationStatus.analyzing,
-                ),
-                const SizedBox(height: 16),
-
-                Text(
-                  widget.scenarioTitle ?? 'AI Coach',
-                  style: AppTypography.titleLarge(color: context.textPrimary),
-                ),
-                const SizedBox(height: 4),
-
-                // Status label with recording indicator
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (state.status == ConversationStatus.userSpeaking) ...[
-                      _PulsingRecordDot(),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(
-                      statusLabel,
-                      style: AppTypography.bodySmall(
-                        color: state.status == ConversationStatus.userSpeaking
-                            ? AppColors.error
-                            : context.textSecondary,
-                      ),
-                    ),
-                  ],
+                  micAmplitude: state.micAmplitude,
+                  aiAmplitude: state.aiAmplitude,
                 ),
               ],
             ],
@@ -512,9 +465,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             right: 16,
             bottom: 8,
             child: _CaptionOverlay(
-              messages: state.messages,
               currentTranscription: state.currentTranscription,
-              scrollController: _scrollController,
             ),
           ),
       ],
@@ -540,84 +491,48 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               height: 44,
               decoration: BoxDecoration(
                 color: _showCaptions
-                    ? AppColors.primary.withValues(alpha: 0.12)
-                    : context.surface,
+                    ? AppColors.primary.withValues(alpha: 0.18)
+                    : _kDarkSurface,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 _showCaptions
                     ? Icons.closed_caption_rounded
                     : Icons.closed_caption_off_rounded,
-                color: _showCaptions ? AppColors.primary : context.textTertiary,
+                color: _showCaptions ? AppColors.primary : _kDarkTextSecondary,
                 size: 22,
               ),
             ),
           ),
           const SizedBox(width: 20),
 
-          // Large mic button with amplitude rings
+          // Large mic button
           GestureDetector(
             onTap: () => ref
                 .read(conversationProvider(widget.category).notifier)
                 .toggleMic(),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Outer ring — expands most with amplitude
-                if (!state.isMicMuted)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 80),
-                    curve: Curves.easeOut,
-                    width: 64 + (state.micAmplitude * 44),
-                    height: 64 + (state.micAmplitude * 44),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: state.micAmplitude * 0.35),
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                // Middle ring
-                if (!state.isMicMuted)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 60),
-                    curve: Curves.easeOut,
-                    width: 64 + (state.micAmplitude * 24),
-                    height: 64 + (state.micAmplitude * 24),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: state.micAmplitude * 0.5),
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                // Mic button
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    gradient: state.isMicMuted ? null : AppColors.primaryGradient,
-                    color: state.isMicMuted ? const Color(0xFF4A4A4A) : null,
-                    shape: BoxShape.circle,
-                    boxShadow: state.isMicMuted
-                        ? []
-                        : [
-                            BoxShadow(
-                              color: AppColors.primaryDark,
-                              blurRadius: 0,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                  ),
-                  child: Icon(
-                    state.isMicMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-              ],
+            child: Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                gradient: state.isMicMuted ? null : AppColors.primaryGradient,
+                color: state.isMicMuted ? const Color(0xFF4A4A4A) : null,
+                shape: BoxShape.circle,
+                boxShadow: state.isMicMuted
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: AppColors.primaryDark,
+                          blurRadius: 0,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+              ),
+              child: Icon(
+                state.isMicMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
             ),
           ),
           const SizedBox(width: 20),
@@ -696,7 +611,31 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     );
   }
 
+  bool _isTooShort(ConversationState state) {
+    if (state.elapsed.inSeconds < 15) return true;
+    final userLines = state.fullTranscript
+        .split('\n')
+        .where((l) => l.startsWith('User:') && l.trim().length > 6)
+        .length;
+    return userLines == 0;
+  }
+
   void _endAndNavigate(ConversationState state) {
+    if (_isTooShort(state)) {
+      if (mounted) {
+        context.pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Session too short — practice at least 15 seconds to get scored.'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          ),
+        );
+      }
+      return;
+    }
+
     ref.read(feedbackProvider.notifier).reset();
     ref.read(feedbackProvider.notifier).analyzeConversation(
       transcript: state.fullTranscript,
@@ -750,8 +689,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 class _TimerPill extends StatelessWidget {
   final Duration? remaining;
   final Duration? elapsed;
+  final bool onDark;
 
-  const _TimerPill({this.remaining, this.elapsed});
+  const _TimerPill({this.remaining, this.elapsed, this.onDark = false});
 
   @override
   Widget build(BuildContext context) {
@@ -759,28 +699,42 @@ class _TimerPill extends StatelessWidget {
     final minutes = duration.inMinutes.toString().padLeft(2, '0');
     final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
     final isLow = remaining != null && remaining!.inSeconds <= 30;
+    final isWarning = remaining != null &&
+        remaining!.inSeconds <= 60 &&
+        remaining!.inSeconds > 30;
+
+    final Color pillColor;
+    final Color contentColor;
+    if (isLow) {
+      pillColor = AppColors.error.withValues(alpha: 0.15);
+      contentColor = AppColors.error;
+    } else if (isWarning) {
+      pillColor = AppColors.warning.withValues(alpha: 0.15);
+      contentColor = AppColors.warning;
+    } else {
+      pillColor = onDark
+          ? const Color(0xFF2A2A2A)
+          : AppColors.primary.withValues(alpha: 0.1);
+      contentColor = onDark ? _kDarkTextSecondary : context.textSecondary;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isLow
-            ? AppColors.error.withValues(alpha: 0.12)
-            : AppColors.primary.withValues(alpha: 0.1),
+        color: pillColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.timer_outlined,
-            size: 14,
-            color: isLow ? AppColors.error : context.textSecondary,
-          ),
+          Icon(Icons.timer_outlined, size: 14, color: contentColor),
           const SizedBox(width: 4),
           Text(
             '$minutes:$seconds',
             style: AppTypography.labelMedium(
-              color: isLow ? AppColors.error : context.textPrimary,
+              color: isLow || isWarning
+                  ? contentColor
+                  : (onDark ? Colors.white : context.textPrimary),
             ),
           ),
         ],
@@ -789,242 +743,146 @@ class _TimerPill extends StatelessWidget {
   }
 }
 
-// ── Hero Avatar with Pulse/Waveform Ring ──────────────────────────────────
+// ── Orb Widget (AI Coach visual) ─────────────────────────────────────────
 
-class _HeroAvatar extends StatefulWidget {
-  final String? imagePath;
+class _OrbWidget extends StatefulWidget {
   final bool isAiSpeaking;
   final bool isUserSpeaking;
   final bool isConnecting;
+  final double micAmplitude;
+  final double aiAmplitude;
 
-  const _HeroAvatar({
-    this.imagePath,
+  const _OrbWidget({
     required this.isAiSpeaking,
     required this.isUserSpeaking,
     required this.isConnecting,
+    required this.micAmplitude,
+    required this.aiAmplitude,
   });
 
   @override
-  State<_HeroAvatar> createState() => _HeroAvatarState();
+  State<_OrbWidget> createState() => _OrbWidgetState();
 }
 
-class _HeroAvatarState extends State<_HeroAvatar>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _OrbWidgetState extends State<_OrbWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  static const _idleDuration = Duration(milliseconds: 2200);
+  static const _speakDuration = Duration(milliseconds: 850);
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
+    _ctrl = AnimationController(vsync: this, duration: _idleDuration)
+      ..repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_OrbWidget old) {
+    super.didUpdateWidget(old);
+    final wasActive = old.isAiSpeaking || old.isUserSpeaking;
+    final isActive = widget.isAiSpeaking || widget.isUserSpeaking;
+    if (isActive != wasActive) {
+      _ctrl.duration = isActive ? _speakDuration : _idleDuration;
+      _ctrl.repeat(reverse: true);
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final pulseScale = 1.0 + sin(_controller.value * pi * 2) * 0.06;
-        final ringOpacity = 0.3 + sin(_controller.value * pi * 2) * 0.3;
+      animation: _ctrl,
+      builder: (_, _) {
+        final t = _ctrl.value; // 0.0→1.0 slow breathe (idle) or fast pulse (speaking)
+
+        final double orbDiam;
+        final double glowAlpha;
+        final double glowBlur;
+
+        if (widget.isUserSpeaking) {
+          orbDiam = 120.0 + t * 6.0 + widget.micAmplitude * 48.0;
+          glowAlpha = 0.35 + widget.micAmplitude * 0.30;
+          glowBlur = 36.0 + widget.micAmplitude * 32.0;
+        } else if (widget.isAiSpeaking) {
+          orbDiam = 120.0 + t * 8.0 + widget.aiAmplitude * 52.0;
+          glowAlpha = 0.32 + widget.aiAmplitude * 0.30;
+          glowBlur = 34.0 + widget.aiAmplitude * 34.0;
+        } else {
+          // Idle / connecting: gentle breathing only
+          orbDiam = 130.0 + t * 6.0;
+          glowAlpha = 0.28 + t * 0.12;
+          glowBlur = 30.0 + t * 12.0;
+        }
 
         return SizedBox(
-          width: 200,
-          height: 200,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Outer pulsing ring (user speaking)
-              if (widget.isUserSpeaking)
-                Transform.scale(
-                  scale: pulseScale + 0.08,
-                  child: Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: ringOpacity),
-                        width: 3,
-                      ),
-                    ),
-                  ),
+          width: 230,
+          height: 230,
+          child: Center(
+            child: Container(
+              width: orbDiam,
+              height: orbDiam,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    Color.lerp(AppColors.primary, Colors.white, 0.38)!,
+                    AppColors.primary,
+                  ],
+                  stops: const [0.0, 1.0],
                 ),
-
-              // Waveform ring (AI speaking)
-              if (widget.isAiSpeaking)
-                CustomPaint(
-                  size: const Size(190, 190),
-                  painter: _WaveRingPainter(
-                    progress: _controller.value,
-                    color: AppColors.accent,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: glowAlpha),
+                    blurRadius: glowBlur,
+                    spreadRadius: 2,
                   ),
-                ),
-
-              // Character avatar (circular)
-              ClipOval(
-                child: widget.imagePath != null
-                    ? Image.asset(
-                        widget.imagePath!,
-                        width: 160,
-                        height: 160,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _fallbackAvatar(),
-                      )
-                    : _fallbackAvatar(),
+                ],
               ),
-
-              // Connecting spinner
-              if (widget.isConnecting)
-                Container(
-                  width: 160,
-                  height: 160,
-                  decoration: const BoxDecoration(
-                    color: Colors.black45,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 3,
-                    ),
-                  ),
-                ),
-            ],
+              child: widget.isConnecting
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : null,
+            ),
           ),
         );
       },
     );
-  }
-
-  Widget _fallbackAvatar() {
-    return Container(
-      width: 160,
-      height: 160,
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.15),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(Icons.auto_awesome, color: AppColors.primary, size: 64),
-    );
-  }
-}
-
-// ── Wave Ring Painter (AI speaking) ───────────────────────────────────────
-
-class _WaveRingPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-
-  _WaveRingPainter({required this.progress, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final baseRadius = size.width / 2 - 8;
-
-    for (int i = 0; i < 3; i++) {
-      final offset = i * 0.33;
-      final wave = sin((progress + offset) * pi * 2);
-      final radius = baseRadius + wave * 6;
-      final opacity = 0.15 + wave.abs() * 0.2;
-
-      final paint = Paint()
-        ..color = color.withValues(alpha: opacity)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0;
-
-      canvas.drawCircle(center, radius, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _WaveRingPainter oldDelegate) =>
-      oldDelegate.progress != progress;
-}
-
-// ── Pulsing Record Dot ────────────────────────────────────────────────────
-
-class _PulsingRecordDot extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: const BoxDecoration(
-        color: AppColors.error,
-        shape: BoxShape.circle,
-      ),
-    )
-        .animate(onPlay: (c) => c.repeat(reverse: true))
-        .fade(begin: 1.0, end: 0.15, duration: 600.ms, curve: Curves.easeInOut);
   }
 }
 
 // ── Caption Overlay ───────────────────────────────────────────────────────
 
 class _CaptionOverlay extends StatelessWidget {
-  final List<ConversationMessage> messages;
   final String currentTranscription;
-  final ScrollController scrollController;
 
-  const _CaptionOverlay({
-    required this.messages,
-    required this.currentTranscription,
-    required this.scrollController,
-  });
+  const _CaptionOverlay({required this.currentTranscription});
 
   @override
   Widget build(BuildContext context) {
-    // Show last 3 messages + current transcription
-    final recentMessages = messages.length > 3
-        ? messages.sublist(messages.length - 3)
-        : messages;
-
-    if (recentMessages.isEmpty && currentTranscription.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (currentTranscription.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      constraints: const BoxConstraints(maxHeight: 120),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.5),
+        color: _kDarkSurface.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kDarkBorder),
       ),
-      child: ListView(
-        controller: scrollController,
-        shrinkWrap: true,
-        children: [
-          for (final msg in recentMessages)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                '${msg.role == MessageRole.ai ? 'AI' : 'You'}: ${msg.text}',
-                style: AppTypography.bodySmall(
-                  color: msg.role == MessageRole.ai
-                      ? Colors.white
-                      : Colors.white70,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          if (currentTranscription.isNotEmpty)
-            Text(
-              'AI: $currentTranscription',
-              style: AppTypography.bodySmall(color: Colors.white60),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-        ],
+      child: Text(
+        currentTranscription,
+        style: AppTypography.bodySmall(color: _kDarkTextPrimary),
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

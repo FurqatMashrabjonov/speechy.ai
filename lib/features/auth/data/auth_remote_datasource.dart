@@ -19,7 +19,7 @@ class AuthRemoteDatasource {
         _firestore = firestore ?? FirebaseFirestore.instance,
         _googleSignIn = googleSignIn ?? GoogleSignIn();
 
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<User?> get authStateChanges => _auth.userChanges();
   User? get currentUser => _auth.currentUser;
 
   Future<UserCredential> signInWithEmail(String email, String password) async {

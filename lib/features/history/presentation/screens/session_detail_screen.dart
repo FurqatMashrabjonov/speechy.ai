@@ -7,8 +7,9 @@ import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
 import 'package:speech_coach/features/history/data/session_history_repository.dart';
 import 'package:speech_coach/features/history/domain/session_history_entity.dart';
-import 'package:speech_coach/features/feedback/presentation/widgets/radar_chart.dart';
-import 'package:speech_coach/features/feedback/presentation/widgets/score_bar.dart';
+import 'package:speech_coach/shared/widgets/coach_tip_card.dart';
+import 'package:speech_coach/shared/widgets/progress_bar.dart';
+import 'package:speech_coach/shared/widgets/score_ring.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
 final _sessionDetailProvider =
@@ -47,35 +48,23 @@ class SessionDetailScreen extends ConsumerWidget {
                     color: AppColors.error.withValues(alpha: 0.6),
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'Could not load session',
-                    style: AppTypography.headlineSmall(),
-                  ),
+                  Text('Could not load session', style: AppTypography.headlineSmall()),
                   const SizedBox(height: 8),
                   Text(
                     e.toString(),
                     textAlign: TextAlign.center,
-                    style: AppTypography.bodyMedium(
-                      color: context.textSecondary,
-                    ),
+                    style: AppTypography.bodyMedium(color: context.textSecondary),
                   ),
                   const SizedBox(height: 24),
                   Tappable(
                     onTap: () => context.pop(),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
                         color: AppColors.primary,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text(
-                        'Go Back',
-                        style:
-                            AppTypography.labelLarge(color: AppColors.white),
-                      ),
+                      child: Text('Go Back', style: AppTypography.labelLarge(color: AppColors.white)),
                     ),
                   ),
                 ],
@@ -85,26 +74,19 @@ class SessionDetailScreen extends ConsumerWidget {
           data: (session) {
             if (session == null) {
               return Center(
-                child: Text(
-                  'Session not found',
-                  style: AppTypography.bodyMedium(
-                    color: context.textSecondary,
-                  ),
-                ),
+                child: Text('Session not found', style: AppTypography.bodyMedium(color: context.textSecondary)),
               );
             }
-            return _buildDetail(context, ref, session);
+            return _buildDetail(context, session);
           },
         ),
       ),
     );
   }
 
-  Widget _buildDetail(
-    BuildContext context,
-    WidgetRef ref,
-    SessionHistoryEntry session,
-  ) {
+  Widget _buildDetail(BuildContext context, SessionHistoryEntry session) {
+    final score = session.overallScore ?? 0;
+
     return Column(
       children: [
         // App bar
@@ -116,15 +98,10 @@ class SessionDetailScreen extends ConsumerWidget {
                 onTap: () => context.pop(),
                 child: const Icon(Icons.arrow_back_rounded, size: 24),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  session.scenarioTitle,
-                  style: AppTypography.headlineSmall(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              const Spacer(),
+              Text('Session Feedback', style: AppTypography.titleMedium()),
+              const Spacer(),
+              const SizedBox(width: 24),
             ],
           ),
         ),
@@ -134,153 +111,147 @@ class SessionDetailScreen extends ConsumerWidget {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
+              children: [
+                const SizedBox(height: 8),
+
+                // Category + date
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 8),
-                    // Category badge
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.14),
+                        color: AppColors.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
-                        session.category,
-                        style: AppTypography.labelSmall(
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ).animate().fadeIn(duration: 400.ms),
-                    const SizedBox(height: 4),
-                    // Date
+                      child: Text(session.category, style: AppTypography.labelSmall(color: AppColors.primary)),
+                    ),
+                    const SizedBox(width: 8),
                     Text(
                       _formatFullDate(session.createdAt),
-                      style: AppTypography.bodySmall(
-                        color: context.textTertiary,
-                      ),
-                    ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
-                    const SizedBox(height: 20),
-
-                    // Overall score circle
-                    _OverallScoreCircle(score: session.overallScore ?? 0)
-                        .animate()
-                        .fadeIn(delay: 200.ms, duration: 600.ms)
-                        .scale(begin: const Offset(0.8, 0.8)),
-                    const SizedBox(height: 24),
-
-                    // Radar chart
-                    ScoreRadarChart(
-                      clarity: session.clarity ?? 0,
-                      confidence: session.confidence ?? 0,
-                      engagement: session.engagement ?? 0,
-                      relevance: session.relevance ?? 0,
-                      size: 220,
-                    ).animate().fadeIn(delay: 500.ms, duration: 600.ms),
-                    const SizedBox(height: 24),
-
-                    // Score bars
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: context.surface,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Detailed Scores',
-                            style: AppTypography.titleMedium(),
-                          ),
-                          const SizedBox(height: 12),
-                          ScoreBar(
-                            label: 'Clarity',
-                            score: session.clarity ?? 0,
-                            animationDelay: 0,
-                          ),
-                          ScoreBar(
-                            label: 'Confidence',
-                            score: session.confidence ?? 0,
-                            animationDelay: 100,
-                          ),
-                          ScoreBar(
-                            label: 'Engagement',
-                            score: session.engagement ?? 0,
-                            animationDelay: 200,
-                          ),
-                          ScoreBar(
-                            label: 'Relevance',
-                            score: session.relevance ?? 0,
-                            animationDelay: 300,
-                          ),
-                        ],
-                      ),
-                    ).animate().fadeIn(delay: 600.ms, duration: 400.ms),
-                    const SizedBox(height: 16),
-
-                    // Summary
-                    if (session.summary != null && session.summary!.isNotEmpty)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: context.surface,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Summary',
-                                style: AppTypography.titleMedium()),
-                            const SizedBox(height: 8),
-                            Text(
-                              session.summary!,
-                              style: AppTypography.bodyMedium(
-                                color: context.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ).animate().fadeIn(delay: 700.ms, duration: 400.ms),
-                    if (session.summary != null && session.summary!.isNotEmpty)
-                      const SizedBox(height: 16),
-
-                    // Strengths
-                    if (session.strengths != null && session.strengths!.isNotEmpty)
-                      _FeedbackList(
-                        title: 'Strengths',
-                        items: session.strengths!,
-                        icon: Icons.check_circle_rounded,
-                        iconColor: AppColors.success,
-                      ).animate().fadeIn(delay: 800.ms, duration: 400.ms),
-                    if (session.strengths != null && session.strengths!.isNotEmpty)
-                      const SizedBox(height: 16),
-
-                    // Improvements
-                    if (session.improvements != null && session.improvements!.isNotEmpty)
-                      _FeedbackList(
-                        title: 'Areas to Improve',
-                        items: session.improvements!,
-                        icon: Icons.arrow_upward_rounded,
-                        iconColor: AppColors.warning,
-                      ).animate().fadeIn(delay: 900.ms, duration: 400.ms),
-                    if (session.improvements != null && session.improvements!.isNotEmpty)
-                      const SizedBox(height: 16),
-
-                    // Transcript
-                    if (session.transcript.isNotEmpty)
-                      _TranscriptSection(transcript: session.transcript)
-                          .animate()
-                          .fadeIn(delay: 1000.ms, duration: 400.ms),
-                    const SizedBox(height: 24),
+                      style: AppTypography.bodySmall(color: context.textTertiary),
+                    ),
                   ],
+                ).animate().fadeIn(duration: 400.ms),
+                const SizedBox(height: 20),
+
+                // Score Ring
+                ScoreRing(score: score, size: 160, strokeWidth: 6),
+                const SizedBox(height: 8),
+
+                // Score label
+                Text(
+                  _getScoreLabel(score),
+                  style: AppTypography.headlineMedium(color: _getScoreColor(score)),
+                ).animate().fadeIn(duration: 400.ms),
+                const SizedBox(height: 24),
+
+                // Breakdown card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: context.card,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: context.divider, width: 1.5),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Breakdown', style: AppTypography.titleMedium()),
+                      const SizedBox(height: 16),
+                      ProgressBar(
+                        value: (session.clarity ?? 0) / 100,
+                        label: 'Clarity',
+                        trailingText: '${session.clarity ?? 0}%',
+                        icon: Icons.waves_rounded,
+                        delay: const Duration(milliseconds: 50),
+                      ),
+                      const SizedBox(height: 14),
+                      ProgressBar(
+                        value: (session.confidence ?? 0) / 100,
+                        label: 'Confidence',
+                        trailingText: '${session.confidence ?? 0}%',
+                        icon: Icons.shield_rounded,
+                        delay: const Duration(milliseconds: 150),
+                      ),
+                      const SizedBox(height: 14),
+                      ProgressBar(
+                        value: (session.engagement ?? 0) / 100,
+                        label: 'Engagement',
+                        trailingText: '${session.engagement ?? 0}%',
+                        icon: Icons.people_rounded,
+                        delay: const Duration(milliseconds: 250),
+                      ),
+                      const SizedBox(height: 14),
+                      ProgressBar(
+                        value: (session.relevance ?? 0) / 100,
+                        label: 'Relevance',
+                        trailingText: '${session.relevance ?? 0}%',
+                        icon: Icons.track_changes_rounded,
+                        delay: const Duration(milliseconds: 350),
+                      ),
+                    ],
+                  ),
+                ).animate().fadeIn(duration: 400.ms),
+                const SizedBox(height: 16),
+
+                // Summary as coach tip
+                if (session.summary != null && session.summary!.isNotEmpty) ...[
+                  CoachTipCard(tip: session.summary!).animate().fadeIn(duration: 400.ms),
+                  const SizedBox(height: 16),
+                ],
+
+                // Strengths
+                if (session.strengths != null && session.strengths!.isNotEmpty) ...[
+                  _FeedbackList(
+                    title: 'Strengths',
+                    items: session.strengths!,
+                    icon: Icons.check_circle_rounded,
+                    iconColor: AppColors.success,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Improvements
+                if (session.improvements != null && session.improvements!.isNotEmpty) ...[
+                  _FeedbackList(
+                    title: 'Areas to Improve',
+                    items: session.improvements!,
+                    icon: Icons.arrow_upward_rounded,
+                    iconColor: AppColors.warning,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Transcript
+                if (session.transcript.isNotEmpty) ...[
+                  _TranscriptSection(transcript: session.transcript)
+                      .animate()
+                      .fadeIn(duration: 400.ms),
+                ],
+
+                const SizedBox(height: 24),
+              ],
             ),
           ),
         ),
       ],
     );
+  }
+
+  String _getScoreLabel(int score) {
+    if (score >= 90) return 'Excellent Work!';
+    if (score >= 80) return 'Great Job!';
+    if (score >= 70) return 'Good Work!';
+    if (score >= 50) return 'Keep Going!';
+    return 'Keep Practicing!';
+  }
+
+  Color _getScoreColor(int score) {
+    if (score >= 80) return AppColors.success;
+    if (score >= 50) return AppColors.warning;
+    return AppColors.error;
   }
 
   String _formatFullDate(DateTime date) {
@@ -290,75 +261,7 @@ class SessionDetailScreen extends ConsumerWidget {
     ];
     final h = date.hour.toString().padLeft(2, '0');
     final m = date.minute.toString().padLeft(2, '0');
-    return '${months[date.month - 1]} ${date.day}, ${date.year} at $h:$m';
-  }
-}
-
-class _OverallScoreCircle extends StatelessWidget {
-  final int score;
-
-  const _OverallScoreCircle({required this.score});
-
-  Color get _color {
-    if (score >= 80) return AppColors.success;
-    if (score >= 50) return AppColors.warning;
-    return AppColors.error;
-  }
-
-  String get _label {
-    if (score >= 90) return 'Excellent!';
-    if (score >= 80) return 'Great Job!';
-    if (score >= 70) return 'Good Work';
-    if (score >= 50) return 'Keep Going';
-    return 'Keep Practicing';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          width: 140,
-          height: 140,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 140,
-                height: 140,
-                child: CircularProgressIndicator(
-                  value: score / 100,
-                  strokeWidth: 8,
-                  backgroundColor: context.divider,
-                  color: _color,
-                  strokeCap: StrokeCap.round,
-                ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$score',
-                    style: AppTypography.displayLarge(color: _color),
-                  ),
-                  Text(
-                    '/100',
-                    style: AppTypography.labelSmall(
-                      color: context.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _label,
-          style: AppTypography.titleLarge(color: _color),
-        ),
-      ],
-    );
+    return '${months[date.month - 1]} ${date.day}, ${date.year} · $h:$m';
   }
 }
 
@@ -377,40 +280,56 @@ class _FeedbackList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTypography.titleMedium()),
-          const SizedBox(height: 12),
-          ...items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(icon, size: 18, color: iconColor),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: AppTypography.bodyMedium(
-                        color: context.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(title, style: AppTypography.titleMedium()),
+        ),
+        ...List.generate(items.length, (index) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: context.card,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(color: context.divider),
             ),
-          ),
-        ],
-      ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 20, color: iconColor),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    items[index],
+                    style: AppTypography.bodyMedium(color: context.textPrimary)
+                        .copyWith(height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          )
+              .animate(delay: (index * 100).ms)
+              .fadeIn(duration: 300.ms)
+              .slideY(begin: 0.15, end: 0, duration: 300.ms, curve: Curves.easeOut);
+        }),
+      ],
     );
   }
 }
@@ -424,69 +343,79 @@ class _TranscriptSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final lines = transcript
         .split('\n')
-        .where((line) => line.trim().isNotEmpty)
+        .where((l) => l.trim().isNotEmpty)
         .toList();
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: BorderRadius.circular(20),
+        color: context.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.divider, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.chat_rounded, size: 18, color: AppColors.primary),
+              const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Text('Transcript', style: AppTypography.titleMedium()),
             ],
           ),
           const SizedBox(height: 12),
-          ...lines.map((line) {
-            final isUser = line.startsWith('You:');
-            final isAi = line.startsWith('AI:');
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (isUser || isAi)
-                    Container(
-                      width: 28,
-                      height: 28,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        color: isUser
-                            ? AppColors.primary.withValues(alpha: 0.14)
-                            : AppColors.lavender.withValues(alpha: 0.3),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isUser ? Icons.person_rounded : Icons.auto_awesome,
-                        size: 14,
-                        color:
-                            isUser ? AppColors.primary : AppColors.lavender,
-                      ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 220),
+            child: SingleChildScrollView(
+              child: Column(
+                children: lines.map((line) {
+                  final isUser = line.startsWith('You:') || line.startsWith('User:');
+                  final isAi = line.startsWith('AI:');
+                  final text = isUser
+                      ? (line.startsWith('User:')
+                          ? line.substring(5)
+                          : line.substring(4))
+                          .trim()
+                      : isAi
+                          ? line.substring(3).trim()
+                          : line;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (isUser || isAi)
+                          Container(
+                            width: 28,
+                            height: 28,
+                            margin: const EdgeInsets.only(right: 8, top: 1),
+                            decoration: BoxDecoration(
+                              color: isUser
+                                  ? AppColors.primary.withValues(alpha: 0.12)
+                                  : AppColors.accent.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isUser ? Icons.person_rounded : Icons.auto_awesome_rounded,
+                              size: 14,
+                              color: isUser ? AppColors.primary : AppColors.accent,
+                            ),
+                          ),
+                        Expanded(
+                          child: Text(
+                            text,
+                            style: AppTypography.bodySmall(color: context.textSecondary),
+                          ),
+                        ),
+                      ],
                     ),
-                  Expanded(
-                    child: Text(
-                      isUser
-                          ? line.substring(4).trim()
-                          : isAi
-                              ? line.substring(3).trim()
-                              : line,
-                      style: AppTypography.bodyMedium(
-                        color: context.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
-            );
-          }),
+            ),
+          ),
         ],
       ),
     );

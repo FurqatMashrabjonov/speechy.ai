@@ -169,17 +169,17 @@ class _DuoButtonState extends State<DuoButton> {
                     ),
                   ],
           ),
-          child: Row(
-            mainAxisSize: widget.width != null ? MainAxisSize.max : MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (widget.icon != null) ...[
-                Icon(widget.icon, color: _textColor, size: 20),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisSize: widget.width != null ? MainAxisSize.max : MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(widget.icon, color: _textColor, size: 20),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
                   child: Text(
                     widget.text,
                     style: AppTypography.button(color: _textColor),
@@ -187,8 +187,8 @@ class _DuoButtonState extends State<DuoButton> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

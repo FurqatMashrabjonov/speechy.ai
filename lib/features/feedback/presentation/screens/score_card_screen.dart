@@ -778,6 +778,14 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                           .fadeIn(duration: 400.ms),
                     if (_fillerWords.isNotEmpty) const SizedBox(height: 16),
 
+                    // Transcript
+                    if (widget.transcript.isNotEmpty) ...[
+                      _TranscriptSection(transcript: widget.transcript)
+                          .animate()
+                          .fadeIn(duration: 400.ms),
+                      const SizedBox(height: 16),
+                    ],
+
                     // Chain Result Banner
                     if (_chainResult != null)
                       _ChainResultBanner(
@@ -1399,6 +1407,96 @@ class _ChainResultBanner extends StatelessWidget {
                 ),
               ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Transcript Section ────────────────────────────────────────────────────
+
+class _TranscriptSection extends StatelessWidget {
+  final String transcript;
+
+  const _TranscriptSection({required this.transcript});
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = transcript
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: context.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.divider, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text('Transcript', style: AppTypography.titleMedium()),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 220),
+            child: SingleChildScrollView(
+              child: Column(
+                children: lines.map((line) {
+                  final isUser = line.startsWith('You:') || line.startsWith('User:');
+                  final isAi = line.startsWith('AI:');
+                  final text = isUser
+                      ? (line.startsWith('User:')
+                          ? line.substring(5)
+                          : line.substring(4))
+                          .trim()
+                      : isAi
+                          ? line.substring(3).trim()
+                          : line;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (isUser || isAi)
+                          Container(
+                            width: 28,
+                            height: 28,
+                            margin: const EdgeInsets.only(right: 8, top: 1),
+                            decoration: BoxDecoration(
+                              color: isUser
+                                  ? AppColors.primary.withValues(alpha: 0.12)
+                                  : AppColors.accent.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isUser ? Icons.person_rounded : Icons.auto_awesome_rounded,
+                              size: 14,
+                              color: isUser ? AppColors.primary : AppColors.accent,
+                            ),
+                          ),
+                        Expanded(
+                          child: Text(
+                            text,
+                            style: AppTypography.bodySmall(color: context.textSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
         ],
       ),
     );

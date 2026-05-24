@@ -45,6 +45,8 @@ class ConversationState {
   final bool isMicMuted;
   // Real-time mic amplitude 0.0–1.0 for waveform UI
   final double micAmplitude;
+  // Real-time AI audio amplitude 0.0–1.0 (calculated from incoming PCM chunks)
+  final double aiAmplitude;
   // Feedback from live tool call
   final ConversationFeedback? sessionFeedback;
 
@@ -63,6 +65,7 @@ class ConversationState {
     this.voiceName,
     this.isMicMuted = false,
     this.micAmplitude = 0.0,
+    this.aiAmplitude = 0.0,
     this.sessionFeedback,
   });
 
@@ -98,6 +101,7 @@ class ConversationState {
     String? voiceName,
     bool? isMicMuted,
     double? micAmplitude,
+    double? aiAmplitude,
     ConversationFeedback? sessionFeedback,
   }) {
     return ConversationState(
@@ -115,6 +119,7 @@ class ConversationState {
       voiceName: voiceName ?? this.voiceName,
       isMicMuted: isMicMuted ?? this.isMicMuted,
       micAmplitude: micAmplitude ?? this.micAmplitude,
+      aiAmplitude: aiAmplitude ?? this.aiAmplitude,
       sessionFeedback: sessionFeedback ?? this.sessionFeedback,
     );
   }
@@ -153,6 +158,29 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   static const int _bargeInHoldFrames = 3;
   int _bargeInFrameCount = 0;
   bool _bargeInActive = false; // blocks in-flight AI audio after barge-in
+
+  // AI audio amplitude smoothing
+  double _aiAmpSmoothed = 0.0;
+  Timer? _aiAmpDecayTimer;
+
+  // Local user-speech detection (avoids 2-3s server VAD delay)
+  static const double _userSpeakThreshold = 0.08; // fallback if calibration fails
+  static const int _userSpeakHoldFrames = 2;
+  int _userSpeakFrameCount = 0;
+
+  // Adaptive volume calibration — personalises threshold to each user's voice
+  static const int _calibrationFrames = 50; // ~2-3s of PCM chunks
+  double _calibratedThreshold = 0.08;
+  bool _isCalibrating = false;
+  final List<double> _calibrationSamples = [];
+
+  // Network reconnection
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 3;
+  Timer? _reconnectTimer;
+
+  // Natural session ending (10s before scenario timer runs out)
+  bool _naturalEndSent = false;
 
   ConversationNotifier(this._service, this.category)
     : super(const ConversationState());
@@ -259,7 +287,6 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         maxBufferSizeBytes: 1024 * 1024 * 10,
         bufferingType: BufferingType.released,
         bufferingTimeNeeds: 0,
-        onBuffering: (isBuffering, handle, time) {},
       );
       _audioHandle = null;
     } finally {
@@ -313,6 +340,11 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       return;
     }
 
+    _reconnectAttempts = 0;
+    _naturalEndSent = false;
+    _calibratedThreshold = _userSpeakThreshold;
+    _calibrationSamples.clear();
+
     state = state.copyWith(status: ConversationStatus.connecting, error: null);
 
     try {
@@ -365,6 +397,19 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     }
   }
 
+  /// Computes per-user speech threshold from collected background noise samples.
+  /// Uses the 70th percentile * 2.8 so quiet users aren't missed and loud
+  /// environments don't cause false triggers.
+  void _finishCalibration() {
+    _isCalibrating = false;
+    if (_calibrationSamples.isEmpty) return;
+    final sorted = [..._calibrationSamples]..sort();
+    final p70 = sorted[(sorted.length * 0.7).floor()];
+    _calibratedThreshold = (p70 * 2.8).clamp(0.05, 0.28);
+    _calibrationSamples.clear();
+    debugPrint('Volume calibrated: baseline p70=$p70, threshold=$_calibratedThreshold');
+  }
+
   /// Starts continuous mic audio streaming to Gemini via per-chunk sendAudioRealtime.
   /// VAD on the server automatically detects when the user speaks/stops.
   Future<void> _startMicStream() async {
@@ -385,13 +430,24 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       );
 
       _micIsActive = true;
+      _isCalibrating = true; // start background noise calibration
 
       _micSubscription = stream.listen((data) {
         if (_closed) return;
         final bytes = Uint8List.fromList(data);
+        final amp = _pcmAmplitude(bytes);
+
+        // Calibration: collect background noise samples before user speaks.
+        // Runs during AI's greeting (echo-cancelled), giving us a clean baseline.
+        if (_isCalibrating) {
+          _calibrationSamples.add(amp);
+          if (_calibrationSamples.length >= _calibrationFrames) {
+            _finishCalibration();
+          }
+        }
+
         if (_isAiSpeaking) {
           // Barge-in detection: check amplitude from raw PCM
-          final amp = _pcmAmplitude(bytes);
           if (amp > _bargeInThreshold) {
             _bargeInFrameCount++;
             if (_bargeInFrameCount >= _bargeInHoldFrames) {
@@ -404,6 +460,19 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         } else {
           _bargeInFrameCount = 0;
           _service.sendAudioRealtime(bytes);
+
+          // Immediately detect user speech from calibrated local PCM threshold.
+          // Avoids the 2-3s server VAD lag before inputTranscription arrives.
+          if (amp > _calibratedThreshold) {
+            _userSpeakFrameCount++;
+            if (_userSpeakFrameCount >= _userSpeakHoldFrames &&
+                state.status == ConversationStatus.active &&
+                mounted) {
+              state = state.copyWith(status: ConversationStatus.userSpeaking);
+            }
+          } else {
+            _userSpeakFrameCount = 0;
+          }
         }
       });
 
@@ -479,9 +548,18 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       } catch (e) {
         if (_closed) break;
         debugPrint('Receive loop error: $e');
+        final isMidSession = state.messages.isNotEmpty;
+        final errorType = isMidSession
+            ? ConversationErrorType.midSession
+            : _classifyError(e);
+
+        // Auto-reconnect for mid-session network drops (not permission errors)
+        if (isMidSession && errorType != ConversationErrorType.permission) {
+          _tryReconnect();
+          return; // Exit loop — _tryReconnect will restart it on success
+        }
+
         if (mounted) {
-          final isMidSession = state.messages.isNotEmpty;
-          final errorType = isMidSession ? ConversationErrorType.midSession : _classifyError(e);
           state = state.copyWith(
             status: ConversationStatus.error,
             error: _friendlyMessage(errorType),
@@ -493,6 +571,58 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     }
   }
 
+  /// Attempts to reconnect after a mid-session network drop.
+  /// Keeps transcript and elapsed time intact. Backs off 2 / 4 / 6 seconds.
+  Future<void> _tryReconnect() async {
+    if (_closed || _reconnectAttempts >= _maxReconnectAttempts) {
+      if (mounted) {
+        state = state.copyWith(
+          status: ConversationStatus.error,
+          error: _friendlyMessage(ConversationErrorType.midSession),
+          errorType: ConversationErrorType.midSession,
+        );
+      }
+      return;
+    }
+
+    _reconnectAttempts++;
+    final delaySec = _reconnectAttempts * 2;
+    debugPrint('Reconnect attempt $_reconnectAttempts in ${delaySec}s...');
+
+    if (mounted) {
+      state = state.copyWith(status: ConversationStatus.connecting, error: null);
+    }
+
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(Duration(seconds: delaySec), () async {
+      if (_closed) return;
+      try {
+        await _service.close();
+        // Pass the full transcript as prior context so AI resumes naturally
+        // without reintroducing itself or losing conversation thread.
+        final transcript = state.messages.isNotEmpty ? state.fullTranscript : null;
+        await _service.connect(
+          category,
+          scenarioPrompt: state.scenarioPrompt,
+          durationMinutes: state.durationLimitMinutes,
+          voiceName: state.voiceName,
+          priorTranscript: transcript,
+        );
+        await _setupNewStream();
+        await _startAudioPlayback();
+        _reconnectAttempts = 0;
+        _isAiSpeaking = false;
+        if (mounted) {
+          state = state.copyWith(status: ConversationStatus.active);
+        }
+        _receiveLoop(); // restart the receive loop
+      } catch (e) {
+        debugPrint('Reconnect attempt $_reconnectAttempts failed: $e');
+        _tryReconnect(); // try again (will increment counter)
+      }
+    });
+  }
+
   void _handleServerResponse(LiveServerResponse response) {
     final msg = response.message;
 
@@ -502,6 +632,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         if (!_isAiSpeaking) {
           _isAiSpeaking = true;
           _bargeInFrameCount = 0;
+          _userSpeakFrameCount = 0;
           _flushUserTranscription();
           state = state.copyWith(status: ConversationStatus.aiSpeaking);
         }
@@ -511,6 +642,16 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
             if (_audioStream != null) {
               SoLoud.instance.addAudioDataStream(_audioStream!, part.bytes);
             }
+            // Smooth AI amplitude from PCM for orb visualization
+            final rawAmp = _pcmAmplitude(part.bytes);
+            _aiAmpSmoothed = _aiAmpSmoothed * 0.4 + rawAmp * 0.6;
+            if (mounted) state = state.copyWith(aiAmplitude: _aiAmpSmoothed);
+            // Decay to 0 if no new chunk arrives within 200ms (gap between turns)
+            _aiAmpDecayTimer?.cancel();
+            _aiAmpDecayTimer = Timer(const Duration(milliseconds: 200), () {
+              _aiAmpSmoothed = 0;
+              if (mounted) state = state.copyWith(aiAmplitude: 0.0);
+            });
           }
         }
       }
@@ -617,6 +758,11 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       SoLoud.instance.setDataIsEnded(_audioStream!);
     }
 
+    // Reset AI amplitude
+    _aiAmpDecayTimer?.cancel();
+    _aiAmpSmoothed = 0;
+    if (mounted) state = state.copyWith(aiAmplitude: 0.0);
+
     final transcription = state.currentTranscription.trim();
     Uint8List? audioBytes;
 
@@ -658,8 +804,8 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     _micResumeTimer = Timer(const Duration(milliseconds: 150), () {
       _isAiSpeaking = false;
       _bargeInFrameCount = 0;
-      // Mic stays running — no restart needed
-      if (!_closed && !state.isMicMuted && mounted) {
+      // Don't restart mic if the session is ending (requestFeedbackAndEnd stopped it)
+      if (!_closed && !state.isMicMuted && mounted && !_naturalEndSent) {
         if (!_micIsActive) _startMicStream(); // fallback if somehow stopped
       }
     });
@@ -713,28 +859,32 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   }
 
   Future<void> requestFeedbackAndEnd() async {
-    if (state.status == ConversationStatus.ended ||
+    if (_closed ||
+        state.status == ConversationStatus.ended ||
         state.status == ConversationStatus.analyzing) {
       return;
     }
 
-    // Stop mic stream so user doesn't interrupt the final processing
+    // Stop mic — session is ending, user can't speak anymore.
     await _stopMicStream();
 
-    state = state.copyWith(status: ConversationStatus.analyzing);
-
-    // Ask Gemini for the feedback tool call
+    // Do NOT set status=analyzing yet. Let AI speak its goodbye naturally first.
+    // The tool call handler will set analyzing when submit_session_feedback is called,
+    // which triggers navigation to the score card.
     await _service.sendText(
-      'The session is over. Evaluate my performance based on our conversation and my vocal tone. Call the submit_session_feedback tool with the scores and feedback, then briefly say goodbye.',
+      'Our session time is up. Please say a warm, brief goodbye to the user right now '
+      '— one or two natural sentences. Then immediately call the submit_session_feedback '
+      'tool to save their results.',
     );
 
-    // Add a failsafe timeout. If Gemini doesn't call the tool within 15 seconds,
-    // end the conversation anyway so the user isn't stuck.
-    Timer(const Duration(seconds: 15), () {
-      if (mounted && state.status == ConversationStatus.analyzing) {
-        debugPrint(
-          'requestFeedbackAndEnd: Timed out waiting for tool call. Falling back.',
-        );
+    // Fallback: AI didn't call the tool in time — set analyzing so the screen
+    // navigates to the score card, then force-close the session.
+    Timer(const Duration(seconds: 18), () {
+      if (mounted &&
+          state.status != ConversationStatus.ended &&
+          state.status != ConversationStatus.analyzing) {
+        debugPrint('requestFeedbackAndEnd: timeout — forcing navigation fallback');
+        state = state.copyWith(status: ConversationStatus.analyzing);
         endConversation();
       }
     });
@@ -763,6 +913,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   void _startTimer() {
     _timer?.cancel();
     _wrapUpWarningSent = false;
+    _naturalEndSent = false;
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         state = state.copyWith(
@@ -780,32 +931,47 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         // Hard cap: 14m30s — end before Firebase 15-min server disconnect
         if (elapsed >= _sessionHardLimit) {
           debugPrint('Session hard limit reached — ending gracefully.');
-          if (state.scenarioId != null) {
-            requestFeedbackAndEnd();
-          } else {
-            endConversation();
-          }
-          return;
-        }
-
-        // Scenario timer: warn + auto-end at scenario duration
-        if (state.durationLimitMinutes != null) {
-          final limit = Duration(minutes: state.durationLimitMinutes!);
-          final remaining = limit - elapsed;
-
-          if (remaining.inSeconds <= 30 && !_wrapUpWarningSent) {
-            _wrapUpWarningSent = true;
-            _service.sendText(
-              'There are only 30 seconds left in our session. Please immediately start wrapping up the conversation naturally, ask a final quick question, or say your goodbyes.',
-            );
-          }
-
-          if (state.isTimeUp) {
+          if (!_naturalEndSent) {
+            _naturalEndSent = true;
             if (state.scenarioId != null) {
               requestFeedbackAndEnd();
             } else {
               endConversation();
             }
+          }
+          return;
+        }
+
+        // Scenario timer
+        if (state.durationLimitMinutes != null) {
+          final limit = Duration(minutes: state.durationLimitMinutes!);
+          final remaining = limit - elapsed;
+
+          // 30s: privately tell AI time is almost up so it can steer naturally
+          if (remaining.inSeconds <= 30 && !_wrapUpWarningSent) {
+            _wrapUpWarningSent = true;
+            _service.sendText(
+              '[System: 30 seconds remaining in this session. Continue the conversation naturally — do not announce the time limit.]',
+            );
+          }
+
+          // 10s: signal AI to say natural goodbye + call feedback tool.
+          // Mic is stopped but AI keeps speaking — user hears a real goodbye.
+          if (remaining.inSeconds <= 10 && !_naturalEndSent) {
+            _naturalEndSent = true;
+            if (state.scenarioId != null) {
+              requestFeedbackAndEnd();
+            } else {
+              endConversation();
+            }
+            return;
+          }
+
+          // 0s: only force-close if naturalEndSent was never triggered.
+          // If it was, the 18s fallback inside requestFeedbackAndEnd handles it —
+          // calling endConversation() here would race with the AI's tool call.
+          if (state.isTimeUp && !_naturalEndSent) {
+            endConversation();
           }
         }
       }
@@ -818,9 +984,20 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     _timer?.cancel();
     _micResumeTimer?.cancel();
     _amplitudeTimer?.cancel();
+    _aiAmpDecayTimer?.cancel();
+    _reconnectTimer?.cancel();
     _micSubscription?.cancel();
     _recorder.dispose();
-    _teardownAudioEngine(); // fire-and-forget: deinit is fast, no callbacks
+    // Synchronous SoLoud teardown — must happen before super.dispose() so the
+    // engine is shut down before Dart can GC any closures registered with it.
+    if (_audioStream != null && SoLoud.instance.isInitialized) {
+      try { SoLoud.instance.setDataIsEnded(_audioStream!); } catch (_) {}
+    }
+    _audioStream = null;
+    _audioHandle = null;
+    if (SoLoud.instance.isInitialized) {
+      try { SoLoud.instance.deinit(); } catch (_) {}
+    }
     _service.close();
     super.dispose();
   }

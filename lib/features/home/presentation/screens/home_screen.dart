@@ -28,9 +28,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final firstName = ref.watch(authStateProvider.select((s) {
-      final name = s.whenData((u) => u?.displayName).value;
-      if (name == null || name.isEmpty) return 'Speaker';
-      return name.split(' ').first;
+      final u = s.whenData((u) => u).value;
+      final name = u?.displayName;
+      if (name != null && name.isNotEmpty) return name.split(' ').first;
+      final email = u?.email ?? '';
+      return email.isNotEmpty ? email.split('@').first : 'there';
     }));
     final plan = ref.watch(learningPlanProvider);
 
