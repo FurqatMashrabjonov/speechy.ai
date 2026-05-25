@@ -459,6 +459,8 @@ class _ShellScreen extends StatelessWidget {
       bottomNavigationBar: BottomNavBar(
         currentIndex: _calculateIndex(context),
         onTap: (index) {
+          // Dismiss any open bottom sheet or dialog before switching tabs
+          Navigator.of(context).popUntil((route) => route.isFirst);
           switch (index) {
             case 0:
               context.go('/home');
