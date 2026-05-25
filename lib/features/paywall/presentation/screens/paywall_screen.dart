@@ -42,7 +42,7 @@ class PaywallScreen extends ConsumerWidget {
     final bannerPath = AppImages.trackBannerMap[trackId];
     final bg = context.background;
     const tier = TrackTier.full;
-    final price = sub.packageForTier(tier)?.storeProduct.priceString ??
+    final price = sub.packageForTrack(trackId)?.storeProduct.priceString ??
         tier.fallbackPrice;
 
     return Scaffold(

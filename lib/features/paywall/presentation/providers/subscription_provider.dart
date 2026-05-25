@@ -34,9 +34,19 @@ class SubscriptionState {
 
   bool isTrackUnlocked(String trackId) => purchasedTiers.containsKey(trackId);
 
-  // Single product — just take the first available package.
-  Package? packageForTier(TrackTier tier) =>
-      availablePackages.isNotEmpty ? availablePackages.first : null;
+  /// Find the package for a specific track.
+  /// RC package identifier must match: {trackId}_full
+  Package? packageForTrack(String trackId) {
+    final identifier = TrackTierX.revenueCatIdForTrack(trackId);
+    for (final pkg in availablePackages) {
+      if (pkg.identifier == identifier) return pkg;
+    }
+    // Dev fallback: if no per-track package found, use first available
+    return availablePackages.isNotEmpty ? availablePackages.first : null;
+  }
+
+  // Legacy — paywall_screen still calls this; routes through packageForTrack.
+  Package? packageForTier(TrackTier tier) => null;
 
   SubscriptionState copyWith({
     bool? isPurchasing,
@@ -91,7 +101,7 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
   }) async {
     state = state.copyWith(isPurchasing: true, error: null);
 
-    final package = state.packageForTier(tier);
+    final package = state.packageForTrack(trackId);
 
     if (package == null) {
       // Dev fallback: simulate purchase

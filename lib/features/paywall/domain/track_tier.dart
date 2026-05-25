@@ -11,7 +11,10 @@ extension TrackTierX on TrackTier {
 
   String get fallbackPrice => r'$6.99';
 
+  /// Per-track product ID: call revenueCatIdForTrack(trackId) instead.
   String get revenueCatIdentifier => 'full';
+
+  static String revenueCatIdForTrack(String trackId) => '${trackId}_full';
 
   static TrackTier? fromString(String? value) => switch (value) {
         'full' => TrackTier.full,
