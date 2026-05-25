@@ -188,12 +188,12 @@ class _TrackCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: tier == TrackTier.ultra
+                            color: tier == TrackTier.power
                                 ? const Color(0xFF7C3AED).withValues(alpha: 0.12)
                                 : const Color(0xFFD97706).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: tier == TrackTier.ultra
+                              color: tier == TrackTier.power
                                   ? const Color(0xFF7C3AED).withValues(alpha: 0.35)
                                   : const Color(0xFFD97706).withValues(alpha: 0.35),
                             ),
@@ -201,7 +201,7 @@ class _TrackCard extends StatelessWidget {
                           child: Text(
                             tier!.displayName,
                             style: AppTypography.labelSmall(
-                              color: tier == TrackTier.ultra
+                              color: tier == TrackTier.power
                                   ? const Color(0xFF7C3AED)
                                   : const Color(0xFFD97706),
                             ).copyWith(fontWeight: FontWeight.w700),

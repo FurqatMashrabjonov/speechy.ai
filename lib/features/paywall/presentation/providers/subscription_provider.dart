@@ -154,7 +154,7 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
           error: 'No previous purchases found.',
         );
       } else {
-        await _applyTier(trackId, TrackTier.ultra);
+        await _applyTier(trackId, TrackTier.power);
         state = state.copyWith(isRestoring: false);
       }
     } catch (_) {

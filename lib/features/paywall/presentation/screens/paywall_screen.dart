@@ -26,7 +26,7 @@ class PaywallScreen extends ConsumerStatefulWidget {
 }
 
 class _PaywallScreenState extends ConsumerState<PaywallScreen> {
-  TrackTier _selected = TrackTier.pro;
+  TrackTier _selected = TrackTier.power;
 
   @override
   void initState() {
@@ -48,7 +48,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '${purchased.displayName} unlocked! Enjoy ${purchased.sessionCount} sessions.',
+              '${purchased.displayName} unlocked! ${purchased.coinsLabel} added.',
             ),
           ),
         );
@@ -71,11 +71,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               right: 0,
               height: 260,
               child: ShaderMask(
-                shaderCallback: (rect) => LinearGradient(
+                shaderCallback: (rect) => const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [Colors.white, Colors.transparent],
-                  stops: const [0.55, 1.0],
+                  stops: [0.55, 1.0],
                 ).createShader(rect),
                 blendMode: BlendMode.dstIn,
                 child: SizedBox.expand(
@@ -196,26 +196,23 @@ class _TierCard extends StatelessWidget {
   });
 
   static const _features = {
-    TrackTier.basic: [
-      '8 progressive sessions',
-      '1 retry if you fall short',
-      'Streak tracking & daily reminders',
+    TrackTier.quick: [
+      'Access first 3 steps of the track',
+      '1 retry per step',
     ],
-    TrackTier.pro: [
-      '12 progressive sessions',
-      '2 retries — more reps, faster improvement',
-      'Streak tracking & daily reminders',
+    TrackTier.full: [
+      'Complete all 15 steps — full curriculum',
+      '2 retries per step',
     ],
-    TrackTier.ultra: [
-      'All 15 sessions — the complete curriculum',
+    TrackTier.power: [
+      'Complete all 15 steps — full curriculum',
       '3 retries — practice until you nail it',
-      'Streak tracking & daily reminders',
     ],
   };
 
   @override
   Widget build(BuildContext context) {
-    final isPro = tier == TrackTier.pro;
+    final isBest = tier.isBestValue;
     final color = isSelected ? AppColors.primary : context.divider;
 
     return Tappable(
@@ -274,7 +271,7 @@ class _TierCard extends StatelessWidget {
                           color: isSelected ? AppColors.primary : null,
                         ).copyWith(fontWeight: FontWeight.w800),
                       ),
-                      if (isPro) ...[
+                      if (isBest) ...[
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -284,7 +281,7 @@ class _TierCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            'Most Popular',
+                            'Best Value',
                             style: AppTypography.labelSmall(color: Colors.white)
                                 .copyWith(fontWeight: FontWeight.w700, fontSize: 9),
                           ),
@@ -292,7 +289,17 @@ class _TierCard extends StatelessWidget {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 3),
+                  // Dual-label: coins + sessions
+                  Text(
+                    tier.coinsLabel,
+                    style: AppTypography.bodySmall(
+                      color: isSelected
+                          ? AppColors.primary
+                          : context.textSecondary,
+                    ).copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 5),
                   ..._features[tier]!.map((f) => Padding(
                         padding: const EdgeInsets.only(bottom: 3),
                         child: Row(
