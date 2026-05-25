@@ -931,23 +931,31 @@ class _TrackSwitcherChip extends StatelessWidget {
     return Tappable(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, Color(0xFF6B5AED)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.38),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const Icon(Icons.swap_horiz_rounded,
+                size: 15, color: Colors.white),
+            const SizedBox(width: 5),
             Text(
-              '$count tracks',
-              style: AppTypography.labelSmall(color: AppColors.primary)
-                  .copyWith(fontWeight: FontWeight.w700, fontSize: 11),
+              'Switch',
+              style: AppTypography.labelSmall(color: Colors.white)
+                  .copyWith(fontWeight: FontWeight.w800, fontSize: 12),
             ),
-            const SizedBox(width: 2),
-            const Icon(Icons.expand_more_rounded,
-                size: 14, color: AppColors.primary),
           ],
         ),
       ),
@@ -974,69 +982,188 @@ class _TrackSwitcherSheet extends StatelessWidget {
         .where((m) => purchasedTrackIds.contains(m.id))
         .toList();
 
+    // Sort: active first
+    metas.sort((a, b) =>
+        a.id == activePlan.templateId ? -1 : b.id == activePlan.templateId ? 1 : 0);
+
     return Container(
-      margin: EdgeInsets.only(
-        top: MediaQuery.of(context).size.height * 0.4,
-      ),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.35),
       decoration: BoxDecoration(
         color: context.card,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 24,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: context.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 20),
+              decoration: BoxDecoration(
+                color: context.divider,
+                borderRadius: BorderRadius.circular(2),
               ),
-              Text('Your Tracks', style: AppTypography.titleMedium()),
-              const SizedBox(height: 4),
-              Text(
-                'Tap to switch your active track',
-                style: AppTypography.bodySmall(color: context.textSecondary),
-              ),
-              const SizedBox(height: 14),
-              ...metas.map((meta) {
-                final isActive = meta.id == activePlan.templateId;
-                final progress = isActive
-                    ? '${activePlan.completedCount} of ${activePlan.totalSteps} steps'
-                    : null;
+            ),
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Tappable(
-                    onTap: isActive ? null : () => onSwitch(meta.id),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, Color(0xFF6B5AED)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.swap_horiz_rounded,
+                        color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Switch Track',
+                          style: AppTypography.titleMedium()),
+                      Text(
+                        '${metas.length} tracks unlocked',
+                        style: AppTypography.labelSmall(
+                            color: context.textSecondary),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Track list
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                children: metas.map((meta) {
+                  final isActive = meta.id == activePlan.templateId;
+
+                  if (isActive) {
+                    // Active track — gradient card
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: isActive
-                            ? AppColors.primary.withValues(alpha: 0.06)
-                            : context.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isActive
-                              ? AppColors.primary.withValues(alpha: 0.3)
-                              : context.divider,
-                          width: isActive ? 1.5 : 1,
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primary,
+                            const Color(0xFF6B5AED),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(meta.emoji,
+                                  style: const TextStyle(fontSize: 28)),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  meta.title,
+                                  style: AppTypography.titleMedium(
+                                          color: Colors.white)
+                                      .copyWith(fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.22),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'Active',
+                                  style: AppTypography.labelSmall(
+                                          color: Colors.white)
+                                      .copyWith(fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Progress bar
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: activePlan.progressPercent,
+                              minHeight: 6,
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.25),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Colors.white),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${activePlan.completedCount} of ${activePlan.totalSteps} steps complete',
+                            style: AppTypography.labelSmall(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.85))
+                                .copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Inactive track — tappable card
+                  return Tappable(
+                    onTap: () => onSwitch(meta.id),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: context.surface,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: context.divider, width: 1.5),
                       ),
                       child: Row(
                         children: [
-                          Text(meta.emoji,
-                              style: const TextStyle(fontSize: 26)),
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: meta.color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Center(
+                              child: Text(meta.emoji,
+                                  style: const TextStyle(fontSize: 24)),
+                            ),
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -1044,51 +1171,40 @@ class _TrackSwitcherSheet extends StatelessWidget {
                               children: [
                                 Text(
                                   meta.title,
-                                  style: AppTypography.bodyMedium().copyWith(
-                                    fontWeight: isActive
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                  ),
+                                  style: AppTypography.bodyMedium()
+                                      .copyWith(fontWeight: FontWeight.w700),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  progress ?? meta.difficultyLabel,
+                                  meta.difficultyLabel,
                                   style: AppTypography.labelSmall(
-                                    color: isActive
-                                        ? AppColors.primary
-                                        : context.textSecondary,
-                                  ).copyWith(fontWeight: isActive ? FontWeight.w600 : FontWeight.w400),
+                                      color: context.textSecondary),
                                 ),
                               ],
                             ),
                           ),
-                          if (isActive)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'Active',
-                                style: AppTypography.labelSmall(
-                                        color: Colors.white)
-                                    .copyWith(fontWeight: FontWeight.w700),
-                              ),
-                            )
-                          else
-                            const Icon(Icons.arrow_forward_ios_rounded,
-                                size: 13, color: Color(0xFFB0B0B0)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'Switch →',
+                              style: AppTypography.labelSmall(
+                                      color: AppColors.primary)
+                                  .copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                );
-              }),
-              const SizedBox(height: 4),
-            ],
-          ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
         ),
       ),
     );
