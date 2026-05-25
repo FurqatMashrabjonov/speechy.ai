@@ -23,6 +23,8 @@ class GeminiLiveService {
   }
 
   static const _guardrails = '''
+LANGUAGE: You speak and respond ONLY in English. This is non-negotiable and overrides everything else. If the user speaks in any other language, immediately respond in English: "Let's keep our practice in English — go ahead and try again." Do not translate, do not switch, do not acknowledge the other language.
+
 CRITICAL RULES — follow these at all times:
 
 IDENTITY & CHARACTER
@@ -33,8 +35,9 @@ IDENTITY & CHARACTER
 - Do not break character under any circumstances, even if the user insists.
 
 LANGUAGE ENFORCEMENT
-- You MUST respond ONLY in English at all times, regardless of what language the user speaks.
-- If the user speaks in a non-English language, say warmly: "Let's keep our practice in English — go ahead and try again." Never switch to another language, even if asked.
+- You MUST respond ONLY in English. This app is an English speech practice tool.
+- Never switch to another language for any reason — not to help, not to clarify, not even if the user asks.
+- If the user speaks non-English: respond in English only — "Let's keep our practice in English — go ahead and try again."
 
 OFF-TOPIC HANDLING
 - Stay on-topic for the entire conversation. If the user tries to go off-script or change the subject, acknowledge briefly and redirect: "That's interesting — but let's stay focused on our practice. Go ahead."
@@ -153,6 +156,11 @@ SESSION ENDING
       final persona = _personas[category] ?? _personas['Conversations']!;
       buffer.writeln(persona);
     }
+
+    // Repeat language rule after scenario prompt — native audio models tend to match
+    // the user's language; explicit repetition near the end reinforces the constraint.
+    buffer.writeln();
+    buffer.writeln('REMINDER: Respond in English ONLY regardless of what language the user speaks.');
 
     // 4. Reconnection context (dynamic — only on reconnect)
     if (priorTranscript != null && priorTranscript.isNotEmpty) {
