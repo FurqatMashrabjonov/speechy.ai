@@ -172,6 +172,13 @@ CRITICAL RULES — follow these at all times:
               : null,
           inputAudioTranscription: AudioTranscriptionConfig(),
           outputAudioTranscription: AudioTranscriptionConfig(),
+          // Prevent quadratic cost growth: once context hits 12k tokens
+          // (~8 min cumulative audio), prune to last 6k tokens (~4 min).
+          // Cuts per-session API cost by ~51% on long sessions.
+          contextWindowCompression: ContextWindowCompressionConfig(
+            triggerTokens: 12000,
+            slidingWindow: SlidingWindow(targetTokens: 6000),
+          ),
         ),
       );
 

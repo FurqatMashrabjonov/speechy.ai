@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:speech_coach/app/theme/app_colors.dart';
 import 'package:speech_coach/app/theme/app_typography.dart';
 import 'package:speech_coach/core/extensions/context_extensions.dart';
@@ -7,6 +8,11 @@ import 'package:speech_coach/features/auth/presentation/providers/auth_provider.
 import 'package:speech_coach/shared/providers/theme_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+final _appVersionProvider = FutureProvider<String>((ref) async {
+  final info = await PackageInfo.fromPlatform();
+  return '${info.version} (${info.buildNumber})';
+});
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -81,8 +87,8 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: Icon(Icons.chevron_right_rounded,
                     color: context.textTertiary),
                 onTap: () => launchUrl(
-                  Uri.parse('https://speechyai.app/privacy'),
-                  mode: LaunchMode.externalApplication,
+                  Uri.parse('https://speechyai.vercel.app/privacy'),
+                  mode: LaunchMode.inAppWebView,
                 ),
               ),
               const Divider(height: 1, indent: 60),
@@ -90,7 +96,9 @@ class SettingsScreen extends ConsumerWidget {
                 leading: _icon(
                     Icons.info_outline_rounded, AppColors.primary),
                 title: const Text('Version'),
-                subtitle: const Text('1.0.0'),
+                subtitle: Text(
+                  ref.watch(_appVersionProvider).valueOrNull ?? '—',
+                ),
               ),
             ],
           ),

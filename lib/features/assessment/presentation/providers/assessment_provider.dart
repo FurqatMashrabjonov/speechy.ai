@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speech_coach/core/analytics/analytics_service.dart';
 
 import 'package:speech_coach/shared/providers/user_provider.dart';
 import '../../data/assessment_data.dart';
@@ -96,6 +97,7 @@ class LearningPlanNotifier extends StateNotifier<LearningPlan?> {
 
   Future<void> unlockNextLevel() async {
     if (state == null || !state!.isComplete) return;
+    AnalyticsService.instance.logTrackCompleted(trackId: state!.templateId);
     final nextLevel = state!.chainLevel + 1;
     final upgraded = state!.copyWith(
       steps: state!.steps

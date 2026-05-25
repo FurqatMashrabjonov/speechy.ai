@@ -73,6 +73,7 @@ dependencies:
   audioplayers: ^6.6.0
   firebase_analytics: ^12.4.1
   firebase_crashlytics: ^5.2.2
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:

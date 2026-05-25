@@ -1,5 +1,9 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_coach/features/paywall/data/limits_remote_repository.dart';
 import 'package:speech_coach/features/paywall/domain/track_tier.dart';
 import 'package:speech_coach/shared/providers/user_provider.dart';
 
@@ -8,7 +12,9 @@ class UsageService {
   static const int freeTotalSessions = 3;
 
   final SharedPreferences _prefs;
-  UsageService(this._prefs);
+  final LimitsRemoteRepository _remote;
+
+  UsageService(this._prefs, this._remote);
 
   // ── Free trial ────────────────────────────────────────────────────────────
 
@@ -19,6 +25,35 @@ class UsageService {
 
   Future<void> recordFreeSession() async {
     await _prefs.setInt(_keyTotalFree, totalFreeSessionsUsed + 1);
+    unawaited(_remote.incrementFreeSession());
+  }
+
+  // ── Remote sync — call on every login ────────────────────────────────────
+
+  Future<void> syncFromRemote() async {
+    final remote = await _remote.fetch();
+    if (remote == null) return;
+
+    // Take max(local, remote) — handles offline sessions on this device
+    if (remote.freeSessionsUsed > totalFreeSessionsUsed) {
+      await _prefs.setInt(_keyTotalFree, remote.freeSessionsUsed);
+      debugPrint(
+        'LimitsSync: free sessions updated $totalFreeSessionsUsed → ${remote.freeSessionsUsed}',
+      );
+    }
+
+    for (final entry in remote.stepAttempts.entries) {
+      // key format: "trackId_stepOrder" — stepOrder is always a plain int suffix
+      final lastUnderscore = entry.key.lastIndexOf('_');
+      if (lastUnderscore < 0) continue;
+      final trackId = entry.key.substring(0, lastUnderscore);
+      final stepOrder = int.tryParse(entry.key.substring(lastUnderscore + 1));
+      if (stepOrder == null) continue;
+      final localCount = getAttemptCount(trackId, stepOrder);
+      if (entry.value > localCount) {
+        await _prefs.setInt('attempts_${trackId}_$stepOrder', entry.value);
+      }
+    }
   }
 
   // ── Track tier ────────────────────────────────────────────────────────────
@@ -43,6 +78,7 @@ class UsageService {
       'attempts_${trackId}_$stepOrder',
       getAttemptCount(trackId, stepOrder) + 1,
     );
+    unawaited(_remote.incrementStepAttempt(trackId, stepOrder));
   }
 
   bool canAttemptStep(String trackId, int stepOrder) {
@@ -85,5 +121,6 @@ class UsageService {
 
 final usageServiceProvider = Provider<UsageService>((ref) {
   final prefs = ref.read(sharedPreferencesProvider);
-  return UsageService(prefs);
+  final remote = ref.read(limitsRemoteRepositoryProvider);
+  return UsageService(prefs, remote);
 });

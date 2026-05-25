@@ -85,6 +85,16 @@ class AnalyticsService {
   Future<void> logStreakMilestone({required int streak}) =>
       _fa.logEvent(name: 'streak_milestone', parameters: {'streak': streak});
 
+  // ── Conversation (free mode, no scenario) ────────────────────────────────────
+
+  Future<void> logConversationStarted() =>
+      _fa.logEvent(name: 'conversation_started');
+
+  Future<void> logConversationEnded({required int durationSeconds}) =>
+      _fa.logEvent(name: 'conversation_ended', parameters: {
+        'duration_seconds': durationSeconds,
+      });
+
   // ── Auth ─────────────────────────────────────────────────────────────────────
 
   Future<void> logSignUp({required String method}) =>

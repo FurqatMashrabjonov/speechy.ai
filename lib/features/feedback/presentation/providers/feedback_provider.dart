@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speech_coach/core/errors/error_reporter.dart';
 import 'package:speech_coach/features/feedback/data/feedback_service.dart';
 import 'package:speech_coach/features/feedback/domain/feedback_entity.dart';
 
@@ -79,8 +80,9 @@ class FeedbackNotifier extends StateNotifier<FeedbackState> {
       }
 
       state = state.copyWith(status: FeedbackStatus.loaded, feedback: feedback);
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('FeedbackNotifier: analysis FAILED — $e');
+      reportError(e, st, context: 'feedback_analysis');
       if (!mounted) return;
       state = state.copyWith(status: FeedbackStatus.error, error: e.toString());
     }

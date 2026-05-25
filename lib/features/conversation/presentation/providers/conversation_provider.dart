@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:record/record.dart';
+import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/features/conversation/data/gemini_live_service.dart';
 import 'package:speech_coach/features/conversation/domain/conversation_entity.dart';
 import 'package:speech_coach/features/feedback/domain/feedback_entity.dart';
@@ -346,6 +347,12 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     _calibrationSamples.clear();
 
     state = state.copyWith(status: ConversationStatus.connecting, error: null);
+
+    // Free/freeform conversation (no scenario) — scenario sessions are tracked
+    // in scenario_detail_screen via logSessionStarted
+    if (state.scenarioId == null) {
+      AnalyticsService.instance.logConversationStarted();
+    }
 
     try {
       final hasPerms = await _recorder.hasPermission();
@@ -901,6 +908,12 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     await _teardownAudioEngine();
     await _service.close();
     await _deactivateAudioSession(); // release audio focus → music resumes
+
+    if (state.scenarioId == null) {
+      AnalyticsService.instance.logConversationEnded(
+        durationSeconds: state.elapsed.inSeconds,
+      );
+    }
 
     if (mounted) {
       state = state.copyWith(status: ConversationStatus.ended);

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speech_coach/core/errors/error_reporter.dart';
 import 'package:speech_coach/features/feedback/domain/feedback_entity.dart';
 import 'package:speech_coach/features/history/data/session_history_repository.dart';
 import 'package:speech_coach/features/history/domain/session_history_entity.dart';
@@ -63,7 +64,9 @@ class SessionHistoryNotifier extends StateNotifier<SessionHistoryState> {
           sessions: merged,
         );
       }
-    } catch (_) {}
+    } catch (e, st) {
+      reportError(e, st, context: 'session_history_cloud_sync');
+    }
   }
 
 }

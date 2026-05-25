@@ -19,6 +19,7 @@ import 'package:speech_coach/features/assessment/presentation/providers/assessme
 import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/features/auth/presentation/providers/auth_provider.dart';
 import 'package:speech_coach/core/analytics/analytics_service.dart';
+import 'package:speech_coach/core/errors/error_reporter.dart';
 import 'package:speech_coach/shared/widgets/duo_button.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
@@ -113,7 +114,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       await ref
           .read(learningPlanProvider.notifier)
           .generateForTemplate(_selectedTemplateId, answers);
-    } catch (_) {}
+    } catch (e, st) {
+      reportError(e, st, context: 'onboarding_confirmRoadmap');
+    }
     if (mounted) {
       setState(() => _generatingPlan = false);
       _next();
@@ -198,7 +201,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (i) => setState(() => _currentPage = i),
+                onPageChanged: (i) {
+                  setState(() => _currentPage = i);
+                  if (i == _kIntroPage + 1) {
+                    AnalyticsService.instance.logAssessmentStarted();
+                  }
+                },
                 children: [
                   // 0 — Intro
                   _IntroPage(
