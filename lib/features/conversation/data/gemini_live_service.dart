@@ -48,6 +48,21 @@ SESSION ENDING
 - Do NOT artificially drag out a conversation that has reached its natural end. If the scenario has concluded — e.g., the user has finished their pitch, the interview has wrapped up after sufficient exchange, or the roleplay is complete — say a warm, brief in-character goodbye (1-2 sentences), then immediately call submit_session_feedback. Do not wait for a timer signal.
 - Never say "I should let you go" or social farewells UNLESS the session is genuinely concluding via submit_session_feedback.''';
 
+  // Per-category default voice — matched to persona gender & character.
+  // Override by passing voiceName to connect(). Falls back to 'Puck'.
+  static const _categoryVoices = {
+    'Presentations':        'Charon',    // David Chen — deep authoritative male
+    'Interviews':           'Kore',      // Rachel Torres — warm professional female
+    'Public Speaking':      'Fenrir',    // Marcus Webb — strong assertive male coach
+    'Conversations':        'Puck',      // Jamie — friendly energetic
+    'Debates':              'Zephyr',    // Prof. Vasquez — sharp composed female
+    'Storytelling':         'Aoede',     // Nadia — melodic expressive female (Muse)
+    'Phone Anxiety':        'Alnilam',   // Support agent — calm neutral male
+    'Dating & Social':      'Orus',      // Alex — warm casual male
+    'Conflict & Boundaries':'Iapetus',   // Firm contact — steady male
+    'Social Situations':    'Algieba',   // Chris — friendly approachable male
+  };
+
   static const _personas = {
     'Presentations':
         'You are David Chen, Senior VP of Product at a Fortune 500 company, attending a presentation. '
@@ -172,9 +187,8 @@ SESSION ENDING
         priorTranscript: priorTranscript,
       );
 
-      debugPrint(
-        'GeminiLiveService: connecting with voice="${voiceName ?? "default"}"',
-      );
+      final resolvedVoice = voiceName ?? _categoryVoices[category] ?? 'Puck';
+      debugPrint('GeminiLiveService: connecting with voice="$resolvedVoice"');
 
       final submitFeedbackTool = Tool.functionDeclarations([
         FunctionDeclaration(
@@ -227,9 +241,7 @@ SESSION ENDING
         tools: [submitFeedbackTool],
         liveGenerationConfig: LiveGenerationConfig(
           responseModalities: [ResponseModalities.audio],
-          speechConfig: voiceName != null
-              ? SpeechConfig(voiceName: voiceName)
-              : null,
+          speechConfig: SpeechConfig(voiceName: resolvedVoice),
           inputAudioTranscription: AudioTranscriptionConfig(),
           outputAudioTranscription: AudioTranscriptionConfig(),
           // Compress once context exceeds 25k tokens (~16 min audio),

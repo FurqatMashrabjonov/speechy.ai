@@ -21,19 +21,6 @@ const _kDarkBorder = Color(0xFF2A2A2A);
 const _kDarkTextPrimary = Colors.white;
 const _kDarkTextSecondary = Color(0xFF9A9A9A);
 
-const _personaInfo = <String, (String, String)>{
-  'Presentations':       ('David Chen',      'Senior VP of Product'),
-  'Interviews':          ('Rachel Torres',   'Head of Talent · Vertex Labs'),
-  'Public Speaking':     ('Marcus Webb',     'Speech Coach'),
-  'Conversations':       ('Jamie',           'Graphic Designer'),
-  'Debates':             ('Prof. Vasquez',   'Political Science Professor'),
-  'Storytelling':        ('Nadia',           'Writer & Podcast Host'),
-  'Phone Anxiety':       ('Support Agent',   'On the other end of the line'),
-  'Dating & Social':     ('Alex',            'Marketing · New connection'),
-  'Conflict & Boundaries': ('Your contact',  'Difficult conversation'),
-  'Social Situations':   ('Chris',           'Teacher · New acquaintance'),
-};
-
 class ConversationScreen extends ConsumerStatefulWidget {
   final String category;
   final String? scenarioId;
@@ -78,7 +65,6 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           scenarioTitle: widget.scenarioTitle ?? widget.category,
           scenarioPrompt: widget.scenarioPrompt ?? '',
           durationMinutes: widget.durationMinutes ?? 3,
-          voiceName: 'Puck',
         );
       }
 
