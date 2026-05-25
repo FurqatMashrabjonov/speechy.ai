@@ -16,7 +16,7 @@ class SoundService {
 
   Future<void> sessionStart() async {
     HapticFeedback.mediumImpact();
-    await _play('audio/session_start.wav');
+    await _play('audio/session_start.mp3');
   }
 
   Future<void> stepPassed() async {
