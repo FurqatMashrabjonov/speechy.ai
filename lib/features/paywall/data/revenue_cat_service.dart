@@ -4,8 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class RevenueCatService {
-  // TODO: replace with production Android API key from RevenueCat dashboard
-  static const _apiKey = 'test_wpYJJTxBrHOoUrDwlCMpNiCDbRJ';
+  static const _apiKey = 'test_GJMzlpFhOxqaWpNXeaHBwWLsIcP';
 
   bool _initialized = false;
 
