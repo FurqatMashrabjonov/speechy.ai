@@ -16,6 +16,7 @@ import 'package:speech_coach/features/scenarios/data/scenario_repository.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/shared/widgets/user_avatar.dart';
 import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
+import 'package:speech_coach/features/assessment/data/assessment_data.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -370,9 +371,28 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
     super.dispose();
   }
 
+  void _showTrackSwitcher(BuildContext context, LearningPlan activePlan,
+      Map<String, dynamic> purchasedTiers) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _TrackSwitcherSheet(
+        activePlan: activePlan,
+        purchasedTrackIds: purchasedTiers.keys.toList(),
+        onSwitch: (templateId) {
+          Navigator.pop(context);
+          ref.read(learningPlanProvider.notifier).switchRoadmap(templateId);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final plan = ref.watch(learningPlanProvider);
+    final purchasedTiers =
+        ref.watch(subscriptionProvider.select((s) => s.purchasedTiers));
 
     if (plan == null) {
       return _NoRoadmapCard();
@@ -381,6 +401,7 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
     final currentIdx = plan.steps.indexWhere((s) => !s.isCompleted);
     final allComplete = currentIdx == -1;
     final effectiveIdx = allComplete ? plan.steps.length : currentIdx;
+    final hasMultipleTracks = purchasedTiers.length > 1;
 
     return Container(
       width: double.infinity,
@@ -439,6 +460,14 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
                     ],
                   ),
                 ),
+                if (hasMultipleTracks) ...[
+                  const SizedBox(width: 8),
+                  _TrackSwitcherChip(
+                    count: purchasedTiers.length,
+                    onTap: () =>
+                        _showTrackSwitcher(context, plan, purchasedTiers),
+                  ),
+                ],
               ],
             ),
           ),
@@ -884,6 +913,183 @@ class _NoRoadmapCard extends StatelessWidget {
             onTap: () => context.push('/assessment'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Track Switcher Chip ───────────────────────────────────────────────────────
+
+class _TrackSwitcherChip extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _TrackSwitcherChip({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tappable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$count tracks',
+              style: AppTypography.labelSmall(color: AppColors.primary)
+                  .copyWith(fontWeight: FontWeight.w700, fontSize: 11),
+            ),
+            const SizedBox(width: 2),
+            const Icon(Icons.expand_more_rounded,
+                size: 14, color: AppColors.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Track Switcher Bottom Sheet ───────────────────────────────────────────────
+
+class _TrackSwitcherSheet extends StatelessWidget {
+  final LearningPlan activePlan;
+  final List<String> purchasedTrackIds;
+  final void Function(String templateId) onSwitch;
+
+  const _TrackSwitcherSheet({
+    required this.activePlan,
+    required this.purchasedTrackIds,
+    required this.onSwitch,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final metas = allRoadmapMetas
+        .where((m) => purchasedTrackIds.contains(m.id))
+        .toList();
+
+    return Container(
+      margin: EdgeInsets.only(
+        top: MediaQuery.of(context).size.height * 0.4,
+      ),
+      decoration: BoxDecoration(
+        color: context.card,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: context.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text('Your Tracks', style: AppTypography.titleMedium()),
+              const SizedBox(height: 4),
+              Text(
+                'Tap to switch your active track',
+                style: AppTypography.bodySmall(color: context.textSecondary),
+              ),
+              const SizedBox(height: 14),
+              ...metas.map((meta) {
+                final isActive = meta.id == activePlan.templateId;
+                final progress = isActive
+                    ? '${activePlan.completedCount} of ${activePlan.totalSteps} steps'
+                    : null;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Tappable(
+                    onTap: isActive ? null : () => onSwitch(meta.id),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? AppColors.primary.withValues(alpha: 0.06)
+                            : context.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isActive
+                              ? AppColors.primary.withValues(alpha: 0.3)
+                              : context.divider,
+                          width: isActive ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(meta.emoji,
+                              style: const TextStyle(fontSize: 26)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  meta.title,
+                                  style: AppTypography.bodyMedium().copyWith(
+                                    fontWeight: isActive
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  progress ?? meta.difficultyLabel,
+                                  style: AppTypography.labelSmall(
+                                    color: isActive
+                                        ? AppColors.primary
+                                        : context.textSecondary,
+                                  ).copyWith(fontWeight: isActive ? FontWeight.w600 : FontWeight.w400),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isActive)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Active',
+                                style: AppTypography.labelSmall(
+                                        color: Colors.white)
+                                    .copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            )
+                          else
+                            const Icon(Icons.arrow_forward_ios_rounded,
+                                size: 13, color: Color(0xFFB0B0B0)),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 4),
+            ],
+          ),
+        ),
       ),
     );
   }
