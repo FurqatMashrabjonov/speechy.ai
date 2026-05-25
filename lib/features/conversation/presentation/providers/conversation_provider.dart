@@ -907,9 +907,8 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     // The tool call handler will set analyzing when submit_session_feedback is called,
     // which triggers navigation to the score card.
     await _service.sendText(
-      'Our session time is up. Please say a warm, brief goodbye to the user right now '
-      '— one or two natural sentences. Then immediately call the submit_session_feedback '
-      'tool to save their results.',
+      '[System: Time is up. Deliver a warm, in-character goodbye — 1-2 natural sentences. '
+      'Then immediately call submit_session_feedback. Do not skip the tool call.]',
     );
 
     // Fallback: AI didn't call the tool in time — set analyzing so the screen
@@ -992,7 +991,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
           if (remaining.inSeconds <= 30 && !_wrapUpWarningSent) {
             _wrapUpWarningSent = true;
             _service.sendText(
-              '[System: 30 seconds remaining in this session. Continue the conversation naturally — do not announce the time limit.]',
+              '[System: 30 seconds remaining. Steer toward a natural closing — do not announce the time limit to the user.]',
             );
           }
 
