@@ -289,9 +289,7 @@ class _QuickStartButton extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, Color(0xFF6B5AED)],
-          ),
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -933,9 +931,7 @@ class _TrackSwitcherChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, Color(0xFF6B5AED)],
-          ),
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -1023,11 +1019,7 @@ class _TrackSwitcherSheet extends StatelessWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, Color(0xFF6B5AED)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: AppColors.primary,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.swap_horiz_rounded,
@@ -1063,14 +1055,7 @@ class _TrackSwitcherSheet extends StatelessWidget {
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primary,
-                            const Color(0xFF6B5AED),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
