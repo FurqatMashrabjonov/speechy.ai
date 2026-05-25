@@ -819,42 +819,29 @@ class _BottomCta extends StatelessWidget {
       );
     }
 
-    // Unpurchased — show pricing + dual CTA
+    // Unpurchased — free trial primary, unlock secondary
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Price context line
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.workspace_premium_rounded,
-                  size: 14, color: AppColors.primary),
-              const SizedBox(width: 5),
-              Text(
-                '$price · one-time · yours forever',
-                style: AppTypography.labelMedium(color: AppColors.primary)
-                    .copyWith(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-        ),
-        // Primary: unlock
-        _PrimaryButton(
-          label: 'Unlock All ${meta.stepCount} Steps',
-          icon: Icons.lock_open_rounded,
-          color: AppColors.primary,
-          onTap: onUnlock,
-        ),
-        // Secondary: free trial (if available)
         if (hasFreeTrials) ...[
-          const SizedBox(height: 10),
-          _GhostButton(
+          _PrimaryButton(
             label: 'Try Step 1 — Free',
+            icon: Icons.play_arrow_rounded,
+            color: AppColors.primary,
             onTap: onTryFree,
           ),
-        ],
+          const SizedBox(height: 10),
+          _GhostButton(
+            label: 'Unlock All ${meta.stepCount} Steps — $price',
+            onTap: onUnlock,
+          ),
+        ] else
+          _PrimaryButton(
+            label: 'Unlock All ${meta.stepCount} Steps — $price',
+            icon: Icons.lock_open_rounded,
+            color: AppColors.primary,
+            onTap: onUnlock,
+          ),
       ],
     );
   }
