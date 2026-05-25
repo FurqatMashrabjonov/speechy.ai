@@ -624,7 +624,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               Navigator.pop(ctx);
               final s = ref.read(conversationProvider(widget.category));
               if (s.scenarioId != null) {
-                if (!_hasNavigatedToScoreCard) {
+                if (s.messages.length >= 2) {
+                  // Enough data — let AI say goodbye and generate score via tool call.
+                  // The 'analyzing' listener handles _endAndNavigate automatically.
+                  ref
+                      .read(conversationProvider(widget.category).notifier)
+                      .requestFeedbackAndEnd();
+                } else if (!_hasNavigatedToScoreCard) {
                   _hasNavigatedToScoreCard = true;
                   ref
                       .read(conversationProvider(widget.category).notifier)
