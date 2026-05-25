@@ -18,6 +18,7 @@ import 'package:confetti/confetti.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dart';
 import 'package:speech_coach/shared/utils/filler_detector.dart';
+import 'package:speech_coach/shared/utils/hedging_detector.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
@@ -53,6 +54,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
   bool _celebrationShown = false;
   ChainResult? _chainResult;
   Map<String, int> _fillerWords = {};
+  Map<String, int> _hedgingWords = {};
   int? _wpm;
   String? _trackId;
   int? _stepOrder;
@@ -157,7 +159,8 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
           final durationSecs = feedbackState.feedback!.durationSeconds;
           final wpm =
               durationSecs > 0 ? (userWords / (durationSecs / 60)).round() : null;
-          if (mounted) setState(() { _fillerWords = fillers; _wpm = wpm; });
+          final hedging = HedgingDetector.detect(widget.transcript);
+          if (mounted) setState(() { _fillerWords = fillers; _wpm = wpm; _hedgingWords = hedging; });
         }
 
         // Record session against free quota — track per-step usage if in a track
@@ -679,7 +682,25 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                         .slideY(begin: 0.3, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
                     const SizedBox(height: 24),
 
-                    // Score Breakdown
+                    // Focus Card — #1 priority
+                    if (feedback.focusPriority != null &&
+                        feedback.focusChallenge != null) ...[
+                      _FocusCard(
+                        priority: feedback.focusPriority!,
+                        challenge: feedback.focusChallenge!,
+                      ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Delivery metrics
+                    _DeliveryCard(
+                      fillerWords: _fillerWords,
+                      hedgingWords: _hedgingWords,
+                      wpm: _wpm,
+                    ).animate().fadeIn(delay: 150.ms, duration: 400.ms),
+                    const SizedBox(height: 16),
+
+                    // Content Breakdown
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -694,7 +715,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Breakdown', style: AppTypography.titleMedium()),
+                          Text('Content', style: AppTypography.titleMedium()),
                           const SizedBox(height: 16),
                           ProgressBar(
                             value: feedback.clarity / 100,
@@ -727,27 +748,26 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                             icon: Icons.track_changes_rounded,
                             delay: const Duration(milliseconds: 350),
                           ),
-                          if (_wpm != null) ...[
-                            const SizedBox(height: 14),
-                            ProgressBar(
-                              value: (_wpm! / 200).clamp(0.0, 1.0),
-                              label: 'Speaking Pace',
-                              trailingText: '$_wpm wpm',
-                              icon: Icons.speed_rounded,
-                              delay: const Duration(milliseconds: 450),
-                            ),
-                          ],
                         ],
                       ),
-                    ).animate().fadeIn(duration: 400.ms),
+                    ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
                     const SizedBox(height: 16),
 
-                    // Coach's Tip
+                    // Transcript moment — AI-identified problem quote
+                    if (feedback.transcriptMoment != null &&
+                        feedback.transcriptMoment!.isNotEmpty) ...[
+                      _TranscriptMomentCard(moment: feedback.transcriptMoment!)
+                          .animate()
+                          .fadeIn(delay: 250.ms, duration: 400.ms),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Coach summary
                     CoachTipCard(
                       tip: feedback.summary.isNotEmpty
                           ? feedback.summary
                           : 'Try to maintain eye contact and use pauses effectively to emphasize key points.',
-                    ).animate().fadeIn(duration: 400.ms),
+                    ).animate().fadeIn(delay: 300.ms, duration: 400.ms),
                     const SizedBox(height: 16),
 
                     // Strengths
@@ -757,7 +777,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                         items: feedback.strengths,
                         icon: Icons.check_circle_rounded,
                         iconColor: AppColors.success,
-                      ), // Removed overall fadeIn here because _FeedbackList now handles its own staggered animations
+                      ),
                     if (feedback.strengths.isNotEmpty)
                       const SizedBox(height: 16),
 
@@ -771,13 +791,6 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                       ),
                     if (feedback.improvements.isNotEmpty)
                       const SizedBox(height: 16),
-
-                    // Filler Words
-                    if (_fillerWords.isNotEmpty)
-                      _FillerWordsCard(fillers: _fillerWords)
-                          .animate()
-                          .fadeIn(duration: 400.ms),
-                    if (_fillerWords.isNotEmpty) const SizedBox(height: 16),
 
                     // Transcript
                     if (widget.transcript.isNotEmpty) ...[
@@ -1156,20 +1169,117 @@ class _FeedbackList extends StatelessWidget {
   }
 }
 
-class _FillerWordsCard extends StatelessWidget {
-  final Map<String, int> fillers;
+// ── Focus Card ────────────────────────────────────────────────────────────────
 
-  const _FillerWordsCard({required this.fillers});
+class _FocusCard extends StatelessWidget {
+  final String priority;
+  final String challenge;
+
+  const _FocusCard({required this.priority, required this.challenge});
 
   @override
   Widget build(BuildContext context) {
-    final total = fillers.values.fold(0, (a, b) => a + b);
-    final sorted = fillers.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF3E0), Color(0xFFFFF8F0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFB74D).withValues(alpha: 0.5), width: 1.5),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFB74D).withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.center_focus_strong_rounded,
+                color: Color(0xFFE65100), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'FOCUS THIS SESSION',
+                      style: AppTypography.labelSmall(color: const Color(0xFFE65100))
+                          .copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  priority,
+                  style: AppTypography.titleMedium(color: const Color(0xFF4E2600))
+                      .copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  challenge,
+                  style: AppTypography.bodySmall(color: const Color(0xFF6D3A00)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Delivery Card ─────────────────────────────────────────────────────────────
+
+class _DeliveryCard extends StatelessWidget {
+  final Map<String, int> fillerWords;
+  final Map<String, int> hedgingWords;
+  final int? wpm;
+
+  const _DeliveryCard({
+    required this.fillerWords,
+    required this.hedgingWords,
+    required this.wpm,
+  });
+
+  Color _fillerColor(int count) {
+    if (count > 10) return AppColors.error;
+    if (count > 4) return AppColors.warning;
+    return AppColors.success;
+  }
+
+  Color _wpmColor(int wpm) {
+    if (wpm >= 100 && wpm <= 165) return AppColors.success;
+    if (wpm > 165 && wpm <= 185) return AppColors.warning;
+    if (wpm < 100 && wpm >= 80) return AppColors.warning;
+    return AppColors.error;
+  }
+
+  Color _hedgingColor(int count) {
+    if (count > 6) return AppColors.error;
+    if (count > 2) return AppColors.warning;
+    return AppColors.success;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fillerTotal = fillerWords.values.fold(0, (a, b) => a + b);
+    final hedgingTotal = HedgingDetector.totalCount(hedgingWords);
+    final hasAny = fillerTotal > 0 || hedgingTotal > 0 || wpm != null;
+    if (!hasAny) return const SizedBox.shrink();
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
@@ -1178,59 +1288,175 @@ class _FillerWordsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text('Delivery', style: AppTypography.titleMedium()),
+          const SizedBox(height: 14),
+          if (fillerTotal > 0)
+            _DeliveryRow(
+              icon: Icons.chat_bubble_outline_rounded,
+              label: 'Filler words',
+              value: '$fillerTotal',
+              benchmark: 'target: <5',
+              color: _fillerColor(fillerTotal),
+              subItems: fillerWords.entries
+                  .toList()
+                ..sort((a, b) => b.value.compareTo(a.value)),
+            ),
+          if (fillerTotal > 0 && (wpm != null || hedgingTotal > 0))
+            const SizedBox(height: 12),
+          if (wpm != null)
+            _DeliveryRow(
+              icon: Icons.speed_rounded,
+              label: 'Speaking pace',
+              value: '$wpm wpm',
+              benchmark: 'optimal: 100-165',
+              color: _wpmColor(wpm!),
+            ),
+          if (wpm != null && hedgingTotal > 0) const SizedBox(height: 12),
+          if (hedgingTotal > 0)
+            _DeliveryRow(
+              icon: Icons.do_not_disturb_on_rounded,
+              label: 'Hedging phrases',
+              value: '$hedgingTotal',
+              benchmark: 'target: <3',
+              color: _hedgingColor(hedgingTotal),
+              subItems: hedgingWords.entries
+                  .toList()
+                ..sort((a, b) => b.value.compareTo(a.value)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeliveryRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final String benchmark;
+  final Color color;
+  final List<MapEntry<String, int>>? subItems;
+
+  const _DeliveryRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.benchmark,
+    required this.color,
+    this.subItems,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: AppTypography.bodySmall(color: context.textSecondary)),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  value,
+                  style: AppTypography.titleMedium(color: color)
+                      .copyWith(fontWeight: FontWeight.w800),
+                ),
+                Text(
+                  benchmark,
+                  style: AppTypography.labelSmall(color: context.textTertiary)
+                      .copyWith(fontSize: 10),
+                ),
+              ],
+            ),
+          ],
+        ),
+        if (subItems != null && subItems!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: subItems!
+                .take(5)
+                .map((e) => Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: color.withValues(alpha: 0.2), width: 1),
+                      ),
+                      child: Text(
+                        '"${e.key}" ×${e.value}',
+                        style: AppTypography.bodySmall(color: color)
+                            .copyWith(fontSize: 11),
+                      ),
+                    ))
+                .toList(),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── Transcript Moment Card ────────────────────────────────────────────────────
+
+class _TranscriptMomentCard extends StatelessWidget {
+  final String moment;
+
+  const _TranscriptMomentCard({required this.moment});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: AppColors.error.withValues(alpha: 0.2), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             children: [
-              const Icon(Icons.chat_bubble_outline_rounded,
-                  size: 18, color: AppColors.warning),
-              const SizedBox(width: 8),
-              Text('Filler Words', style: AppTypography.titleMedium()),
-              const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: total > 10
-                      ? AppColors.error.withValues(alpha: 0.1)
-                      : AppColors.warning.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '$total total',
-                  style: AppTypography.labelSmall(
-                    color: total > 10 ? AppColors.error : AppColors.warning,
-                  ).copyWith(fontWeight: FontWeight.w700),
-                ),
+              const Icon(Icons.format_quote_rounded,
+                  size: 16, color: AppColors.error),
+              const SizedBox(width: 6),
+              Text(
+                'EXAMPLE FROM YOUR SESSION',
+                style: AppTypography.labelSmall(color: AppColors.error)
+                    .copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.4),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: sorted
-                .take(6)
-                .map(
-                  (e) => Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '"${e.key}" ×${e.value}',
-                      style: AppTypography.bodySmall(
-                          color: AppColors.primary),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
-            'Tip: Replace filler words with a confident pause.',
-            style:
-                AppTypography.labelSmall(color: context.textTertiary),
+            '"$moment"',
+            style: AppTypography.bodyMedium(color: context.textPrimary)
+                .copyWith(fontStyle: FontStyle.italic, height: 1.5),
           ),
         ],
       ),

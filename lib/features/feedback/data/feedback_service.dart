@@ -139,8 +139,11 @@ Analyze the speaker's performance and return ONLY a valid JSON object (no markdo
   "relevance": <0-100 score>,
   "overallScore": <0-100 weighted composite based on the category weights above>,
   "summary": "2-3 sentence summary of their performance",
-  "strengths": ["strength1", "strength2", "strength3"],
-  "improvements": ["specific improvement tip 1", "specific improvement tip 2", "specific improvement tip 3"]
+  "strengths": ["specific strength 1", "specific strength 2"],
+  "improvements": ["specific improvement tip 1", "specific improvement tip 2"],
+  "focusPriority": "<single most impactful area — must be exactly one of: Filler Words, Speaking Pace, Hedging Language, Clarity, Confidence, Engagement, Relevance>",
+  "focusChallenge": "<one specific action for next session — max 15 words, start with a verb, e.g. 'Replace 3 filler words with a deliberate 1-second pause'>",
+  "transcriptMoment": "<copy verbatim a specific User sentence or phrase from the transcript that best illustrates their main weakness — must be an exact quote>"
 }
 
 IMPORTANT: All scores (clarity, confidence, engagement, relevance) must be on a 0-100 scale, NOT 1-10.

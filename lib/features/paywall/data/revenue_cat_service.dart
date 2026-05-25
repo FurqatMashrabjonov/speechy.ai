@@ -38,7 +38,8 @@ class RevenueCatService {
   Future<Offerings?> getOfferings() async {
     try {
       final offerings = await Purchases.getOfferings();
-      log('[RevenueCat] Offerings loaded: ${offerings.current?.identifier}');
+      final pkgs = offerings.current?.availablePackages ?? [];
+      log('[RevenueCat] Offerings loaded: ${offerings.current?.identifier} | packages(${pkgs.length}): ${pkgs.map((p) => p.identifier).toList()}');
       return offerings;
     } catch (e) {
       log('[RevenueCat] Error fetching offerings: $e');
@@ -49,9 +50,19 @@ class RevenueCatService {
   Future<bool> purchasePackage(Package package) async {
     try {
       final result = await Purchases.purchase(PurchaseParams.package(package));
-      // Check the specific tier entitlement (identifier = 'basic'/'pro'/'ultra')
-      final entitlement = result.customerInfo.entitlements.all[package.identifier];
-      return entitlement?.isActive ?? result.customerInfo.entitlements.active.isNotEmpty;
+      final info = result.customerInfo;
+      // Non-consumable: check transaction history first (no entitlement needed)
+      final hasTransaction = info.nonSubscriptionTransactions.any(
+        (t) => t.productIdentifier == package.storeProduct.identifier,
+      );
+      if (hasTransaction) {
+        log('[RevenueCat] Purchase confirmed via transaction: ${package.storeProduct.identifier}');
+        return true;
+      }
+      // Fallback: any active entitlement
+      final hasEntitlement = info.entitlements.active.isNotEmpty;
+      log('[RevenueCat] Purchase entitlement check: $hasEntitlement | transactions: ${info.nonSubscriptionTransactions.length}');
+      return hasEntitlement;
     } on PlatformException catch (e) {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
       if (errorCode == PurchasesErrorCode.purchaseCancelledError) {

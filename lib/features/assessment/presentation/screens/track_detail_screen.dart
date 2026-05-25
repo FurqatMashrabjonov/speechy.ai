@@ -43,10 +43,20 @@ class TrackDetailScreen extends ConsumerWidget {
         ? ref.watch(scenarioByIdProvider(nextStep.scenarioId))
         : null;
 
+    final hasFreeTrials = usageService.isFreeStepAccessible(trackId);
+    final showUnlockBanner = tier == null;
+    final price = sub.packageForTrack(trackId)?.storeProduct.priceString ??
+        TrackTier.full.fallbackPrice;
+
     // Paid: all 15 steps, 3 attempts each.
     // Free: step 0 only, 1 attempt — canAttemptStep encapsulates both.
     bool stepAccessible(int stepOrder) =>
         usageService.canAttemptStep(trackId, stepOrder);
+
+    void openPaywall() => context.push('/paywall', extra: {
+          'trackId': trackId,
+          'trackTitle': meta.title,
+        });
 
     return Scaffold(
       backgroundColor: context.isDark ? AppColors.backgroundDark : const Color(0xFFF7F7F7),
@@ -62,27 +72,50 @@ class TrackDetailScreen extends ConsumerWidget {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, i) {
-                      final step = steps[i];
+                      // Insert unlock banner between step 0 and step 1
+                      if (showUnlockBanner && i == 1) {
+                        return _UnlockBanner(
+                          stepsLocked: steps.length - 1,
+                          price: price,
+                          onUnlock: openPaywall,
+                        )
+                            .animate(delay: 30.ms)
+                            .fadeIn(duration: 220.ms);
+                      }
+                      final stepIdx = showUnlockBanner && i > 1 ? i - 1 : i;
+                      final step = steps[stepIdx];
                       final scenario =
                           ref.watch(scenarioByIdProvider(step.scenarioId));
                       final accessible = stepAccessible(step.order);
                       final maxAttempts = tier?.maxAttempts ?? 1;
                       final attemptsLeft = maxAttempts -
                           usageService.getAttemptCount(trackId, step.order);
+                      // isLast: account for banner offset
+                      final isLast = stepIdx == steps.length - 1;
                       return _StepTile(
                         step: step,
                         scenario: scenario,
                         isCurrent: isActive && step.order == currentOrder,
                         isAccessible: accessible,
-                        isLast: i == steps.length - 1,
+                        isLast: isLast,
                         trackColor: meta.color,
                         attemptsLeft: attemptsLeft,
+                        isFreeStep: step.order == 0 && tier == null,
+                        onTap: accessible
+                            ? () => context.push(
+                                  '/scenario/${Uri.encodeComponent(step.scenarioId)}',
+                                  extra: {
+                                    'trackId': trackId,
+                                    'stepOrder': step.order,
+                                  },
+                                )
+                            : openPaywall,
                       )
-                          .animate(delay: (i * 25).ms)
+                          .animate(delay: (stepIdx * 25).ms)
                           .fadeIn(duration: 220.ms)
                           .slideY(begin: 0.05, end: 0, duration: 220.ms, curve: Curves.easeOut);
                     },
-                    childCount: steps.length,
+                    childCount: steps.length + (showUnlockBanner ? 1 : 0),
                   ),
                 ),
               ),
@@ -96,7 +129,7 @@ class TrackDetailScreen extends ConsumerWidget {
               meta: meta,
               isActive: isActive,
               tier: tier,
-              hasFreeTrials: usageService.isFreeStepAccessible(trackId),
+              hasFreeTrials: hasFreeTrials,
               nextStep: nextStep,
               nextScenario: nextScenario,
               planComplete: isActive && (plan?.isComplete ?? false),
@@ -114,10 +147,11 @@ class TrackDetailScreen extends ConsumerWidget {
                     .switchRoadmap(trackId);
                 if (context.mounted) context.pop();
               },
-              onUnlock: () => context.push('/paywall', extra: {
-                'trackId': trackId,
-                'trackTitle': meta.title,
-              }),
+              onUnlock: openPaywall,
+              onTryFree: () => context.push(
+                '/scenario/${Uri.encodeComponent(steps.first.scenarioId)}',
+                extra: {'trackId': trackId, 'stepOrder': 0},
+              ),
             ),
           ),
         ],
@@ -320,6 +354,8 @@ class _StepTile extends StatelessWidget {
   final bool isLast;
   final Color trackColor;
   final int? attemptsLeft;
+  final bool isFreeStep;
+  final VoidCallback? onTap;
 
   const _StepTile({
     required this.step,
@@ -329,6 +365,8 @@ class _StepTile extends StatelessWidget {
     required this.isLast,
     required this.trackColor,
     this.attemptsLeft,
+    this.isFreeStep = false,
+    this.onTap,
   });
 
   Color _difficultyColor(String d) {
@@ -354,7 +392,9 @@ class _StepTile extends StatelessWidget {
             ? null
             : context.textSecondary;
 
-    return IntrinsicHeight(
+    return GestureDetector(
+      onTap: onTap,
+      child: IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -506,6 +546,22 @@ class _StepTile extends StatelessWidget {
                                 .copyWith(fontSize: 10),
                           ),
                         ],
+                        if (isFreeStep && !isCompleted) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'FREE',
+                              style: AppTypography.labelSmall(color: AppColors.success)
+                                  .copyWith(fontWeight: FontWeight.w800, fontSize: 10),
+                            ),
+                          ),
+                        ],
                         if (isCurrent) ...[
                           const Spacer(),
                           Text(
@@ -523,6 +579,7 @@ class _StepTile extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -660,6 +717,100 @@ class _ScenarioAvatar extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Unlock banner (between step 0 and step 1)
+// ---------------------------------------------------------------------------
+
+class _UnlockBanner extends StatelessWidget {
+  final int stepsLocked;
+  final String price;
+  final VoidCallback onUnlock;
+
+  const _UnlockBanner({
+    required this.stepsLocked,
+    required this.price,
+    required this.onUnlock,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Tappable(
+        onTap: onUnlock,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary.withValues(alpha: 0.09),
+                AppColors.primary.withValues(alpha: 0.04),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_open_rounded,
+                    color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Unlock $stepsLocked more steps',
+                      style: AppTypography.titleMedium(),
+                    ),
+                    Text(
+                      '$price · one-time · yours forever',
+                      style: AppTypography.bodySmall(
+                          color: context.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'Unlock',
+                  style: AppTypography.labelMedium(color: Colors.white)
+                      .copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Bottom CTA
 // ---------------------------------------------------------------------------
 
@@ -674,6 +825,7 @@ class _BottomCta extends StatelessWidget {
   final VoidCallback onContinue;
   final VoidCallback onSwitch;
   final VoidCallback onUnlock;
+  final VoidCallback onTryFree;
 
   const _BottomCta({
     required this.meta,
@@ -686,6 +838,7 @@ class _BottomCta extends StatelessWidget {
     required this.onContinue,
     required this.onSwitch,
     required this.onUnlock,
+    required this.onTryFree,
   });
 
   @override
@@ -765,6 +918,16 @@ class _BottomCta extends StatelessWidget {
         icon: Icons.swap_horiz_rounded,
         color: AppColors.primary,
         onTap: onSwitch,
+      );
+    }
+
+    // Free trial available — let user try before buying
+    if (hasFreeTrials) {
+      return _PrimaryButton(
+        label: 'Try Step 1 — Free',
+        icon: Icons.play_arrow_rounded,
+        color: AppColors.primary,
+        onTap: onTryFree,
       );
     }
 

@@ -11,6 +11,10 @@ class ConversationFeedback {
   final String scenarioId;
   final String category;
   final int durationSeconds;
+  // Coaching focus fields (v2)
+  final String? focusPriority;
+  final String? focusChallenge;
+  final String? transcriptMoment;
 
   const ConversationFeedback({
     required this.clarity,
@@ -25,6 +29,9 @@ class ConversationFeedback {
     required this.scenarioId,
     required this.category,
     required this.durationSeconds,
+    this.focusPriority,
+    this.focusChallenge,
+    this.transcriptMoment,
   });
 
   factory ConversationFeedback.fromMap(Map<String, dynamic> map) {
@@ -43,6 +50,9 @@ class ConversationFeedback {
       scenarioId: map['scenarioId'] as String? ?? '',
       category: map['category'] as String? ?? '',
       durationSeconds: (map['durationSeconds'] as num?)?.toInt() ?? 0,
+      focusPriority: map['focusPriority'] as String?,
+      focusChallenge: map['focusChallenge'] as String?,
+      transcriptMoment: map['transcriptMoment'] as String?,
     );
   }
 
@@ -60,7 +70,9 @@ class ConversationFeedback {
       'scenarioId': scenarioId,
       'category': category,
       'durationSeconds': durationSeconds,
+      if (focusPriority != null) 'focusPriority': focusPriority,
+      if (focusChallenge != null) 'focusChallenge': focusChallenge,
+      if (transcriptMoment != null) 'transcriptMoment': transcriptMoment,
     };
   }
-
 }
