@@ -20,7 +20,6 @@ import 'package:speech_coach/features/assessment/domain/learning_plan_entity.dar
 import 'package:speech_coach/shared/utils/filler_detector.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:speech_coach/features/paywall/data/coin_provider.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
 import 'package:speech_coach/features/notifications/data/notification_service.dart';
 import 'package:speech_coach/shared/services/sound_service.dart';
@@ -52,7 +51,6 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
   bool _sessionSaved = false;
   bool _reviewChecked = false;
   bool _celebrationShown = false;
-  bool _softGateShown = false;
   ChainResult? _chainResult;
   Map<String, int> _fillerWords = {};
   int? _wpm;
@@ -257,16 +255,6 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
           _burstConfettiFromScoreRing();
         }
 
-        // Soft gate: nudge to top up if balance is low (non-blocking)
-        if (!_softGateShown) {
-          _softGateShown = true;
-          final coinBalance = ref.read(coinProvider).balance;
-          if (coinBalance < 5) {
-            Future.delayed(const Duration(seconds: 2), () {
-              if (mounted) _showTopUpNudge();
-            });
-          }
-        }
       });
     }
 
@@ -893,68 +881,6 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
     if (score >= 80) return AppColors.success;
     if (score >= 50) return AppColors.warning;
     return AppColors.error;
-  }
-
-  void _showTopUpNudge() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24, 20, 24, MediaQuery.of(ctx).padding.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Icon(Icons.stars_rounded, size: 48, color: AppColors.primary),
-            const SizedBox(height: 12),
-            Text(
-              'Running low on coins',
-              style: AppTypography.titleLarge()
-                  .copyWith(fontWeight: FontWeight.w800),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Top up to keep the momentum going. Each session uses 5 coins.',
-              style: AppTypography.bodyMedium(color: context.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            DuoButton.primary(
-              text: 'Top Up Coins',
-              icon: Icons.stars_rounded,
-              width: double.infinity,
-              onTap: () {
-                Navigator.of(ctx).pop();
-                context.push('/paywall', extra: {
-                  'trackId': _trackId ?? '',
-                  'trackTitle': widget.scenarioTitle,
-                });
-              },
-            ),
-            const SizedBox(height: 10),
-            DuoButton.secondary(
-              text: 'Maybe Later',
-              width: double.infinity,
-              onTap: () => Navigator.of(ctx).pop(),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _burstConfettiFromScoreRing() {

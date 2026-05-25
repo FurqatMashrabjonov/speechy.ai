@@ -6,6 +6,22 @@ import 'package:flutter/foundation.dart';
 class GeminiLiveService {
   LiveSession? _session;
 
+  // Session resumption — server preserves context for up to 2 hours.
+  // Avoids re-sending full transcript as text tokens on reconnect.
+  String? _resumptionHandle;
+  DateTime? _resumptionHandleTime;
+
+  void saveResumptionHandle(String handle) {
+    _resumptionHandle = handle;
+    _resumptionHandleTime = DateTime.now();
+  }
+
+  bool get hasValidResumptionHandle {
+    if (_resumptionHandle == null || _resumptionHandleTime == null) return false;
+    return DateTime.now().difference(_resumptionHandleTime!) <
+        const Duration(hours: 2);
+  }
+
   static const _guardrails = '''
 CRITICAL RULES — follow these at all times:
 - You are a real person in this conversation. Never acknowledge being an AI, language model, or virtual assistant.
@@ -110,6 +126,7 @@ CRITICAL RULES — follow these at all times:
     int? durationMinutes,
     String? voiceName,
     String? priorTranscript,
+    bool useResumption = false,
   }) async {
     try {
       final systemInstruction = _buildFullSystemPrompt(
@@ -162,7 +179,7 @@ CRITICAL RULES — follow these at all times:
       ]);
 
       final liveModel = FirebaseAI.googleAI().liveGenerativeModel(
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+        model: 'gemini-3.1-flash-live-preview',
         systemInstruction: Content.text(systemInstruction),
         tools: [submitFeedbackTool],
         liveGenerationConfig: LiveGenerationConfig(
@@ -172,17 +189,24 @@ CRITICAL RULES — follow these at all times:
               : null,
           inputAudioTranscription: AudioTranscriptionConfig(),
           outputAudioTranscription: AudioTranscriptionConfig(),
-          // Prevent quadratic cost growth: once context hits 12k tokens
-          // (~8 min cumulative audio), prune to last 6k tokens (~4 min).
-          // Cuts per-session API cost by ~51% on long sessions.
+          // Compress once context exceeds 25k tokens (~16 min audio),
+          // retaining last 8k tokens. Conservative window preserves
+          // conversation quality while capping quadratic cost growth.
           contextWindowCompression: ContextWindowCompressionConfig(
-            triggerTokens: 12000,
-            slidingWindow: SlidingWindow(targetTokens: 6000),
+            triggerTokens: 25000,
+            slidingWindow: SlidingWindow(targetTokens: 8000),
           ),
         ),
       );
 
-      _session = await liveModel.connect();
+      // Use server-side session resumption if a valid handle exists (<2hr old).
+      // This preserves conversation context without re-sending transcript as
+      // text tokens, which is both cheaper and more accurate.
+      final resumptionConfig = useResumption && hasValidResumptionHandle
+          ? SessionResumptionConfig.resume(_resumptionHandle!)
+          : SessionResumptionConfig();
+
+      _session = await liveModel.connect(sessionResumption: resumptionConfig);
     } catch (e) {
       debugPrint('GeminiLiveService connect error: $e');
       rethrow;

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/features/assessment/data/assessment_data.dart';
-import 'package:speech_coach/features/paywall/data/coin_provider.dart';
 import 'package:speech_coach/features/paywall/data/revenue_cat_service.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
 import 'package:speech_coach/features/paywall/domain/track_tier.dart';
@@ -67,9 +66,8 @@ class SubscriptionState {
 class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
   final RevenueCatService _service;
   final UsageService _usageService;
-  final CoinNotifier _coins;
 
-  SubscriptionNotifier(this._service, this._usageService, this._coins)
+  SubscriptionNotifier(this._service, this._usageService)
       : super(const SubscriptionState()) {
     _init();
   }
@@ -169,8 +167,6 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
 
   Future<void> _applyTier(String trackId, TrackTier tier) async {
     await _usageService.setTrackTier(trackId, tier);
-    // Add bundled coins to user's balance
-    await _coins.addCoins(tier.coins);
     final updated = Map<String, TrackTier>.from(state.purchasedTiers);
     // Only upgrade, never downgrade
     final current = updated[trackId];
@@ -189,6 +185,5 @@ final subscriptionProvider =
     StateNotifierProvider<SubscriptionNotifier, SubscriptionState>((ref) {
   final service = ref.read(revenueCatServiceProvider);
   final usageService = ref.read(usageServiceProvider);
-  final coins = ref.read(coinProvider.notifier);
-  return SubscriptionNotifier(service, usageService, coins);
+  return SubscriptionNotifier(service, usageService);
 });

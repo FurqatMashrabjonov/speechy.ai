@@ -11,7 +11,6 @@ import 'package:speech_coach/shared/widgets/tappable.dart';
 import 'package:speech_coach/features/scenarios/domain/scenario_entity.dart';
 import 'package:speech_coach/features/scenarios/presentation/providers/scenario_provider.dart';
 import 'package:speech_coach/core/analytics/analytics_service.dart';
-import 'package:speech_coach/features/paywall/data/coin_provider.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
 
 class ScenarioDetailScreen extends ConsumerWidget {
@@ -212,13 +211,6 @@ class ScenarioDetailScreen extends ConsumerWidget {
   }
 
   void _startPractice(BuildContext context, WidgetRef ref, Scenario scenario) {
-    // Hard gate: need ≥5 coins to start any session
-    final coinState = ref.read(coinProvider);
-    if (!coinState.canStartSession) {
-      _showCoinGate(context, scenario.title);
-      return;
-    }
-
     final usage = ref.read(usageServiceProvider);
     if (!usage.canStartSession(trackId: trackId, stepOrder: stepOrder)) {
       context.push('/paywall', extra: {
@@ -244,68 +236,6 @@ class ScenarioDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showCoinGate(BuildContext context, String scenarioTitle) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24, 20, 24, MediaQuery.of(ctx).padding.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Icon(Icons.stars_rounded, size: 48, color: AppColors.primary),
-            const SizedBox(height: 12),
-            Text(
-              'Need 5 coins to start',
-              style: AppTypography.titleLarge()
-                  .copyWith(fontWeight: FontWeight.w800),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Each session uses 1 coin per minute (5 min = 5 coins). '
-              'Buy a track pack to get coins bundled.',
-              style: AppTypography.bodyMedium(color: context.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            DuoButton.primary(
-              text: 'Get Coins',
-              icon: Icons.stars_rounded,
-              width: double.infinity,
-              onTap: () {
-                Navigator.of(ctx).pop();
-                context.push('/paywall', extra: {
-                  'trackId': trackId ?? '',
-                  'trackTitle': scenarioTitle,
-                });
-              },
-            ),
-            const SizedBox(height: 10),
-            DuoButton.secondary(
-              text: 'Not Now',
-              width: double.infinity,
-              onTap: () => Navigator.of(ctx).pop(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _DetailChip extends StatelessWidget {

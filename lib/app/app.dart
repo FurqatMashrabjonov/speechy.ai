@@ -5,7 +5,6 @@ import 'package:speech_coach/app/router.dart';
 import 'package:speech_coach/app/theme/app_theme.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/auth/presentation/providers/auth_provider.dart';
-import 'package:speech_coach/features/paywall/data/coin_provider.dart';
 import 'package:speech_coach/features/paywall/data/usage_service.dart';
 import 'package:speech_coach/shared/providers/theme_provider.dart';
 
@@ -24,7 +23,6 @@ class SpeechCoachApp extends ConsumerWidget {
       if (!wasLoggedIn && isLoggedIn) {
         ref.read(learningPlanProvider.notifier).refreshSync();
         ref.read(usageServiceProvider).syncFromRemote();
-        ref.read(coinProvider.notifier).refresh();
       }
     });
 

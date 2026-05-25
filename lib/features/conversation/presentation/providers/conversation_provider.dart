@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:audio_session/audio_session.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +12,6 @@ import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/features/conversation/data/gemini_live_service.dart';
 import 'package:speech_coach/features/conversation/domain/conversation_entity.dart';
 import 'package:speech_coach/features/feedback/domain/feedback_entity.dart';
-import 'package:speech_coach/features/paywall/data/coin_provider.dart';
 
 // --- Providers ---
 
@@ -23,8 +22,7 @@ final geminiLiveServiceProvider = Provider<GeminiLiveService>((ref) {
 final conversationProvider = StateNotifierProvider.autoDispose
     .family<ConversationNotifier, ConversationState, String>((ref, category) {
       final service = ref.read(geminiLiveServiceProvider);
-      final coins = ref.read(coinProvider.notifier);
-      return ConversationNotifier(service, category, coins);
+      return ConversationNotifier(service, category);
     });
 
 // --- State ---
@@ -133,7 +131,6 @@ class ConversationState {
 class ConversationNotifier extends StateNotifier<ConversationState> {
   final GeminiLiveService _service;
   final String category;
-  final CoinNotifier _coins;
   final AudioRecorder _recorder = AudioRecorder();
 
   Timer? _timer;
@@ -186,7 +183,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   // Natural session ending (10s before scenario timer runs out)
   bool _naturalEndSent = false;
 
-  ConversationNotifier(this._service, this.category, this._coins)
+  ConversationNotifier(this._service, this.category)
     : super(const ConversationState());
 
   ConversationErrorType _classifyError(dynamic e) {
@@ -358,6 +355,24 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     }
 
     try {
+      // Kill switch — admin can halt all sessions via Firestore flag.
+      // Fails open: if Firestore is unreachable, session proceeds normally.
+      try {
+        final doc = await FirebaseFirestore.instance
+            .doc('config/global')
+            .get(const GetOptions(source: Source.server));
+        if (doc.data()?['killSwitch'] == true) {
+          if (mounted) {
+            state = state.copyWith(
+              status: ConversationStatus.error,
+              error: 'Service temporarily unavailable.\nPlease try again later.',
+              errorType: ConversationErrorType.quota,
+            );
+          }
+          return;
+        }
+      } catch (_) {}
+
       final hasPerms = await _recorder.hasPermission();
       if (!hasPerms) {
         state = state.copyWith(
@@ -608,15 +623,19 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       if (_closed) return;
       try {
         await _service.close();
-        // Pass the full transcript as prior context so AI resumes naturally
-        // without reintroducing itself or losing conversation thread.
-        final transcript = state.messages.isNotEmpty ? state.fullTranscript : null;
+        // Prefer server-side session resumption (no extra tokens).
+        // Fall back to transcript injection only if handle expired (>2hr).
+        final useResumption = _service.hasValidResumptionHandle;
+        final transcript = useResumption
+            ? null
+            : (state.messages.isNotEmpty ? state.fullTranscript : null);
         await _service.connect(
           category,
           scenarioPrompt: state.scenarioPrompt,
           durationMinutes: state.durationLimitMinutes,
           voiceName: state.voiceName,
           priorTranscript: transcript,
+          useResumption: useResumption,
         );
         await _setupNewStream();
         await _startAudioPlayback();
@@ -688,6 +707,12 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       // Turn is complete — create the AI message bubble (audio already playing)
       if (msg.turnComplete == true) {
         _onAiTurnComplete();
+      }
+    } else if (msg is SessionResumptionUpdate) {
+      // Save the latest resumption handle so reconnects can restore
+      // server-side context without re-sending transcript as text tokens.
+      if (msg.newHandle != null) {
+        _service.saveResumptionHandle(msg.newHandle!);
       }
     } else if (msg is GoingAwayNotice) {
       // Server will disconnect in ~60 seconds — end gracefully now
@@ -942,21 +967,6 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         if (status == ConversationStatus.ended ||
             status == ConversationStatus.analyzing) {
           return;
-        }
-
-        // Coin deduction: 1 coin per minute elapsed
-        if (elapsed.inSeconds > 0 && elapsed.inSeconds % 60 == 0) {
-          _coins.deductCoin();
-          if (_coins.state.balance == 0 && !_naturalEndSent) {
-            _naturalEndSent = true;
-            debugPrint('Coins exhausted — ending session gracefully.');
-            if (state.scenarioId != null) {
-              requestFeedbackAndEnd();
-            } else {
-              endConversation();
-            }
-            return;
-          }
         }
 
         // Hard cap: 14m30s — end before Firebase 15-min server disconnect
