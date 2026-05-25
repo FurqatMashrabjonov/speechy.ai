@@ -12,6 +12,7 @@ import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/features/conversation/data/gemini_live_service.dart';
 import 'package:speech_coach/features/conversation/domain/conversation_entity.dart';
 import 'package:speech_coach/features/feedback/domain/feedback_entity.dart';
+import 'package:speech_coach/features/paywall/data/coin_provider.dart';
 
 // --- Providers ---
 
@@ -22,7 +23,8 @@ final geminiLiveServiceProvider = Provider<GeminiLiveService>((ref) {
 final conversationProvider = StateNotifierProvider.autoDispose
     .family<ConversationNotifier, ConversationState, String>((ref, category) {
       final service = ref.read(geminiLiveServiceProvider);
-      return ConversationNotifier(service, category);
+      final coins = ref.read(coinProvider.notifier);
+      return ConversationNotifier(service, category, coins);
     });
 
 // --- State ---
@@ -131,6 +133,7 @@ class ConversationState {
 class ConversationNotifier extends StateNotifier<ConversationState> {
   final GeminiLiveService _service;
   final String category;
+  final CoinNotifier _coins;
   final AudioRecorder _recorder = AudioRecorder();
 
   Timer? _timer;
@@ -183,7 +186,7 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   // Natural session ending (10s before scenario timer runs out)
   bool _naturalEndSent = false;
 
-  ConversationNotifier(this._service, this.category)
+  ConversationNotifier(this._service, this.category, this._coins)
     : super(const ConversationState());
 
   ConversationErrorType _classifyError(dynamic e) {
@@ -939,6 +942,21 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         if (status == ConversationStatus.ended ||
             status == ConversationStatus.analyzing) {
           return;
+        }
+
+        // Coin deduction: 1 coin per minute elapsed
+        if (elapsed.inSeconds > 0 && elapsed.inSeconds % 60 == 0) {
+          _coins.deductCoin();
+          if (_coins.state.balance == 0 && !_naturalEndSent) {
+            _naturalEndSent = true;
+            debugPrint('Coins exhausted — ending session gracefully.');
+            if (state.scenarioId != null) {
+              requestFeedbackAndEnd();
+            } else {
+              endConversation();
+            }
+            return;
+          }
         }
 
         // Hard cap: 14m30s — end before Firebase 15-min server disconnect
