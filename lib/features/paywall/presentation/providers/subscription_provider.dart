@@ -26,14 +26,9 @@ class SubscriptionState {
   // Will be removed once all screens are migrated.
   bool get isPro => purchasedTiers.isNotEmpty;
 
-  /// Highest tier the user has purchased across all tracks.
-  TrackTier? get highestTier {
-    TrackTier? best;
-    for (final tier in purchasedTiers.values) {
-      if (best == null || tier.sessionCount > best.sessionCount) best = tier;
-    }
-    return best;
-  }
+  /// Any purchased tier (only one tier exists now).
+  TrackTier? get highestTier =>
+      purchasedTiers.isEmpty ? null : purchasedTiers.values.first;
 
   TrackTier? tierForTrack(String trackId) => purchasedTiers[trackId];
 
@@ -154,7 +149,7 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
           error: 'No previous purchases found.',
         );
       } else {
-        await _applyTier(trackId, TrackTier.power);
+        await _applyTier(trackId, TrackTier.full);
         state = state.copyWith(isRestoring: false);
       }
     } catch (_) {
@@ -169,8 +164,7 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     await _usageService.setTrackTier(trackId, tier);
     final updated = Map<String, TrackTier>.from(state.purchasedTiers);
     // Only upgrade, never downgrade
-    final current = updated[trackId];
-    if (current == null || tier.sessionCount > current.sessionCount) {
+    if (!updated.containsKey(trackId)) {
       updated[trackId] = tier;
     }
     state = state.copyWith(purchasedTiers: updated);

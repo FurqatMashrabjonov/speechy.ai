@@ -263,13 +263,7 @@ class _UnlockedTracksSection extends ConsumerWidget {
           final trackId = e.key;
           final tier = e.value;
           final title = generatePlanFromTemplateId(trackId).title;
-          final isPower = tier == TrackTier.power;
-          final isFull = tier == TrackTier.full;
-          final badgeColor = isPower
-              ? const Color(0xFF7C3AED)
-              : isFull
-                  ? const Color(0xFFD97706)
-                  : AppColors.primary;
+          final badgeColor = AppColors.primary;
           final badgeLabel = tier.displayName;
 
           return Container(
@@ -290,11 +284,7 @@ class _UnlockedTracksSection extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    isPower
-                        ? Icons.diamond_rounded
-                        : isFull
-                            ? Icons.star_rounded
-                            : Icons.lock_open_rounded,
+                    Icons.lock_open_rounded,
                     color: badgeColor,
                     size: 18,
                   ),

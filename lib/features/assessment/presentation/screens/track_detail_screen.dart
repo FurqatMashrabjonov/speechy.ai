@@ -43,16 +43,10 @@ class TrackDetailScreen extends ConsumerWidget {
         ? ref.watch(scenarioByIdProvider(nextStep.scenarioId))
         : null;
 
-    // A step is accessible if tier covers it AND attempts remain, or free trials remain
-    bool stepAccessible(int stepOrder) {
-      if (tier != null) {
-        return stepOrder < tier.sessionCount &&
-            usageService.canAttemptStep(trackId, stepOrder);
-      }
-      return isActive &&
-          usageService.hasFreeSessionsLeft &&
-          usageService.canAttemptStep(trackId, stepOrder);
-    }
+    // Paid: all 15 steps, 3 attempts each.
+    // Free: step 0 only, 1 attempt — canAttemptStep encapsulates both.
+    bool stepAccessible(int stepOrder) =>
+        usageService.canAttemptStep(trackId, stepOrder);
 
     return Scaffold(
       backgroundColor: context.isDark ? AppColors.backgroundDark : const Color(0xFFF7F7F7),
@@ -102,7 +96,7 @@ class TrackDetailScreen extends ConsumerWidget {
               meta: meta,
               isActive: isActive,
               tier: tier,
-              hasFreeTrials: usageService.hasFreeSessionsLeft,
+              hasFreeTrials: usageService.isFreeStepAccessible(trackId),
               nextStep: nextStep,
               nextScenario: nextScenario,
               planComplete: isActive && (plan?.isComplete ?? false),

@@ -9,6 +9,7 @@ import 'package:speech_coach/shared/providers/user_provider.dart';
 
 class UsageService {
   static const _keyTotalFree = 'total_free_sessions_used';
+  // Free-form conversations (no track) get 3 global free sessions.
   static const int freeTotalSessions = 3;
 
   final SharedPreferences _prefs;
@@ -16,7 +17,7 @@ class UsageService {
 
   UsageService(this._prefs, this._remote);
 
-  // ── Free trial ────────────────────────────────────────────────────────────
+  // ── Free trial (free-form conversations) ─────────────────────────────────
 
   int get totalFreeSessionsUsed => _prefs.getInt(_keyTotalFree) ?? 0;
   bool get hasFreeSessionsLeft => totalFreeSessionsUsed < freeTotalSessions;
@@ -28,13 +29,18 @@ class UsageService {
     unawaited(_remote.incrementFreeSession());
   }
 
-  // ── Remote sync — call on every login ────────────────────────────────────
+  // ── Per-track free session — step 0 only, 1 attempt ──────────────────────
+
+  /// Step 0 of each track is always free — but only once, no retry.
+  bool isFreeStepAccessible(String trackId) =>
+      getAttemptCount(trackId, 0) == 0;
+
+  // ── Remote sync ───────────────────────────────────────────────────────────
 
   Future<void> syncFromRemote() async {
     final remote = await _remote.fetch();
     if (remote == null) return;
 
-    // Take max(local, remote) — handles offline sessions on this device
     if (remote.freeSessionsUsed > totalFreeSessionsUsed) {
       await _prefs.setInt(_keyTotalFree, remote.freeSessionsUsed);
       debugPrint(
@@ -43,7 +49,6 @@ class UsageService {
     }
 
     for (final entry in remote.stepAttempts.entries) {
-      // key format: "trackId_stepOrder" — stepOrder is always a plain int suffix
       final lastUnderscore = entry.key.lastIndexOf('_');
       if (lastUnderscore < 0) continue;
       final trackId = entry.key.substring(0, lastUnderscore);
@@ -62,9 +67,8 @@ class UsageService {
       TrackTierX.fromString(_prefs.getString('tier_$trackId'));
 
   Future<void> setTrackTier(String trackId, TrackTier tier) async {
-    final current = getTrackTier(trackId);
-    // Only upgrade, never downgrade
-    if (current != null && current.sessionCount >= tier.sessionCount) return;
+    // Only upgrade, never downgrade (no-op if already purchased)
+    if (getTrackTier(trackId) != null) return;
     await _prefs.setString('tier_$trackId', tier.revenueCatIdentifier);
   }
 
@@ -81,36 +85,32 @@ class UsageService {
     unawaited(_remote.incrementStepAttempt(trackId, stepOrder));
   }
 
+  /// Paid users: 3 attempts per step.
+  /// Free users: 1 attempt on step 0 only; all other steps inaccessible.
   bool canAttemptStep(String trackId, int stepOrder) {
     final tier = getTrackTier(trackId);
-    // Free users get exactly 1 attempt per step — no retries
-    final maxAttempts = tier?.maxAttempts ?? 1;
-    return getAttemptCount(trackId, stepOrder) < maxAttempts;
+    if (tier != null) {
+      return getAttemptCount(trackId, stepOrder) < tier.maxAttempts;
+    }
+    if (stepOrder != 0) return false;
+    return isFreeStepAccessible(trackId);
   }
 
   // ── Session gate ──────────────────────────────────────────────────────────
 
-  /// Returns true if user can start a session for this step.
-  /// [trackId] and [stepOrder] are optional — if omitted, falls back to free trial check.
   bool canStartSession({String? trackId, int? stepOrder}) {
     if (trackId == null || stepOrder == null) {
       return hasFreeSessionsLeft;
     }
-    final tier = getTrackTier(trackId);
-    if (tier != null) {
-      return stepOrder < tier.sessionCount && canAttemptStep(trackId, stepOrder);
-    }
-    // Free: global sessions left AND this specific step not yet attempted
-    return hasFreeSessionsLeft && canAttemptStep(trackId, stepOrder);
+    return canAttemptStep(trackId, stepOrder);
   }
 
   Future<void> recordSession({String? trackId, int? stepOrder}) async {
     if (trackId != null && stepOrder != null) {
-      // Always track per-step attempts (free and paid alike)
       await incrementAttempt(trackId, stepOrder);
       final tier = getTrackTier(trackId);
       if (tier == null) {
-        // Also consume a global free session
+        // Free session on step 0 — also consume global free counter
         await recordFreeSession();
       }
       return;

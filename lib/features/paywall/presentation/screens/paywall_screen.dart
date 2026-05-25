@@ -11,7 +11,7 @@ import 'package:speech_coach/features/paywall/domain/track_tier.dart';
 import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
 import 'package:speech_coach/shared/widgets/tappable.dart';
 
-class PaywallScreen extends ConsumerStatefulWidget {
+class PaywallScreen extends ConsumerWidget {
   final String trackId;
   final String trackTitle;
 
@@ -22,20 +22,7 @@ class PaywallScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<PaywallScreen> createState() => _PaywallScreenState();
-}
-
-class _PaywallScreenState extends ConsumerState<PaywallScreen> {
-  TrackTier _selected = TrackTier.power;
-
-  @override
-  void initState() {
-    super.initState();
-    AnalyticsService.instance.logPaywallViewed(trackId: widget.trackId);
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final sub = ref.watch(subscriptionProvider);
 
     ref.listen<SubscriptionState>(subscriptionProvider, (prev, next) {
@@ -43,27 +30,26 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(next.error!)));
       }
-      final purchased = next.tierForTrack(widget.trackId);
-      if (purchased != null && prev?.tierForTrack(widget.trackId) == null) {
+      final purchased = next.tierForTrack(trackId);
+      if (purchased != null && prev?.tierForTrack(trackId) == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${purchased.displayName} unlocked! ${purchased.coinsLabel} added.',
-            ),
-          ),
+          const SnackBar(content: Text('Track unlocked! Happy practicing.')),
         );
         context.pop();
       }
     });
 
-    final bannerPath = AppImages.trackBannerMap[widget.trackId];
+    final bannerPath = AppImages.trackBannerMap[trackId];
     final bg = context.background;
+    const tier = TrackTier.full;
+    final price = sub.packageForTier(tier)?.storeProduct.priceString ??
+        tier.fallbackPrice;
 
     return Scaffold(
       backgroundColor: bg,
       body: Stack(
         children: [
-          // ── Banner background fading into screen color ──────────────
+          // Banner fading into background
           if (bannerPath != null)
             Positioned(
               top: 0,
@@ -84,35 +70,38 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               ),
             ),
 
-          // ── Main content on top ─────────────────────────────────────
           SafeArea(
             child: Column(
               children: [
-                // Close button
+                // Close
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 6),
                   child: Row(
                     children: [
                       Tappable(
                         onTap: () => context.pop(),
-                        child: const Icon(Icons.close_rounded, size: 24),
+                        child:
+                            const Icon(Icons.close_rounded, size: 24),
                       ),
                     ],
                   ),
                 ),
 
-                // Scrollable content
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                    padding:
+                        const EdgeInsets.fromLTRB(20, 4, 20, 16),
                     child: Column(
                       children: [
-                        const SizedBox(height: 120),
+                        const SizedBox(height: 110),
+
                         Text(
-                          'Unlock ${widget.trackTitle}',
+                          'Unlock $trackTitle',
                           style: AppTypography.headlineMedium(),
                           textAlign: TextAlign.center,
                         ).animate().fadeIn(delay: 60.ms, duration: 300.ms),
+
                         const SizedBox(height: 4),
                         Text(
                           'Buy once, own forever.',
@@ -121,28 +110,27 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                           textAlign: TextAlign.center,
                         ).animate().fadeIn(delay: 100.ms, duration: 300.ms),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 28),
 
-                        // Tier cards
-                        ...TrackTier.values.map((tier) {
-                          return _TierCard(
-                            tier: tier,
-                            isSelected: _selected == tier,
-                            price: sub
-                                    .packageForTier(tier)
-                                    ?.storeProduct
-                                    .priceString ??
-                                tier.fallbackPrice,
-                            onTap: () => setState(() => _selected = tier),
-                          )
-                              .animate(delay: ((tier.index + 1) * 60).ms)
-                              .fadeIn(duration: 250.ms)
-                              .slideY(
-                                  begin: 0.06,
-                                  end: 0,
-                                  duration: 250.ms,
-                                  curve: Curves.easeOut);
-                        }),
+                        // Feature card
+                        _FeatureCard(price: price)
+                            .animate()
+                            .fadeIn(delay: 140.ms, duration: 280.ms)
+                            .slideY(
+                                begin: 0.06,
+                                end: 0,
+                                duration: 280.ms,
+                                curve: Curves.easeOut),
+
+                        const SizedBox(height: 16),
+
+                        // Free session note
+                        Text(
+                          'First session always free — no card required.',
+                          style: AppTypography.bodySmall(
+                              color: context.textTertiary),
+                          textAlign: TextAlign.center,
+                        ).animate().fadeIn(delay: 200.ms, duration: 280.ms),
                       ],
                     ),
                   ),
@@ -161,15 +149,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                     border: Border(top: BorderSide(color: context.divider)),
                   ),
                   child: _PurchaseButton(
-                    tier: _selected,
-                    trackId: widget.trackId,
-                    price: sub
-                            .packageForTier(_selected)
-                            ?.storeProduct
-                            .priceString ??
-                        _selected.fallbackPrice,
+                    trackId: trackId,
+                    price: price,
                     isLoading: sub.isPurchasing,
-                  ).animate().fadeIn(delay: 250.ms),
+                  ).animate().fadeIn(delay: 240.ms),
                 ),
               ],
             ),
@@ -180,175 +163,86 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   }
 }
 
-// ── Tier Card ─────────────────────────────────────────────────────────────────
+// ── Feature Card ──────────────────────────────────────────────────────────────
 
-class _TierCard extends StatelessWidget {
-  final TrackTier tier;
-  final bool isSelected;
+class _FeatureCard extends StatelessWidget {
   final String price;
-  final VoidCallback onTap;
 
-  const _TierCard({
-    required this.tier,
-    required this.isSelected,
-    required this.price,
-    required this.onTap,
-  });
+  const _FeatureCard({required this.price});
 
-  static const _features = {
-    TrackTier.quick: [
-      'Access first 3 steps of the track',
-      '1 retry per step',
-    ],
-    TrackTier.full: [
-      'Complete all 15 steps — full curriculum',
-      '2 retries per step',
-    ],
-    TrackTier.power: [
-      'Complete all 15 steps — full curriculum',
-      '3 retries — practice until you nail it',
-    ],
-  };
+  static const _features = [
+    (Icons.lock_open_rounded, 'All 15 steps unlocked'),
+    (Icons.replay_rounded, '3 attempts per step — retry until you nail it'),
+    (Icons.bolt_rounded, 'Real-time AI coach · low-latency audio'),
+    (Icons.star_rounded, 'Detailed score card after every session'),
+    (Icons.all_inclusive_rounded, 'Yours forever · no subscription'),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final isBest = tier.isBestValue;
-    final color = isSelected ? AppColors.primary : context.divider;
-
-    return Tappable(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.07)
-              : context.card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: color,
-            width: isSelected ? 2 : 1.5,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            // Radio indicator
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : context.textTertiary,
-                  width: isSelected ? 6 : 2,
-                ),
-                color: isSelected ? AppColors.primary : Colors.transparent,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Full Access',
+                style: AppTypography.titleLarge()
+                    .copyWith(fontWeight: FontWeight.w800),
               ),
-            ),
-            const SizedBox(width: 14),
-
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        tier.displayName,
-                        style: AppTypography.titleMedium(
-                          color: isSelected ? AppColors.primary : null,
-                        ).copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      if (isBest) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'Best Value',
-                            style: AppTypography.labelSmall(color: Colors.white)
-                                .copyWith(fontWeight: FontWeight.w700, fontSize: 9),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  // Dual-label: coins + sessions
                   Text(
-                    tier.coinsLabel,
-                    style: AppTypography.bodySmall(
-                      color: isSelected
-                          ? AppColors.primary
-                          : context.textSecondary,
-                    ).copyWith(fontWeight: FontWeight.w600),
+                    price,
+                    style: AppTypography.titleLarge(color: AppColors.primary)
+                        .copyWith(fontWeight: FontWeight.w800),
                   ),
-                  const SizedBox(height: 5),
-                  ..._features[tier]!.map((f) => Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_rounded,
-                              size: 13,
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : context.textTertiary,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                f,
-                                style: AppTypography.bodySmall(
-                                  color: isSelected
-                                      ? context.textPrimary
-                                      : context.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )),
+                  Text(
+                    'one-time',
+                    style:
+                        AppTypography.labelSmall(color: context.textTertiary),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ..._features.map(
+            (f) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Icon(f.$1, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      f.$2,
+                      style: AppTypography.bodyMedium(
+                          color: context.textPrimary),
+                    ),
+                  ),
                 ],
               ),
             ),
-
-            const SizedBox(width: 12),
-
-            // Price
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  price,
-                  style: AppTypography.titleLarge(
-                    color: isSelected ? AppColors.primary : context.textPrimary,
-                  ).copyWith(fontWeight: FontWeight.w800),
-                ),
-                Text(
-                  'one-time',
-                  style: AppTypography.labelSmall(color: context.textTertiary),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -357,13 +251,11 @@ class _TierCard extends StatelessWidget {
 // ── Purchase Button ───────────────────────────────────────────────────────────
 
 class _PurchaseButton extends ConsumerWidget {
-  final TrackTier tier;
   final String trackId;
   final String price;
   final bool isLoading;
 
   const _PurchaseButton({
-    required this.tier,
     required this.trackId,
     required this.price,
     required this.isLoading,
@@ -377,12 +269,12 @@ class _PurchaseButton extends ConsumerWidget {
           : () {
               AnalyticsService.instance.logPurchaseInitiated(
                 trackId: trackId,
-                tier: tier.revenueCatIdentifier,
+                tier: TrackTier.full.revenueCatIdentifier,
               );
               ref.read(subscriptionProvider.notifier).purchaseTier(
-                trackId: trackId,
-                tier: tier,
-              );
+                    trackId: trackId,
+                    tier: TrackTier.full,
+                  );
             },
       child: AnimatedOpacity(
         opacity: isLoading ? 0.7 : 1.0,
@@ -411,7 +303,7 @@ class _PurchaseButton extends ConsumerWidget {
                   ),
                 )
               : Text(
-                  'Get ${tier.displayName} — $price',
+                  'Unlock Track — $price',
                   style: AppTypography.titleMedium(color: Colors.white)
                       .copyWith(fontWeight: FontWeight.w700),
                   textAlign: TextAlign.center,
