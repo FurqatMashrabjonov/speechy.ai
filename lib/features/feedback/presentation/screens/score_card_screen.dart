@@ -32,6 +32,7 @@ class ScoreCardScreen extends ConsumerStatefulWidget {
   final String scenarioTitle;
   final String category;
   final String transcript;
+  final int? previousScore;
 
   const ScoreCardScreen({
     super.key,
@@ -40,6 +41,7 @@ class ScoreCardScreen extends ConsumerStatefulWidget {
     required this.scenarioTitle,
     required this.category,
     this.transcript = '',
+    this.previousScore,
   });
 
   @override
@@ -673,6 +675,45 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                         color: _getScoreColor(feedback.overallScore),
                       ),
                     ).animate().fadeIn(duration: 400.ms),
+
+                    // Score delta (correction loop comparison)
+                    if (widget.previousScore != null) ...[
+                      const SizedBox(height: 8),
+                      Builder(builder: (context) {
+                        final delta = feedback.overallScore - widget.previousScore!;
+                        final improved = delta > 0;
+                        final color = improved ? AppColors.success : AppColors.warning;
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: color.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                improved
+                                    ? Icons.trending_up_rounded
+                                    : Icons.trending_flat_rounded,
+                                size: 16,
+                                color: color,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                improved
+                                    ? '+$delta from last attempt'
+                                    : '$delta from last attempt',
+                                style: AppTypography.labelMedium(color: color)
+                                    .copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).animate().fadeIn(delay: 200.ms, duration: 400.ms),
+                    ],
                     const SizedBox(height: 16),
 
                     // Streak row
@@ -806,7 +847,7 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                         result: _chainResult!,
                         canRetry: _canRetry,
                         onNextStep: () => context.go('/home'),
-                        onRetry: () => context.go('/home'),
+                        onRetry: () => _retryWithFocus(feedback),
                         onPaywall: _openPaywall,
                       ).animate().fadeIn(delay: 400.ms, duration: 500.ms)
                           .scale(begin: const Offset(0.95, 0.95), curve: Curves.easeOutBack),
@@ -826,45 +867,100 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
             20,
             MediaQuery.of(context).padding.bottom + 12,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DuoButton.primary(
-                text: _chainResult == ChainResult.passed
-                    ? 'Continue Track'
-                    : (_chainResult == ChainResult.needsRetry && !_canRetry && _trackId != null)
-                        ? 'Unlock Retries'
-                        : _chainResult == ChainResult.needsRetry
-                            ? 'Try Again'
-                            : 'Continue Learning',
-                icon: _chainResult == ChainResult.passed
-                    ? Icons.rocket_launch_rounded
-                    : (_chainResult == ChainResult.needsRetry && !_canRetry && _trackId != null)
-                        ? Icons.lock_open_rounded
-                        : Icons.arrow_forward_rounded,
-                width: double.infinity,
-                onTap: () {
-                  if (_chainResult == ChainResult.needsRetry && !_canRetry && _trackId != null) {
-                    _openPaywall();
-                  } else {
-                    context.go('/home');
-                  }
-                },
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Tappable(
-                  onTap: () => context.go('/home'),
-                  child: Text(
-                    'Go Home',
-                    style: AppTypography.labelMedium(color: context.textSecondary),
+          child: Builder(builder: (context) {
+            final feedback = ref.watch(feedbackProvider).feedback;
+            final hasFocus = feedback?.focusPriority != null;
+            final passed = _chainResult == ChainResult.passed;
+            final needsRetry = _chainResult == ChainResult.needsRetry;
+            final noRetries = needsRetry && !_canRetry && _trackId != null;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DuoButton.primary(
+                  text: passed
+                      ? 'Continue Track'
+                      : noRetries
+                          ? 'Unlock Retries'
+                          : needsRetry
+                              ? 'Try Again'
+                              : 'Continue Learning',
+                  icon: passed
+                      ? Icons.rocket_launch_rounded
+                      : noRetries
+                          ? Icons.lock_open_rounded
+                          : Icons.arrow_forward_rounded,
+                  width: double.infinity,
+                  onTap: () {
+                    if (noRetries) {
+                      _openPaywall();
+                    } else if (needsRetry && feedback != null) {
+                      _retryWithFocus(feedback);
+                    } else {
+                      context.go('/home');
+                    }
+                  },
+                ),
+                // Practice Again — available after passing when we have focus context
+                if (passed && hasFocus && feedback != null) ...[
+                  const SizedBox(height: 8),
+                  Tappable(
+                    onTap: () => _retryWithFocus(feedback),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: const Color(0xFFFFB74D).withValues(alpha: 0.5)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.refresh_rounded,
+                              size: 18, color: Color(0xFFE65100)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Practice Again — Focus on ${feedback.focusPriority}',
+                            style: AppTypography.labelMedium(
+                                    color: const Color(0xFFE65100))
+                                .copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Center(
+                  child: Tappable(
+                    onTap: () => context.go('/home'),
+                    child: Text(
+                      'Go Home',
+                      style: AppTypography.labelMedium(
+                          color: context.textSecondary),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+          }),
         ),
       ],
+    );
+  }
+
+  void _retryWithFocus(ConversationFeedback feedback) {
+    context.push(
+      '/scenario/${Uri.encodeComponent(widget.scenarioId)}',
+      extra: {
+        if (_trackId != null) 'trackId': _trackId,
+        if (_stepOrder != null) 'stepOrder': _stepOrder,
+        if (feedback.focusPriority != null) 'focusPriority': feedback.focusPriority,
+        if (feedback.focusChallenge != null) 'focusChallenge': feedback.focusChallenge,
+        'previousScore': feedback.overallScore,
+      },
     );
   }
 

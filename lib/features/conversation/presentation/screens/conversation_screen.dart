@@ -41,6 +41,9 @@ class ConversationScreen extends ConsumerStatefulWidget {
   final String? scenarioPrompt;
   final int? durationMinutes;
   final String? userRole;
+  final String? focusPriority;
+  final String? focusChallenge;
+  final int? previousScore;
   const ConversationScreen({
     super.key,
     required this.category,
@@ -49,6 +52,9 @@ class ConversationScreen extends ConsumerStatefulWidget {
     this.scenarioPrompt,
     this.durationMinutes,
     this.userRole,
+    this.focusPriority,
+    this.focusChallenge,
+    this.previousScore,
   });
 
   @override
@@ -191,6 +197,51 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                       textAlign: TextAlign.center,
                     ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
                     const SizedBox(height: 20),
+
+                    // Coach focus banner (correction loop retry)
+                    if (widget.focusPriority != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFF3E0), Color(0xFFFFF8F0)],
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: const Color(0xFFFFB74D)
+                                  .withValues(alpha: 0.5),
+                              width: 1.5),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.center_focus_strong_rounded,
+                                color: Color(0xFFE65100), size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'FOCUS: ${widget.focusPriority}',
+                                    style: AppTypography.labelSmall(
+                                            color: const Color(0xFFE65100))
+                                        .copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  if (widget.focusChallenge != null)
+                                    Text(
+                                      widget.focusChallenge!,
+                                      style: AppTypography.bodySmall(
+                                          color: const Color(0xFF6D3A00)),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ).animate().fadeIn(delay: 180.ms, duration: 400.ms),
+                      const SizedBox(height: 12),
+                    ],
 
                     // Your Role card
                     if (widget.userRole != null && widget.userRole!.isNotEmpty)
@@ -658,6 +709,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           'scenarioTitle': state.scenarioTitle ?? widget.category,
           'category': widget.category,
           'transcript': state.fullTranscript,
+          if (widget.previousScore != null) 'previousScore': widget.previousScore,
         },
       );
     }

@@ -218,6 +218,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               scenarioId: scenarioId,
               trackId: extra?['trackId'] as String?,
               stepOrder: extra?['stepOrder'] as int?,
+              focusPriority: extra?['focusPriority'] as String?,
+              focusChallenge: extra?['focusChallenge'] as String?,
+              previousScore: extra?['previousScore'] as int?,
             ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
@@ -246,6 +249,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               scenarioTitle: extra['scenarioTitle'] as String,
               category: extra['category'] as String,
               transcript: extra['transcript'] as String? ?? '',
+              previousScore: extra['previousScore'] as int?,
             ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
@@ -419,6 +423,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               scenarioPrompt: extra?['scenarioPrompt'] as String?,
               durationMinutes: extra?['durationMinutes'] as int?,
               userRole: extra?['userRole'] as String?,
+              focusPriority: extra?['focusPriority'] as String?,
+              focusChallenge: extra?['focusChallenge'] as String?,
+              previousScore: extra?['previousScore'] as int?,
             ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {

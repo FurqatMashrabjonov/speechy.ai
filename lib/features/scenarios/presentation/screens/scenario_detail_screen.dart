@@ -17,12 +17,18 @@ class ScenarioDetailScreen extends ConsumerWidget {
   final String scenarioId;
   final String? trackId;
   final int? stepOrder;
+  final String? focusPriority;
+  final String? focusChallenge;
+  final int? previousScore;
 
   const ScenarioDetailScreen({
     super.key,
     required this.scenarioId,
     this.trackId,
     this.stepOrder,
+    this.focusPriority,
+    this.focusChallenge,
+    this.previousScore,
   });
 
   @override
@@ -145,6 +151,92 @@ class ScenarioDetailScreen extends ConsumerWidget {
                     ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
                     const SizedBox(height: 28),
 
+                    // Previous score comparison chip
+                    if (previousScore != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.history_rounded,
+                                size: 14, color: AppColors.primary),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Last attempt: $previousScore%',
+                              style: AppTypography.labelMedium(
+                                      color: AppColors.primary)
+                                  .copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ).animate().fadeIn(delay: 220.ms, duration: 400.ms),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // Coach focus banner (correction loop)
+                    if (focusPriority != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFF3E0), Color(0xFFFFF8F0)],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: const Color(0xFFFFB74D)
+                                  .withValues(alpha: 0.5),
+                              width: 1.5),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.center_focus_strong_rounded,
+                                color: Color(0xFFE65100), size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'COACH FOCUS',
+                                    style: AppTypography.labelSmall(
+                                            color: const Color(0xFFE65100))
+                                        .copyWith(
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.5),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    focusPriority!,
+                                    style: AppTypography.titleMedium(
+                                            color: const Color(0xFF4E2600))
+                                        .copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  if (focusChallenge != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      focusChallenge!,
+                                      style: AppTypography.bodySmall(
+                                          color: const Color(0xFF6D3A00)),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ).animate().fadeIn(delay: 250.ms, duration: 400.ms),
+                      const SizedBox(height: 20),
+                    ],
+
                     // Tips
                     Container(
                       width: double.infinity,
@@ -232,6 +324,9 @@ class ScenarioDetailScreen extends ConsumerWidget {
         'scenarioPrompt': scenario.systemPrompt,
         'durationMinutes': scenario.durationMinutes,
         'userRole': scenario.userRole,
+        if (focusPriority != null) 'focusPriority': focusPriority,
+        if (focusChallenge != null) 'focusChallenge': focusChallenge,
+        if (previousScore != null) 'previousScore': previousScore,
       },
     );
   }
