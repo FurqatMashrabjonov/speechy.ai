@@ -45,8 +45,6 @@ class SubscriptionState {
     return availablePackages.isNotEmpty ? availablePackages.first : null;
   }
 
-  // Legacy — paywall_screen still calls this; routes through packageForTrack.
-  Package? packageForTier(TrackTier tier) => null;
 
   SubscriptionState copyWith({
     bool? isPurchasing,
