@@ -34,12 +34,9 @@ class SubscriptionState {
 
   bool isTrackUnlocked(String trackId) => purchasedTiers.containsKey(trackId);
 
-  Package? packageForTier(TrackTier tier) {
-    for (final pkg in availablePackages) {
-      if (pkg.identifier == tier.revenueCatIdentifier) return pkg;
-    }
-    return null;
-  }
+  // Single product — just take the first available package.
+  Package? packageForTier(TrackTier tier) =>
+      availablePackages.isNotEmpty ? availablePackages.first : null;
 
   SubscriptionState copyWith({
     bool? isPurchasing,
