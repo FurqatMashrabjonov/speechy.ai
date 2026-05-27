@@ -700,6 +700,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           'scenarioTitle': state.scenarioTitle ?? widget.category,
           'category': widget.category,
           'transcript': state.fullTranscript,
+          'scenarioPrompt': state.scenarioPrompt ?? '',
+          'durationSeconds': state.elapsed.inSeconds,
           if (widget.previousScore != null) 'previousScore': widget.previousScore,
         },
       );

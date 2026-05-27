@@ -12,6 +12,7 @@ import 'package:speech_coach/app/app.dart';
 import 'package:speech_coach/features/assessment/data/assessment_repository.dart';
 import 'package:speech_coach/features/progress/data/progress_repository.dart';
 import 'package:speech_coach/firebase_options.dart';
+import 'package:speech_coach/features/feedback/data/pending_feedback_service.dart';
 import 'package:speech_coach/features/notifications/data/notification_service.dart';
 import 'package:speech_coach/features/paywall/data/revenue_cat_service.dart';
 import 'package:speech_coach/shared/providers/user_provider.dart';
@@ -79,6 +80,9 @@ void main() async {
       );
     }
   } catch (_) {}
+
+  // Recover any sessions whose feedback analysis was interrupted
+  PendingFeedbackService.retryPending(prefs).catchError((_) {});
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

@@ -33,6 +33,8 @@ class ScoreCardScreen extends ConsumerStatefulWidget {
   final String category;
   final String transcript;
   final int? previousScore;
+  final String scenarioPrompt;
+  final int durationSeconds;
 
   const ScoreCardScreen({
     super.key,
@@ -42,6 +44,8 @@ class ScoreCardScreen extends ConsumerStatefulWidget {
     required this.category,
     this.transcript = '',
     this.previousScore,
+    this.scenarioPrompt = '',
+    this.durationSeconds = 0,
   });
 
   @override
@@ -503,9 +507,30 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
               style: AppTypography.bodyMedium(color: context.textSecondary),
             ),
             const SizedBox(height: 24),
-            DuoButton.primary(
-              text: 'Go Home',
+            if (widget.transcript.isNotEmpty) ...[
+              DuoButton.primary(
+                text: 'Retry Analysis',
+                icon: Icons.refresh_rounded,
+                onTap: () {
+                  ref.read(feedbackProvider.notifier).reset();
+                  ref.read(feedbackProvider.notifier).analyzeConversation(
+                    transcript: widget.transcript,
+                    category: widget.category,
+                    scenarioTitle: widget.scenarioTitle,
+                    scenarioPrompt: widget.scenarioPrompt,
+                    scenarioId: widget.scenarioId,
+                    durationSeconds: widget.durationSeconds,
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+            Tappable(
               onTap: () => context.go('/home'),
+              child: Text(
+                'Go Home',
+                style: AppTypography.labelMedium(color: context.textSecondary),
+              ),
             ),
           ],
         ),

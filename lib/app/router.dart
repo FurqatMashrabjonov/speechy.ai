@@ -250,6 +250,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               category: extra['category'] as String,
               transcript: extra['transcript'] as String? ?? '',
               previousScore: extra['previousScore'] as int?,
+              scenarioPrompt: extra['scenarioPrompt'] as String? ?? '',
+              durationSeconds: extra['durationSeconds'] as int? ?? 0,
             ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
