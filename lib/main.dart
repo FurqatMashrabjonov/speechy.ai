@@ -5,6 +5,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_coach/app/app.dart';
@@ -16,7 +17,8 @@ import 'package:speech_coach/features/paywall/data/revenue_cat_service.dart';
 import 'package:speech_coach/shared/providers/user_provider.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   // Initialize Firebase
   await Firebase.initializeApp(
@@ -74,7 +76,6 @@ void main() async {
           .length;
       await NotificationService.scheduleWeeklySummary(
         sessionsThisWeek: weekSessions,
-        streak: progress.streak,
       );
     }
   } catch (_) {}
@@ -92,6 +93,8 @@ void main() async {
     ),
   );
 
+
+  FlutterNativeSplash.remove();
 
   runApp(
     ProviderScope(

@@ -456,18 +456,13 @@ int _sessionsPerDay(String? eventDateId) {
   }
 }
 
-DateTime? _eventDate(String? eventDateId) {
-  final now = DateTime.now();
-  switch (eventDateId) {
-    case 'this_week':
-      return now.add(const Duration(days: 5));
-    case 'this_month':
-      return now.add(const Duration(days: 25));
-    case 'two_months':
-      return now.add(const Duration(days: 60));
-    default:
-      return null;
+DateTime? _eventDate(String? eventDateId, int stepCount, int sessionsPerDay) {
+  // "two_months" and "no_date" → no hard deadline, user is in no rush
+  if (eventDateId == 'this_week' || eventDateId == 'this_month') {
+    final days = (stepCount / sessionsPerDay).ceil();
+    return DateTime.now().add(Duration(days: days));
   }
+  return null;
 }
 
 // --- Mapping Engine ---
@@ -513,6 +508,8 @@ LearningPlan generatePlan(AssessmentResult result) {
     for (final a in result.answers) a.questionId: a.optionId
   };
   final eventDateId = answerMap['event_date'];
+  final stepCount = template.steps.length;
+  final sessionsPerDay = _sessionsPerDay(eventDateId);
 
   return LearningPlan(
     templateId: template.id,
@@ -531,7 +528,7 @@ LearningPlan generatePlan(AssessmentResult result) {
         )
         .toList(),
     createdAt: DateTime.now(),
-    eventDate: _eventDate(eventDateId),
-    sessionsPerDayTarget: _sessionsPerDay(eventDateId),
+    eventDate: _eventDate(eventDateId, stepCount, sessionsPerDay),
+    sessionsPerDayTarget: sessionsPerDay,
   );
 }

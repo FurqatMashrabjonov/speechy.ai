@@ -67,6 +67,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _DailyGoalBanner(
                   sessionsToday: todaySessions,
                   target: dailyTarget,
+                  plan: plan,
                 )
                     .animate()
                     .fadeIn(delay: 80.ms, duration: 350.ms)
@@ -107,9 +108,7 @@ class _Header extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final streak = ref.watch(progressProvider.select((p) => p.streak));
     final photoUrl = ref.watch(authStateProvider.select((s) => s.value?.photoURL));
-    final tier = ref.watch(subscriptionProvider.select((s) => s.highestTier));
 
     return Row(
       children: [
@@ -118,49 +117,7 @@ class _Header extends ConsumerWidget {
         Expanded(
           child: Text(firstName, style: AppTypography.headlineSmall()),
         ),
-        if (streak > 0) _StreakPill(streak: streak, isPremium: tier != null),
       ],
-    );
-  }
-}
-
-class _StreakPill extends StatelessWidget {
-  final int streak;
-  final bool isPremium;
-  const _StreakPill({required this.streak, this.isPremium = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = isPremium
-        ? const [Color(0xFFB45309), Color(0xFFD97706)]
-        : const [Color(0xFFFF6B35), Color(0xFFFF9500)];
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: colors),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: colors.first.withValues(alpha: 0.35),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.local_fire_department_rounded,
-              color: Colors.white, size: 16),
-          const SizedBox(width: 3),
-          Text(
-            '$streak',
-            style: AppTypography.titleMedium(color: Colors.white)
-                .copyWith(fontWeight: FontWeight.w800, fontSize: 14),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -170,19 +127,44 @@ class _StreakPill extends StatelessWidget {
 class _DailyGoalBanner extends StatelessWidget {
   final int sessionsToday;
   final int target;
+  final LearningPlan plan;
 
   const _DailyGoalBanner({
     required this.sessionsToday,
     required this.target,
+    required this.plan,
   });
+
+  String _subtitle() {
+    final days = plan.daysUntilEvent;
+    final title = plan.title;
+
+    if (plan.eventDate == null) {
+      return 'Great session! Keep building your skills.';
+    }
+    if (days < 0) {
+      return 'Keep practicing — every session makes you sharper.';
+    }
+    if (days == 0) {
+      return "Today's the day — you've prepared well!";
+    }
+    if (days == 1) {
+      return 'Tomorrow is the day — you\'re ready for $title.';
+    }
+    if (days <= 7) {
+      return '$days days until $title — you\'re on track.';
+    }
+    return '$days days left to nail $title. Great pace!';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isIntensive = target >= 3;
-    final List<Color> gradientColors = isIntensive
+    final days = plan.daysUntilEvent;
+    final isUrgent = plan.eventDate != null && days >= 0 && days <= 3;
+    final List<Color> gradientColors = isUrgent
         ? [const Color(0xFFFF6B35), const Color(0xFFFF9500)]
         : [const Color(0xFF22C55E), const Color(0xFF16A34A)];
-    final shadowColor = isIntensive
+    final shadowColor = isUrgent
         ? const Color(0xFFFF6B35)
         : const Color(0xFF22C55E);
 
@@ -215,7 +197,7 @@ class _DailyGoalBanner extends StatelessWidget {
             ),
             child: Center(
               child: Icon(
-                isIntensive ? Icons.local_fire_department_rounded : Icons.check_rounded,
+                isUrgent ? Icons.local_fire_department_rounded : Icons.check_rounded,
                 color: Colors.white,
                 size: 24,
               ),
@@ -233,9 +215,7 @@ class _DailyGoalBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  isIntensive
-                      ? 'Great push — rest and come back tomorrow.'
-                      : 'Come back tomorrow — spaced practice sticks.',
+                  _subtitle(),
                   style: AppTypography.bodySmall(
                       color: Colors.white.withValues(alpha: 0.88)),
                 ),

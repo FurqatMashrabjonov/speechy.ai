@@ -1,14 +1,11 @@
 import 'package:speech_coach/features/progress/domain/progress_entity.dart';
 
-String getSpeechyComment(double avgScore, int streak) {
+String getSpeechyComment(double avgScore) {
   if (avgScore >= 85) {
     return '"You\'re crushing it! Your speaking skills are exceptional."';
   }
   if (avgScore >= 70) {
     return '"Great progress! Your consistency is really paying off."';
-  }
-  if (streak >= 3) {
-    return '"Love the streak! Keep showing up and you\'ll see big improvements."';
   }
   return '"Every practice session makes you better. Keep going!"';
 }

@@ -1,47 +1,31 @@
 class UserProgress {
-  final int streak;
-  final int longestStreak;
   final int totalSessions;
   final int totalMinutes;
   final DateTime? lastSessionDate;
   final List<String> badges;
   final List<SessionRecord> sessionHistory;
-  final int streakFreezes;
-  final DateTime? lastFreezeDate;
 
   const UserProgress({
-    this.streak = 0,
-    this.longestStreak = 0,
     this.totalSessions = 0,
     this.totalMinutes = 0,
     this.lastSessionDate,
     this.badges = const [],
     this.sessionHistory = const [],
-    this.streakFreezes = 0,
-    this.lastFreezeDate,
   });
 
   UserProgress copyWith({
-    int? streak,
-    int? longestStreak,
     int? totalSessions,
     int? totalMinutes,
     DateTime? lastSessionDate,
     List<String>? badges,
     List<SessionRecord>? sessionHistory,
-    int? streakFreezes,
-    DateTime? lastFreezeDate,
   }) {
     return UserProgress(
-      streak: streak ?? this.streak,
-      longestStreak: longestStreak ?? this.longestStreak,
       totalSessions: totalSessions ?? this.totalSessions,
       totalMinutes: totalMinutes ?? this.totalMinutes,
       lastSessionDate: lastSessionDate ?? this.lastSessionDate,
       badges: badges ?? this.badges,
       sessionHistory: sessionHistory ?? this.sessionHistory,
-      streakFreezes: streakFreezes ?? this.streakFreezes,
-      lastFreezeDate: lastFreezeDate ?? this.lastFreezeDate,
     );
   }
 
@@ -53,22 +37,16 @@ class UserProgress {
 
   Map<String, dynamic> toMap() {
     return {
-      'streak': streak,
-      'longestStreak': longestStreak,
       'totalSessions': totalSessions,
       'totalMinutes': totalMinutes,
       'lastSessionDate': lastSessionDate?.toIso8601String(),
       'badges': badges,
       'sessionHistory': sessionHistory.map((s) => s.toMap()).toList(),
-      'streakFreezes': streakFreezes,
-      'lastFreezeDate': lastFreezeDate?.toIso8601String(),
     };
   }
 
   factory UserProgress.fromMap(Map<String, dynamic> map) {
     return UserProgress(
-      streak: (map['streak'] as num?)?.toInt() ?? 0,
-      longestStreak: (map['longestStreak'] as num?)?.toInt() ?? 0,
       totalSessions: (map['totalSessions'] as num?)?.toInt() ?? 0,
       totalMinutes: (map['totalMinutes'] as num?)?.toInt() ?? 0,
       lastSessionDate: map['lastSessionDate'] != null
@@ -78,10 +56,6 @@ class UserProgress {
       sessionHistory: (map['sessionHistory'] as List? ?? [])
           .map((s) => SessionRecord.fromMap(s as Map<String, dynamic>))
           .toList(),
-      streakFreezes: (map['streakFreezes'] as num?)?.toInt() ?? 0,
-      lastFreezeDate: map['lastFreezeDate'] != null
-          ? DateTime.tryParse(map['lastFreezeDate'] as String)
-          : null,
     );
   }
 }

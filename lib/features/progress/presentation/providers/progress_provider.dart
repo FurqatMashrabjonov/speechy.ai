@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:speech_coach/core/analytics/analytics_service.dart';
 import 'package:speech_coach/features/assessment/data/assessment_repository.dart';
 import 'package:speech_coach/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:speech_coach/features/feedback/domain/feedback_entity.dart';
@@ -66,40 +65,9 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
   }
 
   Future<void> addSession(ConversationFeedback feedback) async {
-    debugPrint('ProgressNotifier.addSession: score=${feedback.overallScore}');
+    debugPrint('ProgressNotifier.addSession: score=${feedback.overallScore}, sessions=${state.totalSessions + 1}');
 
-    // Calculate streak (with streak freeze support)
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    int newStreak = state.streak;
-    int newStreakFreezes = state.streakFreezes;
-    DateTime? newLastFreezeDate = state.lastFreezeDate;
-
-    if (state.lastSessionDate != null) {
-      final lastDate = DateTime(
-        state.lastSessionDate!.year,
-        state.lastSessionDate!.month,
-        state.lastSessionDate!.day,
-      );
-      final diff = today.difference(lastDate).inDays;
-      if (diff == 1) {
-        newStreak = state.streak + 1;
-      } else if (diff == 2 && state.streakFreezes > 0) {
-        // Streak freeze: missed exactly 1 day with freeze available
-        newStreak = state.streak + 1;
-        newStreakFreezes = state.streakFreezes - 1;
-        newLastFreezeDate = today;
-      } else if (diff > 1) {
-        newStreak = 1;
-      }
-      // diff == 0 means same day, keep streak
-    } else {
-      newStreak = 1;
-    }
-
-    debugPrint('ProgressNotifier.addSession: streak=$newStreak '
-        '(was ${state.streak}), longest=${state.longestStreak}, '
-        'sessions=${state.totalSessions + 1}');
 
     final record = SessionRecord(
       scenarioId: feedback.scenarioId,
@@ -117,14 +85,6 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
     final newBadges = List<String>.from(state.badges);
     if (state.totalSessions == 0 && !newBadges.contains('first_conversation')) {
       newBadges.add('first_conversation');
-    }
-    if (newStreak >= 5 && !newBadges.contains('5_day_streak')) {
-      newBadges.add('5_day_streak');
-      AnalyticsService.instance.logStreakMilestone(streak: newStreak);
-    }
-    if (newStreak >= 10 && !newBadges.contains('10_day_streak')) {
-      newBadges.add('10_day_streak');
-      AnalyticsService.instance.logStreakMilestone(streak: newStreak);
     }
     if (feedback.clarity >= 100 && !newBadges.contains('perfect_clarity')) {
       newBadges.add('perfect_clarity');
@@ -151,17 +111,12 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
     }
 
     state = state.copyWith(
-      streak: newStreak,
-      longestStreak:
-          newStreak > state.longestStreak ? newStreak : state.longestStreak,
       totalSessions: state.totalSessions + 1,
       totalMinutes:
           state.totalMinutes + (feedback.durationSeconds / 60).ceil(),
       lastSessionDate: now,
       badges: newBadges,
       sessionHistory: [...state.sessionHistory, record],
-      streakFreezes: newStreakFreezes,
-      lastFreezeDate: newLastFreezeDate,
     );
 
     await _repository.save(state);
@@ -174,12 +129,6 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
       debugPrint('ProgressNotifier: Firestore sync failed (non-critical): $e');
     });
 
-    // Cancel streak warning — user practiced today
-    await NotificationService.cancelStreakWarning();
-
-    // Schedule tomorrow's streak warning (8pm) and daily reminder (9am)
-    await NotificationService.scheduleStreakWarning(newStreak);
-
     // Schedule weekly summary on Sundays
     final now2 = DateTime.now();
     if (now2.weekday == DateTime.sunday) {
@@ -191,7 +140,6 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
           .length;
       await NotificationService.scheduleWeeklySummary(
         sessionsThisWeek: weekSessions,
-        streak: newStreak,
       );
     }
   }
@@ -200,17 +148,6 @@ class ProgressNotifier extends StateNotifier<UserProgress> {
     if (p.sessionHistory.isEmpty) return 'your track';
     final cat = p.sessionHistory.last.category;
     return cat.isNotEmpty ? cat : 'your track';
-  }
-
-  /// Grants a streak freeze (e.g., for Pro users monthly)
-  Future<void> grantStreakFreeze() async {
-    state = state.copyWith(
-      streakFreezes: state.streakFreezes + 1,
-    );
-    await _repository.save(state);
-    _remoteRepository.save(state).timeout(
-      const Duration(seconds: 5),
-    ).catchError((_) {});
   }
 
   /// Returns true if daily goal was just completed on this session

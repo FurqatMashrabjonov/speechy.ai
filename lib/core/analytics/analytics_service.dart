@@ -80,11 +80,6 @@ class AnalyticsService {
   Future<void> logTrackCompleted({required String trackId}) =>
       _fa.logEvent(name: 'track_completed', parameters: {'track_id': trackId});
 
-  // ── Streak ───────────────────────────────────────────────────────────────────
-
-  Future<void> logStreakMilestone({required int streak}) =>
-      _fa.logEvent(name: 'streak_milestone', parameters: {'streak': streak});
-
   // ── Conversation (free mode, no scenario) ────────────────────────────────────
 
   Future<void> logConversationStarted() =>

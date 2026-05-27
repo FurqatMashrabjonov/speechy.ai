@@ -15,11 +15,6 @@ import 'package:speech_coach/features/history/presentation/providers/session_his
 import 'package:url_launcher/url_launcher.dart';
 import 'package:speech_coach/shared/services/sound_service.dart';
 
-const _kDarkBg = Color(0xFF0D0D0D);
-const _kDarkSurface = Color(0xFF1C1C1E);
-const _kDarkBorder = Color(0xFF2A2A2A);
-const _kDarkTextPrimary = Colors.white;
-const _kDarkTextSecondary = Color(0xFF9A9A9A);
 
 class ConversationScreen extends ConsumerStatefulWidget {
   final String category;
@@ -190,9 +185,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFFF3E0), Color(0xFFFFF8F0)],
-                          ),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.primaryDark.withValues(alpha: 0.18)
+                              : const Color(0xFFFFF3E0),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                               color: const Color(0xFFFFB74D)
@@ -235,7 +230,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.cardPeach,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.cardDark
+                              : AppColors.cardPeach,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: AppColors.primary.withValues(alpha: 0.2),
@@ -276,7 +273,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceLight,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.surfaceDark
+                            : AppColors.surfaceLight,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -370,7 +369,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   Widget _buildMeetScreen(BuildContext context, ConversationState state) {
     return Scaffold(
-      backgroundColor: _kDarkBg,
+      backgroundColor: AppColors.backgroundDark,
       body: SafeArea(
         child: Column(
           children: [
@@ -426,7 +425,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             Expanded(
               child: Text(
                 widget.scenarioTitle ?? widget.category,
-                style: AppTypography.labelMedium(color: _kDarkTextSecondary),
+                style: AppTypography.labelMedium(color: AppColors.textSecondaryDark),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -529,14 +528,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               decoration: BoxDecoration(
                 color: _showCaptions
                     ? AppColors.primary.withValues(alpha: 0.18)
-                    : _kDarkSurface,
+                    : AppColors.surfaceDark,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 _showCaptions
                     ? Icons.closed_caption_rounded
                     : Icons.closed_caption_off_rounded,
-                color: _showCaptions ? AppColors.primary : _kDarkTextSecondary,
+                color: _showCaptions ? AppColors.primary : AppColors.textSecondaryDark,
                 size: 22,
               ),
             ),
@@ -757,9 +756,9 @@ class _TimerPill extends StatelessWidget {
       contentColor = AppColors.warning;
     } else {
       pillColor = onDark
-          ? const Color(0xFF2A2A2A)
+          ? AppColors.cardDark
           : AppColors.primary.withValues(alpha: 0.1);
-      contentColor = onDark ? _kDarkTextSecondary : context.textSecondary;
+      contentColor = onDark ? AppColors.textSecondaryDark : context.textSecondary;
     }
 
     return Container(
@@ -810,15 +809,21 @@ class _OrbWidget extends StatefulWidget {
 
 class _OrbWidgetState extends State<_OrbWidget> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
+  late CurvedAnimation _curve;
 
-  static const _idleDuration = Duration(milliseconds: 2200);
-  static const _speakDuration = Duration(milliseconds: 850);
+  // Low-pass smoothed amplitude values — updated each animation frame
+  double _smoothMicAmp = 0;
+  double _smoothAiAmp = 0;
+
+  static const _idleDuration = Duration(milliseconds: 3200);
+  static const _speakDuration = Duration(milliseconds: 1400);
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(vsync: this, duration: _idleDuration)
       ..repeat(reverse: true);
+    _curve = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
   }
 
   @override
@@ -834,6 +839,7 @@ class _OrbWidgetState extends State<_OrbWidget> with SingleTickerProviderStateMi
 
   @override
   void dispose() {
+    _curve.dispose();
     _ctrl.dispose();
     super.dispose();
   }
@@ -841,27 +847,32 @@ class _OrbWidgetState extends State<_OrbWidget> with SingleTickerProviderStateMi
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _ctrl,
+      animation: _curve,
       builder: (_, _) {
-        final t = _ctrl.value; // 0.0→1.0 slow breathe (idle) or fast pulse (speaking)
+        final t = _curve.value; // eased 0→1
+
+        // Smooth amplitude each frame to avoid jarring jumps
+        _smoothMicAmp += (widget.micAmplitude - _smoothMicAmp) * 0.10;
+        _smoothAiAmp += (widget.aiAmplitude - _smoothAiAmp) * 0.10;
 
         final double orbDiam;
         final double glowAlpha;
         final double glowBlur;
 
         if (widget.isUserSpeaking) {
-          orbDiam = 120.0 + t * 6.0 + widget.micAmplitude * 48.0;
-          glowAlpha = 0.35 + widget.micAmplitude * 0.30;
-          glowBlur = 36.0 + widget.micAmplitude * 32.0;
+          // Max extra growth from voice: 14px (gentle, not alarming)
+          orbDiam = 122.0 + t * 8.0 + _smoothMicAmp * 14.0;
+          glowAlpha = 0.28 + _smoothMicAmp * 0.18;
+          glowBlur = 30.0 + _smoothMicAmp * 18.0;
         } else if (widget.isAiSpeaking) {
-          orbDiam = 120.0 + t * 8.0 + widget.aiAmplitude * 52.0;
-          glowAlpha = 0.32 + widget.aiAmplitude * 0.30;
-          glowBlur = 34.0 + widget.aiAmplitude * 34.0;
+          orbDiam = 122.0 + t * 10.0 + _smoothAiAmp * 16.0;
+          glowAlpha = 0.26 + _smoothAiAmp * 0.20;
+          glowBlur = 28.0 + _smoothAiAmp * 20.0;
         } else {
-          // Idle / connecting: gentle breathing only
-          orbDiam = 130.0 + t * 6.0;
-          glowAlpha = 0.28 + t * 0.12;
-          glowBlur = 30.0 + t * 12.0;
+          // Idle / connecting: slow gentle breathing only
+          orbDiam = 128.0 + t * 8.0;
+          glowAlpha = 0.22 + t * 0.14;
+          glowBlur = 28.0 + t * 14.0;
         }
 
         return SizedBox(
@@ -918,13 +929,13 @@ class _CaptionOverlay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: _kDarkSurface.withValues(alpha: 0.95),
+        color: AppColors.surfaceDark.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kDarkBorder),
+        border: Border.all(color: AppColors.dividerDark),
       ),
       child: Text(
         currentTranscription,
-        style: AppTypography.bodySmall(color: _kDarkTextPrimary),
+        style: AppTypography.bodySmall(color: AppColors.textPrimaryDark),
         maxLines: 3,
         overflow: TextOverflow.ellipsis,
       ),

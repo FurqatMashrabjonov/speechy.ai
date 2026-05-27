@@ -823,7 +823,7 @@ class _NotifPage extends StatelessWidget {
           ).animate().fadeIn(delay: 100.ms, duration: 400.ms),
           const SizedBox(height: 10),
           Text(
-            'Get a daily nudge so you never miss a practice session or break your streak.',
+            'Get a daily nudge so you never miss a practice session.',
             style: AppTypography.bodyMedium(color: context.textSecondary),
             textAlign: TextAlign.center,
           ).animate().fadeIn(delay: 180.ms, duration: 400.ms),

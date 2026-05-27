@@ -4,7 +4,6 @@ class UserEntity {
   final String? displayName;
   final String? photoUrl;
   final DateTime createdAt;
-  final int streak;
   final int totalSessions;
 
   const UserEntity({
@@ -13,7 +12,6 @@ class UserEntity {
     this.displayName,
     this.photoUrl,
     required this.createdAt,
-    this.streak = 0,
     this.totalSessions = 0,
   });
 
@@ -24,7 +22,6 @@ class UserEntity {
       displayName: map['displayName'] as String?,
       photoUrl: map['photoUrl'] as String?,
       createdAt: DateTime.parse(map['createdAt'] as String),
-      streak: (map['streak'] as num?)?.toInt() ?? 0,
       totalSessions: (map['totalSessions'] as num?)?.toInt() ?? 0,
     );
   }
@@ -36,7 +33,6 @@ class UserEntity {
       'displayName': displayName,
       'photoUrl': photoUrl,
       'createdAt': createdAt.toIso8601String(),
-      'streak': streak,
       'totalSessions': totalSessions,
     };
   }
@@ -47,7 +43,6 @@ class UserEntity {
     String? displayName,
     String? photoUrl,
     DateTime? createdAt,
-    int? streak,
     int? totalSessions,
   }) {
     return UserEntity(
@@ -56,7 +51,6 @@ class UserEntity {
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
-      streak: streak ?? this.streak,
       totalSessions: totalSessions ?? this.totalSessions,
     );
   }

@@ -52,17 +52,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(
-                Icons.mic_rounded,
-                color: Colors.white,
-                size: 44,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
               ),
             )
                 .animate()

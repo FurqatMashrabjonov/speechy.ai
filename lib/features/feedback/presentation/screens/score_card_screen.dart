@@ -716,13 +716,6 @@ class _ScoreCardScreenState extends ConsumerState<ScoreCardScreen>
                     ],
                     const SizedBox(height: 16),
 
-                    // Streak row
-                    _StreakPill()
-                        .animate()
-                        .fadeIn(delay: 200.ms, duration: 400.ms)
-                        .slideY(begin: 0.3, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
-                    const SizedBox(height: 24),
-
                     // Focus Card — #1 priority
                     if (feedback.focusPriority != null &&
                         feedback.focusChallenge != null) ...[
@@ -1553,36 +1546,6 @@ class _TranscriptMomentCard extends StatelessWidget {
             '"$moment"',
             style: AppTypography.bodyMedium(color: context.textPrimary)
                 .copyWith(fontStyle: FontStyle.italic, height: 1.5),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StreakPill extends ConsumerWidget {
-  const _StreakPill();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final streak = ref.watch(progressProvider.select((p) => p.streak));
-    if (streak <= 0) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFF6B35).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFFF6B35).withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('\u{1F525}', style: TextStyle(fontSize: 14)),
-          const SizedBox(width: 4),
-          Text(
-            '$streak-day streak',
-            style: AppTypography.labelMedium(color: const Color(0xFFFF6B35))
-                .copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),

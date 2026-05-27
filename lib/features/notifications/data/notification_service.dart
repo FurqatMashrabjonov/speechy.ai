@@ -12,7 +12,6 @@ class NotificationService {
 
   // Notification IDs
   static const _idDaily = 100;
-  static const _idStreakWarning = 101;
   static const _idStepUnlocked = 102;
   static const _idWeeklySummary = 103;
   static const _idReEngagement = 104;
@@ -54,27 +53,7 @@ class NotificationService {
     );
   }
 
-  // ── 2. Streak warning — 8pm today if user hasn't practiced ─────────────────
-  static Future<void> scheduleStreakWarning(int streak) async {
-    await _plugin.cancel(_idStreakWarning);
-    if (streak <= 0) return;
-
-    final now = tz.TZDateTime.now(tz.local);
-    final todayAt8pm = tz.TZDateTime(
-      tz.local, now.year, now.month, now.day, 20, 0,
-    );
-    if (todayAt8pm.isBefore(now)) return; // 8pm already passed
-
-    await _schedule(
-      id: _idStreakWarning,
-      title: '🔥 Don\'t break your $streak-day streak!',
-      body: 'Just 1 session keeps your streak alive. You\'ve got this.',
-      scheduledDate: todayAt8pm,
-      repeat: false,
-    );
-  }
-
-  // ── 3. Step unlocked — fired immediately after passing a step ──────────────
+  // ── 2. Step unlocked — fired immediately after passing a step ──────────────
   static Future<void> scheduleStepUnlocked(String completedStep) async {
     await _plugin.cancel(_idStepUnlocked);
     await _plugin.show(
@@ -95,7 +74,6 @@ class NotificationService {
   // ── 4. Weekly summary — Sunday 7pm ────────────────────────────────────────
   static Future<void> scheduleWeeklySummary({
     required int sessionsThisWeek,
-    required int streak,
   }) async {
     await _plugin.cancel(_idWeeklySummary);
     final now = tz.TZDateTime.now(tz.local);
@@ -114,7 +92,7 @@ class NotificationService {
     await _schedule(
       id: _idWeeklySummary,
       title: 'Your week in review',
-      body: '$sessionText this week · 🔥 $streak-day streak. Keep it up!',
+      body: '$sessionText this week. Keep up the great work!',
       scheduledDate: sunday,
       repeat: false,
     );
@@ -137,17 +115,8 @@ class NotificationService {
     );
   }
 
-  // ── Legacy: streak reminder (kept for backwards compat) ────────────────────
-  static Future<void> scheduleStreakReminder(int streak, {int hour = 19, int minute = 0}) async {
-    await scheduleStreakWarning(streak);
-  }
-
   static Future<void> cancelAll() async {
     await _plugin.cancelAll();
-  }
-
-  static Future<void> cancelStreakWarning() async {
-    await _plugin.cancel(_idStreakWarning);
   }
 
   // ── Internal helpers ────────────────────────────────────────────────────────

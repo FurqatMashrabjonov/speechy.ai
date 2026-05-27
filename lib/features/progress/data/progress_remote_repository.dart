@@ -31,14 +31,11 @@ class ProgressRemoteRepository {
           : progress.sessionHistory;
 
       await doc.set({
-        'streak': progress.streak,
-        'longestStreak': progress.longestStreak,
         'totalSessions': progress.totalSessions,
         'totalMinutes': progress.totalMinutes,
         'lastSessionDate': progress.lastSessionDate?.toIso8601String(),
         'badges': progress.badges,
         'sessionHistory': recentHistory.map((s) => s.toMap()).toList(),
-        'streakFreezes': progress.streakFreezes,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -56,8 +53,6 @@ class ProgressRemoteRepository {
 
       final data = snapshot.data()!;
       return UserProgress(
-        streak: (data['streak'] as num?)?.toInt() ?? 0,
-        longestStreak: (data['longestStreak'] as num?)?.toInt() ?? 0,
         totalSessions: (data['totalSessions'] as num?)?.toInt() ?? 0,
         totalMinutes: (data['totalMinutes'] as num?)?.toInt() ?? 0,
         lastSessionDate: data['lastSessionDate'] != null
@@ -67,7 +62,6 @@ class ProgressRemoteRepository {
         sessionHistory: (data['sessionHistory'] as List? ?? [])
             .map((s) => SessionRecord.fromMap(s as Map<String, dynamic>))
             .toList(),
-        streakFreezes: (data['streakFreezes'] as num?)?.toInt() ?? 0,
       );
     } catch (e) {
       debugPrint('Failed to load progress from Firestore: $e');
@@ -99,10 +93,6 @@ class ProgressRemoteRepository {
     mergedHistory.sort((a, b) => a.date.compareTo(b.date));
 
     return local.copyWith(
-      streak: local.streak > remote.streak ? local.streak : remote.streak,
-      longestStreak: local.longestStreak > remote.longestStreak
-          ? local.longestStreak
-          : remote.longestStreak,
       totalSessions: local.totalSessions > remote.totalSessions
           ? local.totalSessions
           : remote.totalSessions,
@@ -112,9 +102,6 @@ class ProgressRemoteRepository {
       lastSessionDate: mergedLastSession,
       badges: mergedBadges,
       sessionHistory: mergedHistory,
-      streakFreezes: local.streakFreezes > remote.streakFreezes
-          ? local.streakFreezes
-          : remote.streakFreezes,
     );
   }
 }

@@ -32,15 +32,11 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   static final _demoProgress = UserProgress(
-    streak: 12,
-    longestStreak: 18,
     totalSessions: 47,
     totalMinutes: 186,
     lastSessionDate: DateTime.now().subtract(const Duration(hours: 3)),
     badges: [
       'first_conversation',
-      '5_day_streak',
-      '10_day_streak',
       'dedicated_10',
       'interviews_5',
       'star_performer',
@@ -84,7 +80,7 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   static String? _nextLevelHint(double avg) {
-    if (avg >= 85) return "You're at the top — keep your streak going!";
+    if (avg >= 85) return "You're at the top — keep pushing higher!";
     if (avg >= 75) return 'Score 85+ avg to reach Expert Speaker';
     if (avg >= 60) return 'Score 75+ avg to reach Strong Speaker';
     if (avg >= 40) return 'Score 60+ avg to reach Good Speaker';
@@ -110,32 +106,8 @@ class AnalyticsScreen extends ConsumerWidget {
           const SizedBox(height: 16),
 
           // Header
-          Row(
-            children: [
-              Expanded(
-                child: Text('Progress', style: AppTypography.headlineLarge()),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.local_fire_department_rounded,
-                        color: AppColors.primary, size: 18),
-                    const SizedBox(width: 4),
-                    Text('${progress.streak}',
-                        style: AppTypography.titleMedium(
-                            color: AppColors.primary)),
-                  ],
-                ),
-              ),
-            ],
-          ).animate().fadeIn(duration: 400.ms),
+          Text('Progress', style: AppTypography.headlineLarge())
+              .animate().fadeIn(duration: 400.ms),
 
           // Demo banner
           if (isDemo) ...[
@@ -213,16 +185,9 @@ class AnalyticsScreen extends ConsumerWidget {
           ).animate().fadeIn(delay: 80.ms, duration: 400.ms),
           const SizedBox(height: 14),
 
-          // ── 3 mini stats ──────────────────────────────────────────────────
+          // ── 2 mini stats ──────────────────────────────────────────────────
           Row(
             children: [
-              _MiniStat(
-                icon: Icons.local_fire_department_rounded,
-                value: '${progress.streak}',
-                label: 'Day Streak',
-                color: AppColors.secondary,
-              ),
-              const SizedBox(width: 10),
               _MiniStat(
                 icon: Icons.mic_rounded,
                 value: '${sessions.length}',

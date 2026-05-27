@@ -50,8 +50,6 @@ class AppConstants {
   static const String keyPracticeReminders = 'practice_reminders';
   static const String keyReminderTimeHour = 'reminder_time_hour';
   static const String keyReminderTimeMinute = 'reminder_time_minute';
-  static const String keyStreakReminders = 'streak_reminders';
-
   // Firestore collections
   static const String usersCollection = 'users';
   static const String sessionsCollection = 'sessions';

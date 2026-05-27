@@ -100,7 +100,4 @@ class AppColors {
   // Chat bubble colors
   static const chatAiBubble = Color(0xFFF7F7F7);
 
-  // Legacy aliases
-  static const streakOrange = Color(0xFFE8793A);
-  static const streakYellow = Color(0xFFFFC800);
 }

@@ -105,15 +105,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               // 3. Stats
               Row(
                 children: [
-                  if (progress.streak > 0) ...[
-                    _StatCard(
-                      icon: Icons.local_fire_department_rounded,
-                      value: '${progress.streak}',
-                      label: 'Day Streak',
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 12),
-                  ],
                   _StatCard(
                     icon: Icons.mic_rounded,
                     value: '${progress.totalSessions}',
