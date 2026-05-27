@@ -1,10 +1,18 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class RevenueCatService {
-  static const _apiKey = 'test_GJMzlpFhOxqaWpNXeaHBwWLsIcP';
+  // TODO: Replace with production keys before publishing to stores.
+  // iOS key starts with 'appl_', Android key starts with 'goog_'.
+  // Get them from https://app.revenuecat.com/projects → API keys.
+  static const _iosApiKey = 'appl_REPLACE_WITH_IOS_PRODUCTION_KEY';
+  static const _androidApiKey = 'goog_REPLACE_WITH_ANDROID_PRODUCTION_KEY';
+
+  static String get _apiKey =>
+      Platform.isIOS ? _iosApiKey : _androidApiKey;
 
   bool _initialized = false;
 

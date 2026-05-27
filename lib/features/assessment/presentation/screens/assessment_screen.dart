@@ -24,6 +24,7 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
   final Map<String, String> _answers = {};
+  bool _isGenerating = false;
 
   List<AssessmentQuestion> get _questions => getAdaptiveQuestions(_answers['goal']);
 
@@ -62,16 +63,35 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   }
 
   Future<void> _generatePlan() async {
+    if (_isGenerating) return;
+    setState(() => _isGenerating = true);
+
     final answers = _answers.entries
         .map((e) => AssessmentAnswer(questionId: e.key, optionId: e.value))
         .toList();
 
-    await ref
-        .read(learningPlanProvider.notifier)
-        .generateFromAssessment(answers);
+    try {
+      await ref
+          .read(learningPlanProvider.notifier)
+          .generateFromAssessment(answers)
+          .timeout(const Duration(seconds: 10));
 
-    if (mounted) {
-      context.go('/plan-summary');
+      if (mounted) context.go('/plan-summary');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isGenerating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().contains('TimeoutException')
+                ? 'Taking longer than expected. Please check your connection and try again.'
+                : 'Something went wrong. Please try again.',
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        ),
+      );
     }
   }
 
@@ -166,11 +186,14 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                 MediaQuery.of(context).padding.bottom + 16,
               ),
               child: isLastPage && hasAnswer
-                  ? DuoButton.success(
-                      text: 'Get My Plan',
-                      icon: Icons.auto_awesome_rounded,
+                  ? DuoButton(
+                      text: _isGenerating ? 'Building your plan...' : 'Get My Plan',
+                      icon: _isGenerating ? null : Icons.auto_awesome_rounded,
                       width: double.infinity,
-                      onTap: _generatePlan,
+                      color: AppColors.success,
+                      shadowColor: const Color(0xFF44A302),
+                      disabled: _isGenerating,
+                      onTap: _isGenerating ? null : _generatePlan,
                     ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1)
                   : const SizedBox(height: 52),
             ),

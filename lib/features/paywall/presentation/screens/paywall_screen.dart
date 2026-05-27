@@ -148,11 +148,21 @@ class PaywallScreen extends ConsumerWidget {
                     color: bg,
                     border: Border(top: BorderSide(color: context.divider)),
                   ),
-                  child: _PurchaseButton(
-                    trackId: trackId,
-                    price: price,
-                    isLoading: sub.isPurchasing,
-                  ).animate().fadeIn(delay: 240.ms),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _PurchaseButton(
+                        trackId: trackId,
+                        price: price,
+                        isLoading: sub.isPurchasing,
+                      ).animate().fadeIn(delay: 240.ms),
+                      const SizedBox(height: 10),
+                      _RestoreButton(
+                        trackId: trackId,
+                        isLoading: sub.isRestoring,
+                      ).animate().fadeIn(delay: 280.ms),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -243,6 +253,40 @@ class _FeatureCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Restore Button ───────────────────────────────────────────────────────────
+
+class _RestoreButton extends ConsumerWidget {
+  final String trackId;
+  final bool isLoading;
+
+  const _RestoreButton({required this.trackId, required this.isLoading});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Tappable(
+      onTap: isLoading
+          ? null
+          : () => ref.read(subscriptionProvider.notifier).restore(
+                trackId: trackId,
+              ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Text(
+                'Restore purchases',
+                style: AppTypography.labelMedium(color: context.textSecondary),
+                textAlign: TextAlign.center,
+              ),
       ),
     );
   }

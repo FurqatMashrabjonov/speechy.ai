@@ -396,6 +396,11 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
         scenarioPrompt: state.scenarioPrompt,
         durationMinutes: state.durationLimitMinutes,
         voiceName: state.voiceName,
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw TimeoutException(
+          'Could not connect — please check your internet and try again.',
+        ),
       );
       _startTimer();
 

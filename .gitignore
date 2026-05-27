@@ -2,6 +2,11 @@
 .env
 .env.*
 
+# Android signing — never commit keystore or key.properties
+*.jks
+*.keystore
+android/key.properties
+
 # Miscellaneous
 *.class
 *.log
