@@ -16,6 +16,7 @@ import 'package:speech_coach/features/scenarios/data/scenario_repository.dart';
 import 'package:speech_coach/app/theme/app_images.dart';
 import 'package:speech_coach/shared/widgets/user_avatar.dart';
 import 'package:speech_coach/features/paywall/presentation/providers/subscription_provider.dart';
+import 'package:speech_coach/features/paywall/data/usage_service.dart';
 import 'package:speech_coach/features/assessment/data/assessment_data.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -259,34 +260,47 @@ class _DailyGoalBanner extends StatelessWidget {
 
 // ── Quick-start CTA ──────────────────────────────────────────────────────────
 
-class _QuickStartButton extends StatelessWidget {
+class _QuickStartButton extends ConsumerWidget {
   final LearningPlan plan;
   const _QuickStartButton({required this.plan});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final nextStep = plan.nextStep!;
     final scenario = ScenarioRepository().getById(nextStep.scenarioId);
     final title = scenario?.title ?? nextStep.scenarioId;
 
+    final usage = ref.read(usageServiceProvider);
+    final canStart = usage.canAttemptStep(plan.templateId, nextStep.order);
+
     return Tappable(
-      onTap: () => context.push(
-        '/scenario/${Uri.encodeComponent(nextStep.scenarioId)}',
-        extra: {'trackId': plan.templateId, 'stepOrder': nextStep.order},
-      ),
+      onTap: canStart
+          ? () => context.push(
+                '/scenario/${Uri.encodeComponent(nextStep.scenarioId)}',
+                extra: {'trackId': plan.templateId, 'stepOrder': nextStep.order},
+              )
+          : () => context.push('/paywall', extra: {
+                'trackId': plan.templateId,
+                'trackTitle': plan.title,
+              }),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.primary,
+          color: canStart ? AppColors.primary : AppColors.surfaceDark,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.28),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          border: canStart
+              ? null
+              : Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
+          boxShadow: canStart
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.28),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           children: [
@@ -294,11 +308,16 @@ class _QuickStartButton extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: canStart
+                    ? Colors.white.withValues(alpha: 0.2)
+                    : AppColors.primary.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.play_arrow_rounded,
-                  color: Colors.white, size: 22),
+              child: Icon(
+                canStart ? Icons.play_arrow_rounded : Icons.lock_open_rounded,
+                color: canStart ? Colors.white : AppColors.primary,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -306,23 +325,35 @@ class _QuickStartButton extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Step ${plan.completedCount + 1} of ${plan.totalSteps}',
+                    canStart
+                        ? 'Step ${plan.completedCount + 1} of ${plan.totalSteps}'
+                        : 'Unlock to continue',
                     style: AppTypography.labelSmall(
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: canStart
+                          ? Colors.white.withValues(alpha: 0.8)
+                          : AppColors.primary.withValues(alpha: 0.8),
                     ).copyWith(fontWeight: FontWeight.w600),
                   ),
                   Text(
-                    title,
-                    style: AppTypography.titleMedium(color: Colors.white)
-                        .copyWith(fontSize: 15),
+                    canStart ? title : plan.title,
+                    style: AppTypography.titleMedium(
+                      color: canStart ? Colors.white : AppColors.primary,
+                    ).copyWith(fontSize: 15),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded,
-                color: Colors.white, size: 14),
+            Icon(
+              canStart
+                  ? Icons.arrow_forward_ios_rounded
+                  : Icons.chevron_right_rounded,
+              color: canStart
+                  ? Colors.white
+                  : AppColors.primary.withValues(alpha: 0.7),
+              size: canStart ? 14 : 20,
+            ),
           ],
         ),
       ),
@@ -521,6 +552,10 @@ class _RoadmapHeroState extends ConsumerState<_RoadmapHero>
                     onTap: i <= effectiveIdx
                         ? () => context.push(
                               '/scenario/${Uri.encodeComponent(plan.steps[i].scenarioId)}',
+                              extra: {
+                                'trackId': plan.templateId,
+                                'stepOrder': plan.steps[i].order,
+                              },
                             )
                         : null,
                   ),
